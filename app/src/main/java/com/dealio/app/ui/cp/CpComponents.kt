@@ -59,17 +59,5 @@ fun CpLeadCard(lead: CpLead, onClick: () -> Unit) {
 }
 
 @Composable
-fun QuickActionTile(label: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Row(
-        modifier = modifier
-            .background(Color.White, RoundedCornerShape(14.dp))
-            .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
-            .clickable { onClick() }
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, null, tint = Teal, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(label, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-    }
-}
+fun QuickActionTile(label: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) =
+    com.dealio.app.ui.builder.QuickActionTile(label, icon, modifier, accent = Teal, onClick = onClick)

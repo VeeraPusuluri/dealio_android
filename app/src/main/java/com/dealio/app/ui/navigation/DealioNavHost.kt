@@ -1,18 +1,23 @@
 package com.dealio.app.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dealio.app.data.BuilderStore
 import com.dealio.app.data.TokenStore
+import com.dealio.app.ui.ServerStatusViewModel
 import com.dealio.app.ui.builder.BuilderRoot
 import com.dealio.app.ui.cp.CpRoot
 import com.dealio.app.ui.customer.CustomerRoot
 import com.dealio.app.ui.screens.HomeScreen
 import com.dealio.app.ui.screens.LoginScreen
+import com.dealio.app.ui.screens.ServerDownScreen
 import com.dealio.app.ui.screens.SignupScreen
 import com.dealio.app.ui.screens.SplashScreen
 
@@ -28,6 +33,15 @@ fun DealioNavHost() {
     val navController = rememberNavController()
     val context = LocalContext.current
     val tokenStore = remember { TokenStore(context) }
+
+    val serverStatus: ServerStatusViewModel = viewModel()
+    val isDown by serverStatus.isDown.collectAsState()
+    val checking by serverStatus.checking.collectAsState()
+
+    if (isDown) {
+        ServerDownScreen(checking = checking, onRetry = { serverStatus.retry() })
+        return
+    }
 
     NavHost(navController = navController, startDestination = Routes.SPLASH) {
 
@@ -80,7 +94,6 @@ fun DealioNavHost() {
                     popUpTo(0) { inclusive = true }
                 }
             }
-            // Each role gets its full bottom-nav app; remaining roles see the placeholder for now.
             val role = tokenStore.user()?.role
             when {
                 role.equals("BUILDER", ignoreCase = true) -> BuilderRoot(onLogout = logout)

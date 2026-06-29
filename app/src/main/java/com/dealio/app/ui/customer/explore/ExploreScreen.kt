@@ -33,7 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,8 +50,7 @@ import com.dealio.app.ui.customer.CustomerProjectCard
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.customer.FeaturedCard
 import com.dealio.app.ui.theme.CardBorder
-import com.dealio.app.ui.theme.NavyDeep
-import com.dealio.app.ui.theme.NavyMid
+import com.dealio.app.ui.theme.NavyTealGradient
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextSecondary
 
@@ -62,7 +61,12 @@ fun ExploreScreen(nav: NavController, vm: ExploreViewModel = viewModel()) {
 
     Column(Modifier.fillMaxSize()) {
         // ── Navy hero with search ──
-        Box(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(NavyDeep, NavyMid)))) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp))
+                .background(NavyTealGradient),
+        ) {
             Column(Modifier.systemBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {

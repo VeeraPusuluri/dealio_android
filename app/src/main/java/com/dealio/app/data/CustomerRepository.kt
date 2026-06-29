@@ -16,6 +16,7 @@ import com.dealio.app.data.api.PreferredCityRequest
 import com.dealio.app.data.api.PricingRequest
 import com.dealio.app.data.api.Project
 import com.dealio.app.data.api.ProfileUpdateRequest
+import com.dealio.app.data.api.ProjectDocument
 import com.dealio.app.data.api.RateRequest
 import com.dealio.app.data.api.Shortlist
 import com.dealio.app.data.api.ShortlistRequest
@@ -44,6 +45,9 @@ class CustomerRepository(context: Context) {
         call { api.getProjects(city) }
 
     suspend fun getProject(id: Long): ApiResult<Project> = call { api.getProject(id) }
+
+    suspend fun getProjectDocuments(builderId: Long, projectId: Long): ApiResult<List<ProjectDocument>> =
+        call { api.getProjectDocuments(builderId, projectId) }
 
     suspend fun getAvailableCPs(): ApiResult<List<AvailableCP>> = call { api.getAvailableCPs() }
 

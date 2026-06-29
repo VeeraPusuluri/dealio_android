@@ -18,13 +18,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Campaign
+import androidx.compose.material.icons.outlined.CardGiftcard
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Contacts
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.EventRepeat
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Handshake
+import androidx.compose.material.icons.outlined.InsertChart
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -40,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.TabHeader
 import com.dealio.app.ui.cp.CpRoutes
 import com.dealio.app.ui.theme.CardBorder
@@ -57,12 +69,27 @@ fun CpMoreScreen(nav: NavController, onLogout: () -> Unit) {
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            SectionLabel("Workspace")
+            Row("Conversations", Icons.Outlined.ChatBubbleOutline) { nav.navigate(CpRoutes.CONVERSATIONS) }
             Row("Contacts", Icons.Outlined.Contacts) { nav.navigate(CpRoutes.CONTACTS) }
             Row("Follow-ups", Icons.Outlined.EventRepeat) { nav.navigate(CpRoutes.FOLLOWUPS) }
             Row("Call logs", Icons.Outlined.Phone) { nav.navigate(CpRoutes.CALLLOGS) }
             Row("Meetings", Icons.Outlined.CalendarMonth) { nav.navigate(CpRoutes.MEETINGS) }
             Row("Profile & verification", Icons.Outlined.Person) { nav.navigate(CpRoutes.PROFILE) }
             Row("Notifications", Icons.Outlined.Notifications) { nav.navigate(CpRoutes.NOTIFICATIONS) }
+
+            Spacer(Modifier.height(4.dp))
+            SectionLabel("Grow your business")
+            Row("Leaderboard", Icons.Outlined.EmojiEvents) { nav.navigate(CpRoutes.LEADERBOARD) }
+            Row("AI Lead Intelligence", Icons.Outlined.Psychology) { nav.navigate(CpRoutes.AI_INSIGHTS) }
+            Row("Content Studio", Icons.Outlined.AutoAwesome) { nav.navigate(CpRoutes.CONTENT_STUDIO) }
+            Row("Brochure Generator", Icons.Outlined.Description) { nav.navigate(CpRoutes.BROCHURE) }
+            Row("WhatsApp Broadcast", Icons.Outlined.Campaign) { nav.navigate(CpRoutes.WHATSAPP_BROADCAST) }
+            Row("Social Analytics", Icons.Outlined.InsertChart) { nav.navigate(CpRoutes.SOCIAL_ANALYTICS) }
+            Row("Referrals", Icons.Outlined.CardGiftcard) { nav.navigate(CpRoutes.REFERRAL) }
+            Row("Loan Assist", Icons.Outlined.AccountBalance) { nav.navigate(CpRoutes.LOAN_ASSIST) }
+            Row("Community", Icons.Outlined.Groups) { nav.navigate(CpRoutes.COMMUNITY) }
+            Row("JV Opportunities", Icons.Outlined.Handshake) { nav.navigate(CpRoutes.JV) }
 
             Spacer(Modifier.height(6.dp))
             Button(

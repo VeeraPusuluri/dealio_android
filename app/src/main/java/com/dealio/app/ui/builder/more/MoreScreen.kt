@@ -21,13 +21,20 @@ import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Campaign
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.CurrencyRupee
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.Grid4x4
+import androidx.compose.material.icons.outlined.Handyman
+import androidx.compose.material.icons.outlined.HomeWork
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.OndemandVideo
+import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -59,6 +66,13 @@ private val moreItems = listOf(
     MoreItem("Analytics", Icons.Outlined.Analytics, BuilderRoutes.ANALYTICS),
     MoreItem("Loan Cases", Icons.Outlined.CreditCard, BuilderRoutes.LOANS),
     MoreItem("RERA Compliance", Icons.Outlined.Gavel, BuilderRoutes.RERA),
+    MoreItem("Conversations", Icons.Outlined.ChatBubbleOutline, BuilderRoutes.CONVERSATIONS),
+    MoreItem("AI Assistant", Icons.Outlined.Psychology, BuilderRoutes.AI),
+    MoreItem("Documents", Icons.Outlined.Description, BuilderRoutes.DOCUMENTS),
+    MoreItem("Demand Letters", Icons.Outlined.ReceiptLong, BuilderRoutes.DEMAND_LETTERS),
+    MoreItem("Virtual Tours", Icons.Outlined.OndemandVideo, BuilderRoutes.VIRTUAL_TOURS),
+    MoreItem("Possession", Icons.Outlined.HomeWork, BuilderRoutes.POSSESSION),
+    MoreItem("Snagging", Icons.Outlined.Handyman, BuilderRoutes.SNAGGING),
     MoreItem("Shortlists", Icons.Outlined.FavoriteBorder, BuilderRoutes.SHORTLISTS),
     MoreItem("Notifications", Icons.Outlined.Notifications, BuilderRoutes.NOTIFICATIONS),
     MoreItem("Settings", Icons.Outlined.Settings, BuilderRoutes.SETTINGS),

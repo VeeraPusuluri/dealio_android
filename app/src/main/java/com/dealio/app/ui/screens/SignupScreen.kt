@@ -38,17 +38,18 @@ import com.dealio.app.ui.components.ErrorText
 import com.dealio.app.ui.components.OtpInput
 import com.dealio.app.ui.components.PhoneField
 import com.dealio.app.ui.components.dealioFieldColors
-import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextSecondary
 
-/** Same self-service roles the web signup offers (Signup.tsx). */
+/** Role colors — one accent per role to make the chip grid visually distinct. */
+private data class RoleOption(val value: String, val label: String, val color: Color)
+
 private val signupRoles = listOf(
-    "CUSTOMER" to "Customer",
-    "CP" to "Channel Partner",
-    "BUILDER" to "Builder",
-    "BANK" to "Bank",
-    "NRI" to "NRI",
+    RoleOption("CUSTOMER",  "Customer",        Color(0xFF0A9CB5)), // Teal
+    RoleOption("CP",        "Channel Partner", Color(0xFFFF8930)), // Orange
+    RoleOption("BUILDER",   "Builder",         Color(0xFF0D1F35)), // Navy
+    RoleOption("BANK",      "Bank",            Color(0xFF16A34A)), // Green
+    RoleOption("NRI",       "NRI",             Color(0xFF7C3AED)), // Purple
 )
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -99,15 +100,15 @@ fun SignupScreen(
             )
             Spacer(Modifier.height(8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                signupRoles.forEach { (value, label) ->
+                signupRoles.forEach { roleOption ->
                     FilterChip(
-                        selected = role == value,
-                        onClick = { role = value },
+                        selected = role == roleOption.value,
+                        onClick = { role = roleOption.value },
                         enabled = !state.loading,
-                        label = { Text(label) },
+                        label = { Text(roleOption.label) },
                         shape = RoundedCornerShape(10.dp),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Navy,
+                            selectedContainerColor = roleOption.color,
                             selectedLabelColor = Color.White,
                         ),
                     )

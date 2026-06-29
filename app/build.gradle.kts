@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -19,7 +20,7 @@ android {
     buildTypes {
         debug {
             // 10.0.2.2 is the host machine's localhost from the Android emulator
-            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8090/api/\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://d2l7qgxnnc8786.cloudfront.net/api/\"")
         }
         release {
             buildConfigField("String", "API_BASE_URL", "\"https://REPLACE_WITH_BACKEND_DOMAIN/api/\"")
@@ -58,4 +59,6 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.coil.compose)
     debugImplementation(libs.androidx.ui.tooling)
+    implementation(platform("com.google.firebase:firebase-bom:34.15.0"))
+    implementation("com.google.firebase:firebase-analytics")
 }

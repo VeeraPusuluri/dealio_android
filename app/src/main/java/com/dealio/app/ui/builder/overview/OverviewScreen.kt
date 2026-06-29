@@ -34,7 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -46,16 +46,17 @@ import androidx.navigation.NavController
 import com.dealio.app.ui.builder.BuilderRoutes
 import com.dealio.app.ui.builder.DealioCard
 import com.dealio.app.ui.builder.ErrorState
+import com.dealio.app.ui.builder.GradientStatTile
 import com.dealio.app.ui.builder.LoadingState
+import com.dealio.app.ui.builder.QuickActionTile
+import com.dealio.app.ui.builder.SectionHeader
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.StatTile
 import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.initialsOf
-import com.dealio.app.ui.theme.CardBorder
-import com.dealio.app.ui.theme.NavyDeep
-import com.dealio.app.ui.theme.NavyMid
+import com.dealio.app.ui.theme.NavyTealGradient
 import com.dealio.app.ui.theme.Orange
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
@@ -68,7 +69,12 @@ fun OverviewScreen(nav: NavController, vm: OverviewViewModel = viewModel()) {
 
     Column(Modifier.fillMaxSize()) {
         // ── Navy hero ──
-        Box(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(NavyDeep, NavyMid)))) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp))
+                .background(NavyTealGradient),
+        ) {
             Column(Modifier.systemBarsPadding().padding(horizontal = 20.dp, vertical = 18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -104,49 +110,47 @@ fun OverviewScreen(nav: NavController, vm: OverviewViewModel = viewModel()) {
             ) {
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        StatTile("Projects", state.projects.toString(), Icons.Outlined.Apartment, Teal, Modifier.weight(1f))
-                        StatTile("Active Leads", state.leads.toString(), Icons.Outlined.Groups, Orange, Modifier.weight(1f))
+                        StatTile("Projects", state.projects.toString(), Icons.Outlined.Apartment, Teal, Modifier.weight(1f), onClick = { nav.navigate(BuilderRoutes.PROJECTS) })
+                        StatTile("Active Leads", state.leads.toString(), Icons.Outlined.Groups, Orange, Modifier.weight(1f), onClick = { nav.navigate(BuilderRoutes.PIPELINE) })
                     }
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        StatTile("Deals", state.deals.toString(), Icons.Outlined.Handshake, Teal, Modifier.weight(1f))
-                        StatTile("Booked", state.booked.toString(), Icons.Outlined.TrendingUp, StatusColors.Green, Modifier.weight(1f))
+                        StatTile("Deals", state.deals.toString(), Icons.Outlined.Handshake, Teal, Modifier.weight(1f), onClick = { nav.navigate(BuilderRoutes.DEALS) })
+                        StatTile("Booked", state.booked.toString(), Icons.Outlined.TrendingUp, StatusColors.Green, Modifier.weight(1f), onClick = { nav.navigate(BuilderRoutes.DEALS) })
                     }
                 }
                 item {
-                    StatTile(
-                        "Revenue Booked", formatINRShort(state.revenue),
-                        Icons.Outlined.CurrencyRupee, StatusColors.Green, Modifier.fillMaxWidth(),
+                    GradientStatTile(
+                        label = "Revenue Booked",
+                        value = formatINRShort(state.revenue),
+                        icon = Icons.Outlined.CurrencyRupee,
+                        caption = "${state.booked} units booked",
+                        onClick = { nav.navigate(BuilderRoutes.ANALYTICS) },
                     )
                 }
 
                 item { SectionLabel("Quick actions", Modifier.padding(top = 8.dp, bottom = 2.dp)) }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        QuickAction("New Project", Icons.Filled.Add, Modifier.weight(1f)) { nav.navigate(BuilderRoutes.projectForm()) }
-                        QuickAction("Pipeline", Icons.Outlined.Groups, Modifier.weight(1f)) { nav.navigate(BuilderRoutes.PIPELINE) }
+                        QuickActionTile("New Project", Icons.Filled.Add, Modifier.weight(1f), accent = Teal) { nav.navigate(BuilderRoutes.projectForm()) }
+                        QuickActionTile("Pipeline", Icons.Outlined.Groups, Modifier.weight(1f), accent = Orange) { nav.navigate(BuilderRoutes.PIPELINE) }
                     }
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        QuickAction("Meetings", Icons.Outlined.CalendarMonth, Modifier.weight(1f)) { nav.navigate(BuilderRoutes.MEETINGS) }
-                        QuickAction("Broadcast", Icons.Outlined.Campaign, Modifier.weight(1f)) { nav.navigate(BuilderRoutes.BROADCAST) }
+                        QuickActionTile("Meetings", Icons.Outlined.CalendarMonth, Modifier.weight(1f), accent = StatusColors.Blue) { nav.navigate(BuilderRoutes.MEETINGS) }
+                        QuickActionTile("Broadcast", Icons.Outlined.Campaign, Modifier.weight(1f), accent = StatusColors.Purple) { nav.navigate(BuilderRoutes.BROADCAST) }
                     }
                 }
 
                 item {
-                    Row(
-                        Modifier.fillMaxWidth().padding(top = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        SectionLabel("Recent deals")
-                        Text(
-                            "View all", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clickable { nav.navigate(BuilderRoutes.DEALS) },
-                        )
-                    }
+                    SectionHeader(
+                        "Recent deals",
+                        Modifier.padding(top = 8.dp),
+                        actionText = "View all",
+                        onAction = { nav.navigate(BuilderRoutes.DEALS) },
+                    )
                 }
                 if (state.recentDeals.isEmpty()) {
                     item { Text("No deals yet.", color = TextSecondary, fontSize = 13.sp) }
@@ -172,21 +176,5 @@ fun OverviewScreen(nav: NavController, vm: OverviewViewModel = viewModel()) {
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun QuickAction(label: String, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Row(
-        modifier = modifier
-            .background(Color.White, RoundedCornerShape(14.dp))
-            .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
-            .clickable { onClick() }
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, null, tint = Teal, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(label, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }

@@ -120,7 +120,7 @@ fun PipelineScreen(nav: NavController, vm: PipelineViewModel = viewModel()) {
                 StatusChip(row.stage)
                 Spacer(Modifier.height(14.dp))
                 InfoRow("Project", row.lead.projectName.ifBlank { "—" })
-                InfoRow("Phone", row.lead.phone.ifBlank { "—" })
+                InfoRow("Phone", row.lead.phone.ifBlank { "Contact via channel partner" })
                 InfoRow("Email", row.lead.email.ifBlank { "—" })
                 InfoRow("Budget", if (row.lead.budget > 0) formatINRShort(row.lead.budget) else "—")
                 InfoRow("Channel partner", row.lead.cpName.ifBlank { "Direct" })

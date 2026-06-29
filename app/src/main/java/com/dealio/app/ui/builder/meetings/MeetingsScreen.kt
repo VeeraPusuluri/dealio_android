@@ -104,7 +104,7 @@ fun MeetingsScreen(nav: NavController, vm: MeetingsViewModel = viewModel()) {
                 InfoRow("Requested", "${formatDate(m.preferredDate)} · ${m.preferredTime}")
                 InfoRow("Confirmed", m.confirmedDate?.let { "${formatDate(it)} · ${m.confirmedTime ?: ""}" })
                 InfoRow("Type", m.meetingType)
-                InfoRow("Phone", m.customerPhone)
+                InfoRow("Phone", m.customerPhone.ifBlank { "Contact via channel partner" })
                 InfoRow("Channel partner", m.cpName ?: "Direct")
                 InfoRow("Notes", m.notes)
 

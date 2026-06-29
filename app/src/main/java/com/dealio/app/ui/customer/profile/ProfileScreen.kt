@@ -25,7 +25,13 @@ import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.AddCard
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.Handyman
+import androidx.compose.material.icons.outlined.HomeWork
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.SupportAgent
+import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -187,9 +193,15 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
 
             // Links
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                ActionRow("Conversations", Icons.Outlined.ChatBubbleOutline) { nav.navigate(CustomerRoutes.CONVERSATIONS) }
                 ActionRow("My properties", Icons.Outlined.Home) { nav.navigate(CustomerRoutes.PROPERTY) }
+                ActionRow("Possession tracker", Icons.Outlined.HomeWork) { nav.navigate(CustomerRoutes.POSSESSION) }
+                ActionRow("Snagging report", Icons.Outlined.Handyman) { nav.navigate(CustomerRoutes.SNAGGING) }
                 ActionRow("Documents", Icons.Outlined.Description) { nav.navigate(CustomerRoutes.DOCUMENTS) }
                 ActionRow("Home loans", Icons.Outlined.AccountBalance) { nav.navigate(CustomerRoutes.LOANS) }
+                ActionRow("Loan top-up", Icons.Outlined.AddCard) { nav.navigate(CustomerRoutes.TOPUP) }
+                ActionRow("Investments", Icons.Outlined.TrendingUp) { nav.navigate(CustomerRoutes.INVESTMENTS) }
+                ActionRow("Contact us", Icons.Outlined.SupportAgent) { nav.navigate(CustomerRoutes.CONTACT) }
                 ActionRow("Notifications", Icons.Outlined.Notifications) { nav.navigate(CustomerRoutes.NOTIFICATIONS) }
             }
 

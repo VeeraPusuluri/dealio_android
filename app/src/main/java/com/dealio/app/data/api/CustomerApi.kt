@@ -25,6 +25,13 @@ interface CustomerApi {
     @GET("customer/projects/{id}")
     suspend fun getProject(@Path("id") id: Long): Response<ApiEnvelope<Project>>
 
+    /** Project photos / floor plans / brochures (shared with the builder doc vault). */
+    @GET("builder/{builderId}/projects/{projectId}/documents")
+    suspend fun getProjectDocuments(
+        @Path("builderId") builderId: Long,
+        @Path("projectId") projectId: Long,
+    ): Response<ApiEnvelope<List<ProjectDocument>>>
+
     @GET("customer/cps")
     suspend fun getAvailableCPs(): Response<ApiEnvelope<List<AvailableCP>>>
 

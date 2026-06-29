@@ -47,6 +47,7 @@ import com.dealio.app.ui.theme.Orange
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
+import com.dealio.app.ui.theme.softShadow
 
 private fun priceRange(p: Project): String {
     val lo = p.priceLow()
@@ -89,9 +90,10 @@ fun CustomerProjectCard(p: Project, onClick: () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(20.dp))
-            .border(1.dp, CardBorder, RoundedCornerShape(20.dp))
+            .softShadow(radius = 20.dp)
             .clip(RoundedCornerShape(20.dp))
+            .background(Color.White, RoundedCornerShape(20.dp))
+            .border(1.dp, CardBorder.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
             .clickable { onClick() },
     ) {
         HeroImage(p, Modifier.fillMaxWidth().height(160.dp))
@@ -130,9 +132,10 @@ fun FeaturedCard(p: Project, onClick: () -> Unit) {
     Column(
         Modifier
             .width(220.dp)
-            .background(Color.White, RoundedCornerShape(18.dp))
-            .border(1.dp, CardBorder, RoundedCornerShape(18.dp))
+            .softShadow(radius = 18.dp)
             .clip(RoundedCornerShape(18.dp))
+            .background(Color.White, RoundedCornerShape(18.dp))
+            .border(1.dp, CardBorder.copy(alpha = 0.6f), RoundedCornerShape(18.dp))
             .clickable { onClick() },
     ) {
         HeroImage(p, Modifier.fillMaxWidth().height(120.dp))

@@ -186,6 +186,15 @@ data class DealSummary(
     val cpName: String? = null,
     val isNRI: Boolean = false,
     val commissionStatus: String? = null,
+    val paymentSchedule: List<Installment>? = null,
+)
+
+/** A single demand-letter / payment-schedule line on a deal. */
+data class Installment(
+    val installment: String = "",
+    val amount: Double = 0.0,
+    val dueDate: String = "",
+    val status: String = "Pending",
 )
 
 data class DealDetail(

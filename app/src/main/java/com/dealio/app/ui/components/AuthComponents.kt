@@ -99,16 +99,16 @@ fun OtpInput(
         },
         enabled = enabled,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         decorationBox = { innerTextField ->
             Box {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     repeat(6) { index ->
                         val char = value.getOrNull(index)?.toString() ?: ""
                         val isActive = enabled && value.length == index
                         Box(
                             modifier = Modifier
-                                .width(46.dp)
+                                .weight(1f)
                                 .height(56.dp)
                                 .background(Color.White, RoundedCornerShape(12.dp))
                                 .border(

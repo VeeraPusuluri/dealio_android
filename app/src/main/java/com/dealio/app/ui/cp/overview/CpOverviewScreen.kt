@@ -32,7 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,8 +52,7 @@ import com.dealio.app.ui.builder.initialsOf
 import com.dealio.app.ui.cp.CpLeadCard
 import com.dealio.app.ui.cp.CpRoutes
 import com.dealio.app.ui.cp.QuickActionTile
-import com.dealio.app.ui.theme.NavyDeep
-import com.dealio.app.ui.theme.NavyMid
+import com.dealio.app.ui.theme.NavyTealGradient
 import com.dealio.app.ui.theme.Orange
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
@@ -65,7 +64,12 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
     RefreshOnResume { vm.load(silent = true) }
 
     Column(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(NavyDeep, NavyMid)))) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp))
+                .background(NavyTealGradient),
+        ) {
             Column(Modifier.systemBarsPadding().padding(horizontal = 20.dp, vertical = 18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(46.dp).background(Teal, RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
@@ -100,21 +104,21 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
             else -> LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        StatTile("Earned", formatINRShort(state.totalEarnings), Icons.Outlined.CurrencyRupee, StatusColors.Green, Modifier.weight(1f))
-                        StatTile("Pending", formatINRShort(state.pendingCommission), Icons.Outlined.CurrencyRupee, Orange, Modifier.weight(1f))
+                        StatTile("Earned", formatINRShort(state.totalEarnings), Icons.Outlined.CurrencyRupee, StatusColors.Green, Modifier.weight(1f), onClick = { nav.navigate(CpRoutes.EARNINGS) })
+                        StatTile("Pending", formatINRShort(state.pendingCommission), Icons.Outlined.CurrencyRupee, Orange, Modifier.weight(1f), onClick = { nav.navigate(CpRoutes.EARNINGS) })
                     }
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        StatTile("Deals", state.totalDeals.toString(), Icons.Outlined.Apartment, Teal, Modifier.weight(1f))
-                        StatTile("Leads", state.leadsCount.toString(), Icons.Outlined.Groups, Teal, Modifier.weight(1f))
+                        StatTile("Deals", state.totalDeals.toString(), Icons.Outlined.Apartment, Teal, Modifier.weight(1f), onClick = { nav.navigate(CpRoutes.LEADS) })
+                        StatTile("Leads", state.leadsCount.toString(), Icons.Outlined.Groups, Teal, Modifier.weight(1f), onClick = { nav.navigate(CpRoutes.LEADS) })
                     }
                 }
 
                 // Due today
                 val dueCount = state.due.meetings.size + state.due.followUps.size + state.due.callbacks.size
                 item {
-                    DealioCard {
+                    DealioCard(onClick = { nav.navigate(CpRoutes.FOLLOWUPS) }) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Outlined.EventRepeat, null, tint = Orange, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))

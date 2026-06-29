@@ -20,17 +20,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.outlined.Calculate
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,7 +42,6 @@ import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.SubScreenScaffold
-import com.dealio.app.ui.builder.formatINR
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.customer.CustomerViewModel
@@ -61,8 +54,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.math.pow
-import kotlin.math.roundToLong
 
 data class LoansState(
     val loading: Boolean = true,
@@ -113,7 +104,12 @@ fun LoansScreen(nav: NavController, vm: LoansViewModel = viewModel()) {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                item { EmiCalculator() }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        LoanToolTile("EMI Calculator", "Charts & full schedule", Icons.Outlined.Calculate, Modifier.weight(1f)) { nav.navigate(CustomerRoutes.EMI) }
+                        LoanToolTile("Eligibility", "Compare bank offers", Icons.Outlined.AccountBalance, Modifier.weight(1f)) { nav.navigate(CustomerRoutes.LOAN_ELIGIBILITY) }
+                    }
+                }
 
                 item { SectionLabel("Your applications", Modifier.padding(top = 4.dp)) }
                 if (state.loans.isEmpty()) {
@@ -177,55 +173,19 @@ private fun LoanCard(d: CustomerDeal) {
 }
 
 @Composable
-private fun EmiCalculator() {
-    var amount by remember { mutableFloatStateOf(50_00_000f) }
-    var rate by remember { mutableFloatStateOf(8.5f) }
-    var years by remember { mutableFloatStateOf(20f) }
-
-    val r = rate / 12f / 100f
-    val n = years * 12f
-    val emi = if (r > 0) (amount * r * (1 + r).pow(n) / ((1 + r).pow(n) - 1)) else amount / n
-    val total = emi * n
-    val interest = total - amount
-
+private fun LoanToolTile(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(16.dp))
-            .border(1.dp, CardBorder, RoundedCornerShape(16.dp)).padding(16.dp),
+        modifier
+            .background(Color.White, RoundedCornerShape(16.dp))
+            .border(1.dp, CardBorder.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+            .clickable { onClick() }
+            .padding(14.dp),
     ) {
-        SectionLabel("EMI calculator")
-        Spacer(Modifier.height(12.dp))
-        Box(Modifier.fillMaxWidth().background(Teal.copy(alpha = 0.08f), RoundedCornerShape(12.dp)).padding(14.dp)) {
-            Column {
-                Text("Monthly EMI", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                Text(formatINR(emi.toDouble()), color = Teal, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            }
+        Box(Modifier.size(38.dp).background(Teal.copy(alpha = 0.12f), RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = Teal, modifier = Modifier.size(20.dp))
         }
-        Spacer(Modifier.height(12.dp))
-        SliderRow("Loan amount", formatINRShort(amount.toDouble()), amount, 5_00_000f..5_00_00_000f) { amount = it }
-        SliderRow("Interest rate", "${(rate * 10).roundToLong() / 10.0}%", rate, 6f..12f) { rate = it }
-        SliderRow("Tenure", "${years.toInt()} yrs", years, 5f..30f) { years = it }
-        Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Total interest", color = TextSecondary, fontSize = 12.sp)
-            Text(formatINRShort(interest.toDouble()), color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Total payable", color = TextSecondary, fontSize = 12.sp)
-            Text(formatINRShort(total.toDouble()), color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-@Composable
-private fun SliderRow(label: String, value: String, current: Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit) {
-    Column(Modifier.padding(vertical = 2.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(label, color = TextSecondary, fontSize = 12.sp)
-            Text(value, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-        }
-        Slider(
-            value = current, onValueChange = onChange, valueRange = range,
-            colors = SliderDefaults.colors(thumbColor = Teal, activeTrackColor = Teal),
-        )
+        Spacer(Modifier.height(10.dp))
+        Text(title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(subtitle, color = TextSecondary, fontSize = 11.sp)
     }
 }

@@ -35,8 +35,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.dealio.app.ui.builder.ai.AiAssistantScreen
 import com.dealio.app.ui.builder.analytics.AnalyticsScreen
 import com.dealio.app.ui.builder.broadcast.BroadcastScreen
+import com.dealio.app.ui.builder.conversations.BuilderConversationsScreen
+import com.dealio.app.ui.builder.demandletters.DemandLettersScreen
+import com.dealio.app.ui.builder.documents.BuilderDocumentsScreen
+import com.dealio.app.ui.builder.possession.BuilderPossessionScreen
+import com.dealio.app.ui.builder.snagging.BuilderSnaggingScreen
+import com.dealio.app.ui.builder.virtualtours.VirtualToursScreen
 import com.dealio.app.ui.builder.commissions.CommissionsScreen
 import com.dealio.app.ui.builder.cp.CPPerformanceScreen
 import com.dealio.app.ui.builder.deals.DealDetailScreen
@@ -80,6 +87,13 @@ object BuilderRoutes {
     const val SHORTLISTS = "shortlists"
     const val NOTIFICATIONS = "notifications"
     const val SETTINGS = "settings"
+    const val AI = "ai_assistant"
+    const val VIRTUAL_TOURS = "virtual_tours"
+    const val DOCUMENTS = "documents"
+    const val DEMAND_LETTERS = "demand_letters"
+    const val POSSESSION = "possession"
+    const val SNAGGING = "snagging"
+    const val CONVERSATIONS = "conversations"
 
     fun projectDetail(id: Long) = "$PROJECT_DETAIL/$id"
     fun dealDetail(id: Long) = "$DEAL_DETAIL/$id"
@@ -182,6 +196,14 @@ fun BuilderRoot(onLogout: () -> Unit) {
             composable(BuilderRoutes.SHORTLISTS) { ShortlistsScreen(nav) }
             composable(BuilderRoutes.NOTIFICATIONS) { NotificationsScreen(nav) }
             composable(BuilderRoutes.SETTINGS) { BuilderSettingsScreen(nav, onLogout) }
+
+            composable(BuilderRoutes.AI) { AiAssistantScreen(nav) }
+            composable(BuilderRoutes.VIRTUAL_TOURS) { VirtualToursScreen(nav) }
+            composable(BuilderRoutes.DOCUMENTS) { BuilderDocumentsScreen(nav) }
+            composable(BuilderRoutes.DEMAND_LETTERS) { DemandLettersScreen(nav) }
+            composable(BuilderRoutes.POSSESSION) { BuilderPossessionScreen(nav) }
+            composable(BuilderRoutes.SNAGGING) { BuilderSnaggingScreen(nav) }
+            composable(BuilderRoutes.CONVERSATIONS) { BuilderConversationsScreen(nav) }
         }
     }
 }

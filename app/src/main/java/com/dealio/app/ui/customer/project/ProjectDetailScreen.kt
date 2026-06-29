@@ -20,8 +20,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -61,6 +65,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -68,11 +74,14 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -87,6 +96,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.dealio.app.data.api.Project
+import com.dealio.app.data.api.ProjectDocument
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.InfoRow
 import com.dealio.app.ui.builder.LoadingState
@@ -103,6 +113,7 @@ import com.dealio.app.ui.components.dealioFieldColors
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.Navy
+import com.dealio.app.ui.theme.Mist
 import com.dealio.app.ui.theme.NavyMid
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
@@ -110,6 +121,7 @@ import com.dealio.app.ui.theme.TextSecondary
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.pow
 
 private val timeSlots = listOf("10:00 AM", "11:00 AM", "12:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM")
 private val visitTypes = listOf("Site Visit", "Virtual Tour", "Office Meeting")
@@ -159,7 +171,7 @@ fun ProjectDetailScreen(nav: NavController, projectId: Long, vm: ProjectDetailVi
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = inner.calculateBottomPadding() + 16.dp),
             ) {
-                item { HeroHeader(p) { nav.navigateUp() } }
+                item { HeroHeader(p, galleryUrls(p, state.documents)) { nav.navigateUp() } }
                 item {
                     Column(Modifier.padding(16.dp)) {
                         Text("Starting price", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
@@ -182,6 +194,15 @@ fun ProjectDetailScreen(nav: NavController, projectId: Long, vm: ProjectDetailVi
                         Fact("Possession", p.possessionDate?.take(7) ?: "—", Modifier.weight(1f))
                     }
                 }
+
+                // Floor plans
+                val floorPlans = floorPlanUrls(state.documents)
+                if (floorPlans.isNotEmpty()) {
+                    item { Section("Floor plans") { FloorPlansRow(floorPlans) } }
+                }
+
+                // Home-loan EMI calculator
+                item { Section("Home loan") { LoanCalculator(p.priceLow() ?: p.priceHigh() ?: 50_00_000.0) } }
 
                 // Availability
                 if ((p.totalUnits ?: 0) > 0) {
@@ -340,13 +361,40 @@ private fun priceText(p: Project): String {
 }
 
 @Composable
-private fun HeroHeader(p: Project, onBack: () -> Unit) {
+private fun HeroHeader(p: Project, images: List<String>, onBack: () -> Unit) {
     Box(Modifier.fillMaxWidth().height(270.dp).background(Brush.linearGradient(listOf(NavyMid, Teal)))) {
-        val url = resolveUrl(p.imageUrl ?: p.coverUrl)
-        if (url != null) {
-            AsyncImage(model = url, contentDescription = p.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        } else {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        when {
+            images.size > 1 -> {
+                val pagerState = rememberPagerState { images.size }
+                // Peeking horizontal scroll — the next/previous image peeks in at the
+                // edges, mirroring the website's continuous horizontal gallery.
+                HorizontalPager(
+                    state = pagerState,
+                    contentPadding = PaddingValues(horizontal = 24.dp),
+                    pageSpacing = 12.dp,
+                    modifier = Modifier.fillMaxSize(),
+                ) { page ->
+                    AsyncImage(
+                        model = images[page],
+                        contentDescription = p.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
+                    )
+                }
+                Row(
+                    Modifier.align(Alignment.TopCenter).padding(top = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    repeat(images.size) { i ->
+                        Box(
+                            Modifier.size(if (i == pagerState.currentPage) 8.dp else 6.dp)
+                                .background(Color.White.copy(alpha = if (i == pagerState.currentPage) 1f else 0.5f), CircleShape),
+                        )
+                    }
+                }
+            }
+            images.size == 1 -> AsyncImage(model = images[0], contentDescription = p.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Icon(Icons.Outlined.Apartment, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(56.dp))
             }
         }
@@ -604,4 +652,125 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
             .clickable { onClick() }
             .padding(horizontal = 12.dp, vertical = 8.dp),
     )
+}
+
+// ─── Gallery / floor-plan helpers ────────────────────────────────────────────
+
+private fun isImageDoc(d: ProjectDocument): Boolean {
+    val u = d.url.lowercase()
+    return u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".png") || u.endsWith(".webp")
+}
+private fun isFloorPlanDoc(d: ProjectDocument): Boolean {
+    val t = d.docType.lowercase()
+    return t.contains("floor") || t.contains("plan") || t.contains("layout")
+}
+/** Cover image followed by project photos (deduped) for the hero gallery. */
+private fun galleryUrls(p: Project, docs: List<ProjectDocument>): List<String> {
+    val urls = LinkedHashSet<String>()
+    resolveUrl(p.imageUrl ?: p.coverUrl)?.let { urls.add(it) }
+    docs.filter { isImageDoc(it) && !isFloorPlanDoc(it) }.forEach { d -> resolveUrl(d.url)?.let { urls.add(it) } }
+    return urls.toList()
+}
+private fun floorPlanUrls(docs: List<ProjectDocument>): List<Pair<String, String>> =
+    docs.filter { isFloorPlanDoc(it) && isImageDoc(it) }
+        .mapNotNull { d -> resolveUrl(d.url)?.let { it to d.name.ifBlank { "Floor plan" } } }
+
+@Composable
+private fun FloorPlansRow(plans: List<Pair<String, String>>) {
+    val ctx = LocalContext.current
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        plans.forEach { (url, name) ->
+            Column(
+                Modifier.width(220.dp).clickable { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
+            ) {
+                AsyncImage(
+                    model = url, contentDescription = name, contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(14.dp)).background(Mist),
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(name, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            }
+        }
+    }
+}
+
+// ─── Inline home-loan EMI calculator ─────────────────────────────────────────
+
+@Composable
+private fun LoanCalculator(price: Double) {
+    var propertyValue by remember { mutableFloatStateOf(price.toFloat().coerceAtLeast(5_00_000f)) }
+    var downPct by remember { mutableFloatStateOf(20f) }
+    var rate by remember { mutableFloatStateOf(8.65f) }
+    var years by remember { mutableFloatStateOf(20f) }
+
+    val downAmt = propertyValue * downPct / 100f
+    val loanAmt = propertyValue - downAmt
+    val r = rate / 12f / 100f
+    val n = years * 12f
+    val emi = if (r > 0) loanAmt * r * (1 + r).pow(n) / ((1 + r).pow(n) - 1) else loanAmt / n
+    val totalPayment = emi * n + downAmt
+    val totalInterest = totalPayment - propertyValue
+
+    Column {
+        // EMI banner
+        Row(
+            Modifier.fillMaxWidth().background(Teal.copy(alpha = 0.08f), RoundedCornerShape(12.dp)).padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column {
+                Text("Estimated EMI", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text("${formatINR(emi.toDouble())}/mo", color = Teal, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("Total Interest", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text(formatINRShort(totalInterest.toDouble()), color = androidx.compose.ui.graphics.Color(0xFFEA580C), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+
+        // Breakdown row
+        Row(
+            Modifier.fillMaxWidth().background(Mist, RoundedCornerShape(12.dp)).padding(vertical = 12.dp),
+        ) {
+            BreakdownCell("Down Payment", formatINRShort(downAmt.toDouble()), Teal, Modifier.weight(1f))
+            Box(Modifier.width(1.dp).height(40.dp).background(CardBorder).align(Alignment.CenterVertically))
+            BreakdownCell("Loan Amount", formatINRShort(loanAmt.toDouble()), TextPrimary, Modifier.weight(1f))
+            Box(Modifier.width(1.dp).height(40.dp).background(CardBorder).align(Alignment.CenterVertically))
+            BreakdownCell("Total Cost", formatINRShort(totalPayment.toDouble()), androidx.compose.ui.graphics.Color(0xFFEA580C), Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(10.dp))
+
+        CalcSlider("Property value", formatINRShort(propertyValue.toDouble()), propertyValue, 5_00_000f..price.toFloat().coerceAtLeast(5_00_001f)) { propertyValue = it }
+        CalcSlider("Down payment", "${downPct.toInt()}%", downPct, 10f..50f, steps = 7) { downPct = it }
+        CalcSlider("Interest rate", "${"%.2f".format(rate)}%", rate, 7f..15f) { rate = it }
+        CalcSlider("Tenure", "${years.toInt()} yr", years, 5f..30f) { years = it }
+    }
+}
+
+@Composable
+private fun BreakdownCell(label: String, value: String, valueColor: androidx.compose.ui.graphics.Color, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(3.dp))
+        Text(value, color = valueColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun CalcSlider(
+    label: String, value: String, current: Float,
+    range: ClosedFloatingPointRange<Float>, steps: Int = 0,
+    onChange: (Float) -> Unit,
+) {
+    Column(Modifier.padding(vertical = 2.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, color = TextSecondary, fontSize = 12.sp)
+            Text(value, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Slider(
+            value = current, onValueChange = onChange, valueRange = range, steps = steps,
+            colors = SliderDefaults.colors(thumbColor = Teal, activeTrackColor = Teal),
+        )
+    }
 }

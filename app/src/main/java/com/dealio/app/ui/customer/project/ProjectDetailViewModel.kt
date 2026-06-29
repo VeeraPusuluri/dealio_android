@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.viewModelScope
 import com.dealio.app.data.ApiResult
 import com.dealio.app.data.api.Project
+import com.dealio.app.data.api.ProjectDocument
 import com.dealio.app.ui.customer.CustomerViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +16,7 @@ data class ProjectDetailState(
     val loading: Boolean = true,
     val error: String? = null,
     val project: Project? = null,
+    val documents: List<ProjectDocument> = emptyList(),
     val working: Boolean = false,
     val message: String? = null,
 )
@@ -28,7 +30,14 @@ class ProjectDetailViewModel(app: Application) : CustomerViewModel(app) {
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             when (val r = repo.getProject(id)) {
-                is ApiResult.Success -> _state.update { it.copy(loading = false, project = r.data) }
+                is ApiResult.Success -> {
+                    _state.update { it.copy(loading = false, project = r.data) }
+                    // Project photos / floor plans for the gallery (best-effort).
+                    r.data.builderId?.let { bid ->
+                        val docs = (repo.getProjectDocuments(bid, id) as? ApiResult.Success)?.data ?: emptyList()
+                        _state.update { it.copy(documents = docs) }
+                    }
+                }
                 is ApiResult.Error -> _state.update { it.copy(loading = false, error = r.message) }
             }
         }

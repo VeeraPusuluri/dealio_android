@@ -113,7 +113,7 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                         SectionLabel("Parties")
                         Spacer(Modifier.height(8.dp))
                         InfoRow("Customer", d.customerName)
-                        InfoRow("Phone", d.customerPhone.ifBlank { "—" })
+                        InfoRow("Phone", d.customerPhone.ifBlank { "Contact via channel partner" })
                         InfoRow("Channel partner", d.cpName ?: "Direct")
                         InfoRow("CP phone", d.cpPhone)
                         InfoRow("CP tier", d.cpTier)

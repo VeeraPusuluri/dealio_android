@@ -39,7 +39,15 @@ import com.dealio.app.ui.customer.explore.ExploreScreen
 import com.dealio.app.ui.customer.documents.DocumentsScreen
 import com.dealio.app.ui.customer.journey.DealDetailScreen
 import com.dealio.app.ui.customer.journey.JourneyScreen
+import com.dealio.app.ui.customer.conversations.CustomerConversationsScreen
+import com.dealio.app.ui.customer.finance.CustomerInvestmentsScreen
+import com.dealio.app.ui.customer.finance.CustomerTopupScreen
+import com.dealio.app.ui.customer.handover.CustomerPossessionScreen
+import com.dealio.app.ui.customer.handover.CustomerSnaggingScreen
+import com.dealio.app.ui.customer.loan.EmiCalculatorScreen
 import com.dealio.app.ui.customer.loan.LoanApplyScreen
+import com.dealio.app.ui.customer.support.CustomerContactScreen
+import com.dealio.app.ui.customer.loan.LoanEligibilityScreen
 import com.dealio.app.ui.customer.loan.LoansScreen
 import com.dealio.app.ui.customer.notifications.CustomerNotificationsScreen
 import com.dealio.app.ui.customer.property.PropertyScreen
@@ -62,6 +70,14 @@ object CustomerRoutes {
     const val DEAL_DETAIL = "c_deal_detail"
     const val LOAN_APPLY = "c_loan_apply"
     const val LOANS = "c_loans"
+    const val EMI = "c_emi"
+    const val LOAN_ELIGIBILITY = "c_loan_eligibility"
+    const val TOPUP = "c_topup"
+    const val INVESTMENTS = "c_investments"
+    const val CONTACT = "c_contact"
+    const val CONVERSATIONS = "c_conversations"
+    const val POSSESSION = "c_possession"
+    const val SNAGGING = "c_snagging"
     const val PROPERTY = "c_property"
     const val DOCUMENTS = "c_documents"
     const val NOTIFICATIONS = "c_notifications"
@@ -162,6 +178,14 @@ fun CustomerRoot(onLogout: () -> Unit) {
             }
 
             composable(CustomerRoutes.LOANS) { LoansScreen(nav) }
+            composable(CustomerRoutes.EMI) { EmiCalculatorScreen(nav) }
+            composable(CustomerRoutes.LOAN_ELIGIBILITY) { LoanEligibilityScreen(nav) }
+            composable(CustomerRoutes.TOPUP) { CustomerTopupScreen(nav) }
+            composable(CustomerRoutes.INVESTMENTS) { CustomerInvestmentsScreen(nav) }
+            composable(CustomerRoutes.CONTACT) { CustomerContactScreen(nav) }
+            composable(CustomerRoutes.CONVERSATIONS) { CustomerConversationsScreen(nav) }
+            composable(CustomerRoutes.POSSESSION) { CustomerPossessionScreen(nav) }
+            composable(CustomerRoutes.SNAGGING) { CustomerSnaggingScreen(nav) }
             composable(CustomerRoutes.PROPERTY) { PropertyScreen(nav) }
             composable(CustomerRoutes.DOCUMENTS) { DocumentsScreen(nav) }
             composable(CustomerRoutes.NOTIFICATIONS) { CustomerNotificationsScreen(nav) }
