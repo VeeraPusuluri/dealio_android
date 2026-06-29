@@ -19,16 +19,31 @@ fun Project.priceHigh(): Double? = priceMax ?: priceTo
  * to load. We rewrite them to the API origin (10.0.2.2 in debug). Relative paths
  * ("/uploads/..") are prefixed with the same origin.
  */
+private val cleartextHosts = setOf("10.0.2.2", "localhost", "127.0.0.1")
+
 fun resolveUrl(path: String?): String? {
     if (path.isNullOrBlank()) return null
     val origin = BuildConfig.API_BASE_URL.removeSuffix("api/").removeSuffix("/") // e.g. http://10.0.2.2:8090
     val emuHost = origin.substringAfter("://").substringBefore(":").substringBefore("/")
-    return if (path.startsWith("http://") || path.startsWith("https://")) {
+    val resolved = if (path.startsWith("http://") || path.startsWith("https://")) {
         path.replace("://127.0.0.1", "://$emuHost")
             .replace("://localhost", "://$emuHost")
     } else {
         "$origin/" + path.removePrefix("/")
     }
+    return upgradeScheme(resolved)
+}
+
+/**
+ * Upgrades a remote `http://` URL to `https://`. The backend stores upload URLs with the
+ * scheme it saw at upload time (often plain HTTP), and CloudFront 301-redirects those to
+ * HTTPS. Cleartext HTTP to remote hosts is blocked by the app's network-security-config,
+ * so we upgrade up-front. Local dev hosts keep HTTP (they're cleartext-allow-listed).
+ */
+private fun upgradeScheme(url: String): String {
+    if (!url.startsWith("http://")) return url
+    val host = url.substringAfter("://").substringBefore(":").substringBefore("/")
+    return if (host in cleartextHosts) url else "https://" + url.removePrefix("http://")
 }
 
 /** Indian-style short currency: ₹1.2 Cr, ₹45 L, ₹90,000. */
