@@ -21,9 +21,18 @@ interface AuthApi {
 
     @POST("auth/signup/phone/verify-otp")
     suspend fun verifySignupOtp(@Body body: VerifySignupRequest): Response<ApiEnvelope<AuthData>>
+
+    /** Registers this device's FCM token for push notifications (requires auth). */
+    @POST("auth/device-token")
+    suspend fun registerDeviceToken(@Body body: DeviceTokenRequest): Response<ApiEnvelope<Unit>>
 }
 
 // ── Requests ─────────────────────────────────────────────────────────────────
+
+data class DeviceTokenRequest(
+    val token: String,
+    val platform: String = "android",
+)
 
 data class SendOtpRequest(
     val phone: String,

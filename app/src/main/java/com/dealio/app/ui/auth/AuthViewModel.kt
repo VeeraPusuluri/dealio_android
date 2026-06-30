@@ -86,8 +86,10 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
             when (val result = block()) {
-                is ApiResult.Success -> _state.update {
-                    it.copy(loading = false, loggedInUser = result.data.user)
+                is ApiResult.Success -> {
+                    // Register this device for push now that we're authenticated.
+                    com.dealio.app.push.Push.ensureRegistered(getApplication())
+                    _state.update { it.copy(loading = false, loggedInUser = result.data.user) }
                 }
                 is ApiResult.Error -> _state.update {
                     it.copy(loading = false, error = result.message)
