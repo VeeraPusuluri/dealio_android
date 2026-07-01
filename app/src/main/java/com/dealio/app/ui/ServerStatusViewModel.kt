@@ -17,12 +17,17 @@ import java.util.concurrent.TimeUnit
 
 class ServerStatusViewModel(app: Application) : AndroidViewModel(app) {
 
+    // Give a slow / cold-starting backend room to respond before judging it unreachable.
     private val client = OkHttpClient.Builder()
-        .connectTimeout(5, TimeUnit.SECONDS)
-        .readTimeout(5, TimeUnit.SECONDS)
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
         .build()
 
     private val healthUrl = BuildConfig.API_BASE_URL.trimEnd('/') + "/health"
+
+    // Only show the "server down" screen after several pings miss in a row — a single
+    // slow response or transient blip shouldn't look like an outage.
+    private var consecutiveFailures = 0
 
     private val _isDown = MutableStateFlow(false)
     val isDown: StateFlow<Boolean> = _isDown.asStateFlow()
@@ -59,7 +64,17 @@ class ServerStatusViewModel(app: Application) : AndroidViewModel(app) {
                 false
             }
         }
-        _isDown.value = !ok
+        if (ok) {
+            consecutiveFailures = 0
+            _isDown.value = false
+        } else {
+            consecutiveFailures++
+            if (consecutiveFailures >= FAIL_THRESHOLD) _isDown.value = true
+        }
         _checking.value = false
+    }
+
+    companion object {
+        private const val FAIL_THRESHOLD = 3
     }
 }

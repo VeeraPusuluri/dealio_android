@@ -9,6 +9,7 @@ import com.dealio.app.data.api.CpCommission
 import com.dealio.app.data.api.CpContact
 import com.dealio.app.data.api.CpContactPayload
 import com.dealio.app.data.api.CpDealDetail
+import com.dealio.app.data.api.CpDocumentUploadResponse
 import com.dealio.app.data.api.CpDueToday
 import com.dealio.app.data.api.CpFollowUp
 import com.dealio.app.data.api.CpCallLog
@@ -22,8 +23,13 @@ import com.dealio.app.data.api.CreateFollowUpRequest
 import com.dealio.app.data.api.Meeting
 import com.dealio.app.data.api.MeetingNoteRequest
 import com.dealio.app.data.api.Project
+import com.dealio.app.data.api.SendPhoneOtpRequest
 import com.dealio.app.data.api.ShareLinkResponse
+import com.dealio.app.data.api.VerifyPhoneRequest
 import com.google.gson.Gson
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Response
 import java.io.IOException
 
@@ -88,6 +94,17 @@ class CpRepository(context: Context) {
     // ── Profile ──────────────────────────────────────────────────────────────
     suspend fun getProfile(): ApiResult<CpProfile> = call { api.getProfile(cpUserId) }
     suspend fun updateProfile(body: CpProfileUpdateRequest): ApiResult<Any> = call { api.updateProfile(cpUserId, body) }
+
+    // ── Verification ─────────────────────────────────────────────────────────
+    suspend fun sendPhoneOtp(phone: String): ApiResult<Any> = call { api.sendPhoneOtp(SendPhoneOtpRequest(phone)) }
+    suspend fun verifyPhone(phone: String, otp: String): ApiResult<Any> =
+        call { api.verifyPhone(cpUserId, VerifyPhoneRequest(phone, otp)) }
+
+    suspend fun uploadDocument(docType: String, bytes: ByteArray, fileName: String, mime: String): ApiResult<CpDocumentUploadResponse> {
+        val filePart = MultipartBody.Part.createFormData("file", fileName, bytes.toRequestBody(mime.toMediaTypeOrNull()))
+        val docTypePart = docType.toRequestBody("text/plain".toMediaTypeOrNull())
+        return call { api.uploadDocument(cpUserId, filePart, docTypePart) }
+    }
 
     // ── Notifications ──────────────────────────────────────────────────────────
     suspend fun getNotifications(): ApiResult<List<BuilderNotification>> = call { api.getNotifications() }

@@ -84,6 +84,17 @@ data class CpInfo(
     val reraUrl: String? = null,
 )
 
+// ─── Verification ────────────────────────────────────────────────────────────
+
+data class SendPhoneOtpRequest(val phone: String)
+
+data class VerifyPhoneRequest(val phone: String, val otp: String)
+
+data class CpDocumentUploadResponse(
+    val url: String? = null,
+    val docType: String? = null,
+)
+
 // ─── Contacts (CRM) ──────────────────────────────────────────────────────────
 
 data class CpContact(

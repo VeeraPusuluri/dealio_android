@@ -1,11 +1,15 @@
 package com.dealio.app.data.api
 
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.Part
 import retrofit2.http.Path
 
 /**
@@ -95,6 +99,21 @@ interface CpApi {
 
     @PATCH("cp/{cpUserId}/profile")
     suspend fun updateProfile(@Path("cpUserId") cpUserId: Long, @Body body: CpProfileUpdateRequest): Response<ApiEnvelope<Any>>
+
+    // ── Verification ───────────────────────────────────────────────────────────
+    @POST("cp/verify-phone/send-otp")
+    suspend fun sendPhoneOtp(@Body body: SendPhoneOtpRequest): Response<ApiEnvelope<Any>>
+
+    @POST("cp/{cpUserId}/verify-phone")
+    suspend fun verifyPhone(@Path("cpUserId") cpUserId: Long, @Body body: VerifyPhoneRequest): Response<ApiEnvelope<Any>>
+
+    @Multipart
+    @POST("cp/{cpUserId}/documents")
+    suspend fun uploadDocument(
+        @Path("cpUserId") cpUserId: Long,
+        @Part file: MultipartBody.Part,
+        @Part("docType") docType: RequestBody,
+    ): Response<ApiEnvelope<CpDocumentUploadResponse>>
 
     // ── Notifications ──────────────────────────────────────────────────────────
     @GET("cp/notifications")

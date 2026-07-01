@@ -1,6 +1,7 @@
 package com.dealio.app.push
 
 import android.content.Context
+import android.util.Log
 import com.dealio.app.data.TokenStore
 import com.dealio.app.data.api.ApiClient
 import com.dealio.app.data.api.DeviceTokenRequest
@@ -12,19 +13,29 @@ import kotlinx.coroutines.launch
 /** Notification channel id — must match the backend's android.notification.channelId. */
 const val DEFAULT_CHANNEL_ID = "dealio_default"
 
+private const val TAG = "DealioPush"
+
 /**
  * Registers this device's FCM token with the backend so the user can receive
  * pushes. Best-effort and only when logged in (the endpoint requires auth).
  */
 object Push {
 
-    /** Fetches the current FCM token and registers it, if the user is logged in. */
+    /**
+     * Fetches the current FCM token (logging it for debugging) and registers it
+     * with the backend if the user is logged in. A token-fetch failure here means
+     * Firebase/Google Play Services couldn't mint a token — pushes can't work.
+     */
     fun ensureRegistered(context: Context) {
         val app = context.applicationContext
-        if (!TokenStore(app).isLoggedIn) return
-        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
-            if (!token.isNullOrBlank()) registerToken(app, token)
-        }
+        FirebaseMessaging.getInstance().token
+            .addOnSuccessListener { token ->
+                Log.d(TAG, "FCM registration token: $token")
+                if (token.isNullOrBlank()) return@addOnSuccessListener
+                if (TokenStore(app).isLoggedIn) registerToken(app, token)
+                else Log.d(TAG, "Not logged in yet — token will be registered after login")
+            }
+            .addOnFailureListener { e -> Log.e(TAG, "Failed to fetch FCM token", e) }
     }
 
     /** Sends a specific FCM token to the backend (used by onNewToken and after login). */

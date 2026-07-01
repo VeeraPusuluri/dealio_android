@@ -1,7 +1,11 @@
 package com.dealio.app.ui.cp.profile
 
 import android.app.Application
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,8 +27,11 @@ import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -73,6 +81,10 @@ data class CpProfileState(
     val error: String? = null,
     val profile: CpProfile? = null,
     val message: String? = null,
+    val uploadingDoc: String? = null,
+    val sendingOtp: Boolean = false,
+    val otpSent: Boolean = false,
+    val verifyingOtp: Boolean = false,
 )
 
 class CpProfileViewModel(app: Application) : CpViewModel(app) {
@@ -99,14 +111,76 @@ class CpProfileViewModel(app: Application) : CpViewModel(app) {
         }
     }
 
+    fun uploadDocument(docType: String, uri: Uri) {
+        val context = getApplication<Application>()
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return
+        val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
+        val ext = if (mime.contains("png")) "png" else if (mime.contains("pdf")) "pdf" else "jpg"
+        _state.update { it.copy(uploadingDoc = docType) }
+        viewModelScope.launch {
+            val r = repo.uploadDocument(docType, bytes, "$docType.$ext", mime)
+            _state.update {
+                it.copy(
+                    uploadingDoc = null,
+                    message = (r as? ApiResult.Error)?.message ?: "Document uploaded — pending review",
+                )
+            }
+            if (r is ApiResult.Success) load(silent = true)
+        }
+    }
+
+    fun sendPhoneOtp(phone: String) {
+        _state.update { it.copy(sendingOtp = true) }
+        viewModelScope.launch {
+            val r = repo.sendPhoneOtp(phone)
+            _state.update {
+                it.copy(
+                    sendingOtp = false,
+                    otpSent = r is ApiResult.Success,
+                    message = (r as? ApiResult.Error)?.message ?: "OTP sent to $phone",
+                )
+            }
+        }
+    }
+
+    fun verifyPhoneOtp(phone: String, otp: String, onVerified: () -> Unit) {
+        _state.update { it.copy(verifyingOtp = true) }
+        viewModelScope.launch {
+            val r = repo.verifyPhone(phone, otp)
+            _state.update {
+                it.copy(
+                    verifyingOtp = false,
+                    message = (r as? ApiResult.Error)?.message ?: "Phone verified",
+                )
+            }
+            if (r is ApiResult.Success) {
+                _state.update { it.copy(otpSent = false) }
+                load(silent = true)
+                onVerified()
+            }
+        }
+    }
+
+    fun resetOtpState() = _state.update { it.copy(otpSent = false) }
+
     fun clearMessage() = _state.update { it.copy(message = null) }
 }
 
 @Composable
 fun CpProfileScreen(nav: NavController, vm: CpProfileViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var showEdit by remember { mutableStateOf(false) }
-    LaunchedEffect(state.message) { state.message?.let { vm.clearMessage() } }
+    var phoneOtpDialogFor by remember { mutableStateOf<String?>(null) }
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
+
+    val aadhaarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { vm.uploadDocument("aadhaar", it) }
+    }
+    val panPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { vm.uploadDocument("pan", it) }
+    }
 
     SubScreenScaffold("Profile", nav) { inner ->
         when {
@@ -115,8 +189,9 @@ fun CpProfileScreen(nav: NavController, vm: CpProfileViewModel = viewModel()) {
             else -> {
                 val p = state.profile
                 val cp = p?.cp
+                Box(Modifier.fillMaxSize().padding(inner)) {
                 Column(
-                    Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
+                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     DealioCard {
@@ -148,10 +223,26 @@ fun CpProfileScreen(nav: NavController, vm: CpProfileViewModel = viewModel()) {
                     DealioCard {
                         SectionLabel("Verification")
                         Spacer(Modifier.height(10.dp))
-                        VerifyRow("Phone", cp?.phoneVerified == true)
-                        VerifyRow("Aadhaar", cp?.aadhaarVerified == true)
-                        VerifyRow("PAN", cp?.panVerified == true)
-                        VerifyRow("RERA", cp?.reraVerified == true)
+                        VerifyRow(
+                            label = "Phone",
+                            verified = cp?.phoneVerified == true,
+                            actionLabel = "Verify",
+                            onAction = { phoneOtpDialogFor = p?.phone ?: "" },
+                        )
+                        DocVerifyRow(
+                            label = "Aadhaar",
+                            verified = cp?.aadhaarVerified == true,
+                            hasDoc = !cp?.aadhaarUrl.isNullOrBlank(),
+                            uploading = state.uploadingDoc == "aadhaar",
+                            onUpload = { aadhaarPicker.launch("*/*") },
+                        )
+                        DocVerifyRow(
+                            label = "PAN",
+                            verified = cp?.panVerified == true,
+                            hasDoc = !cp?.panUrl.isNullOrBlank(),
+                            uploading = state.uploadingDoc == "pan",
+                            onUpload = { panPicker.launch("*/*") },
+                        )
                     }
 
                     DealioCard {
@@ -179,8 +270,23 @@ fun CpProfileScreen(nav: NavController, vm: CpProfileViewModel = viewModel()) {
                     ) { Text("Edit profile", color = Color.White, fontWeight = FontWeight.SemiBold) }
                 }
 
+                SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+                }
+
                 if (showEdit) {
                     EditDialog(cp, onDismiss = { showEdit = false }) { city, bio, rera -> vm.save(city, bio, rera); showEdit = false }
+                }
+
+                phoneOtpDialogFor?.let { phone ->
+                    PhoneOtpDialog(
+                        phone = phone,
+                        otpSent = state.otpSent,
+                        sending = state.sendingOtp,
+                        verifying = state.verifyingOtp,
+                        onSendOtp = { vm.sendPhoneOtp(phone) },
+                        onVerify = { otp -> vm.verifyPhoneOtp(phone, otp) { phoneOtpDialogFor = null } },
+                        onDismiss = { vm.resetOtpState(); phoneOtpDialogFor = null },
+                    )
                 }
             }
         }
@@ -199,7 +305,7 @@ private fun StatBox(label: String, value: String, modifier: Modifier = Modifier)
 }
 
 @Composable
-private fun VerifyRow(label: String, verified: Boolean) {
+private fun VerifyRow(label: String, verified: Boolean, actionLabel: String? = null, onAction: (() -> Unit)? = null) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(
             if (verified) Icons.Outlined.CheckCircle else Icons.Outlined.PendingActions,
@@ -207,8 +313,83 @@ private fun VerifyRow(label: String, verified: Boolean) {
         )
         Spacer(Modifier.width(8.dp))
         Text(label, color = TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
-        Text(if (verified) "Verified" else "Pending", color = if (verified) StatusColors.Green else Orange, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        if (!verified && actionLabel != null && onAction != null) {
+            Text(
+                actionLabel, color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.background(Teal.copy(alpha = 0.10f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                    .clickableAction(onAction),
+            )
+        } else {
+            Text(if (verified) "Verified" else "Pending", color = if (verified) StatusColors.Green else Orange, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        }
     }
+}
+
+@Composable
+private fun DocVerifyRow(label: String, verified: Boolean, hasDoc: Boolean, uploading: Boolean, onUpload: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            if (verified) Icons.Outlined.CheckCircle else Icons.Outlined.PendingActions,
+            null, tint = if (verified) StatusColors.Green else Orange, modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(label, color = TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        when {
+            uploading -> CircularProgressIndicator(Modifier.size(16.dp), color = Teal, strokeWidth = 2.dp)
+            verified -> Text("Verified", color = StatusColors.Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            hasDoc -> Text("Under review", color = Orange, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            else -> Text(
+                "Upload", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.background(Teal.copy(alpha = 0.10f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                    .clickableAction(onUpload),
+            )
+        }
+    }
+}
+
+private fun Modifier.clickableAction(onClick: () -> Unit): Modifier = this.then(
+    Modifier.clickable(onClick = onClick),
+)
+
+@Composable
+private fun PhoneOtpDialog(
+    phone: String,
+    otpSent: Boolean,
+    sending: Boolean,
+    verifying: Boolean,
+    onSendOtp: () -> Unit,
+    onVerify: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var otp by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Verify phone", fontWeight = FontWeight.Bold, color = TextPrimary) },
+        text = {
+            Column {
+                Text("We'll send a one-time code to $phone", color = TextSecondary, fontSize = 13.sp)
+                if (otpSent) {
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = otp, onValueChange = { otp = it },
+                        modifier = Modifier.fillMaxWidth(), label = { Text("Enter OTP") },
+                        singleLine = true, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors(),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (otpSent) onVerify(otp) else onSendOtp() },
+                enabled = !sending && !verifying,
+            ) {
+                Text(if (otpSent) "Verify" else "Send OTP", color = Teal, fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary) } },
+    )
 }
 
 @Composable
