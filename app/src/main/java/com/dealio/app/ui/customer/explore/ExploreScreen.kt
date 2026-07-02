@@ -32,8 +32,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -173,56 +180,74 @@ fun ExploreScreen(nav: NavController, vm: ExploreViewModel = viewModel()) {
 
 @Composable
 private fun ExploreHero(state: ExploreState, vm: ExploreViewModel, nav: NavController) {
+    var searchExpanded by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(searchExpanded) { if (searchExpanded) runCatching { focusRequester.requestFocus() } }
+
     Box(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp))
+            .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
             .background(NavyTealGradient),
     ) {
-        Column(Modifier.systemBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp)) {
+        Column(Modifier.systemBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Hi ${state.name.substringBefore(' ')} 👋", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text("Find your next home", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Hi ${state.name.substringBefore(' ')} 👋", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Find your next home", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
-                Box(
-                    Modifier.size(40.dp)
-                        .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                        .clickable { nav.navigate(CustomerRoutes.NOTIFICATIONS) },
-                    contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Outlined.Notifications, "Notifications", tint = Color.White, modifier = Modifier.size(20.dp)) }
+                HeroIconButton(if (searchExpanded) Icons.Outlined.Close else Icons.Outlined.Search, "Search") {
+                    searchExpanded = !searchExpanded
+                    if (!searchExpanded) vm.setQuery("")
+                }
+                Spacer(Modifier.width(8.dp))
+                HeroIconButton(Icons.Outlined.Notifications, "Notifications") { nav.navigate(CustomerRoutes.NOTIFICATIONS) }
             }
-            Spacer(Modifier.height(14.dp))
-            OutlinedTextField(
-                value = state.query,
-                onValueChange = vm::setQuery,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search projects, localities…") },
-                leadingIcon = { Icon(Icons.Outlined.Search, null) },
-                trailingIcon = {
-                    if (state.query.isNotEmpty()) {
-                        Icon(
-                            Icons.Outlined.Close,
-                            "Clear",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(18.dp).clickable { vm.setQuery("") },
-                        )
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedLeadingIconColor = TextSecondary,
-                    unfocusedLeadingIconColor = TextSecondary,
-                    cursorColor = Teal,
-                ),
-            )
+            AnimatedVisibility(visible = searchExpanded) {
+                Column {
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = state.query,
+                        onValueChange = vm::setQuery,
+                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+                        placeholder = { Text("Search projects, localities…") },
+                        leadingIcon = { Icon(Icons.Outlined.Search, null) },
+                        trailingIcon = {
+                            if (state.query.isNotEmpty()) {
+                                Icon(
+                                    Icons.Outlined.Close,
+                                    "Clear",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(18.dp).clickable { vm.setQuery("") },
+                                )
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedLeadingIconColor = TextSecondary,
+                            unfocusedLeadingIconColor = TextSecondary,
+                            cursorColor = Teal,
+                        ),
+                    )
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun HeroIconButton(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(40.dp)
+            .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, desc, tint = Color.White, modifier = Modifier.size(20.dp)) }
 }
 
 @Composable

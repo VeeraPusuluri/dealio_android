@@ -60,6 +60,7 @@ import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.InfoRow
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SectionLabel
+import com.dealio.app.ui.components.AppLockToggleRow
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.builder.formatINRShort
@@ -261,6 +262,12 @@ fun CpProfileScreen(nav: NavController, vm: CpProfileViewModel = viewModel()) {
                             Spacer(Modifier.height(6.dp))
                             Text(cp!!.bio!!, color = TextSecondary, fontSize = 12.sp)
                         }
+                    }
+
+                    DealioCard {
+                        SectionLabel("Security")
+                        Spacer(Modifier.height(10.dp))
+                        AppLockToggleRow()
                     }
 
                     Button(

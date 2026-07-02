@@ -25,15 +25,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dealio.app.ui.theme.ButtonDisabled
 import com.dealio.app.ui.theme.CardBorder
+import com.dealio.app.ui.theme.FieldFill
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.TealDeep
 import com.dealio.app.ui.theme.TextSecondary
 
 /** Country code + phone number entry, like the web login. */
@@ -82,6 +88,9 @@ fun dealioFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedLabelColor = Teal,
     cursorColor = Teal,
     unfocusedBorderColor = CardBorder,
+    focusedContainerColor = Color.White,
+    unfocusedContainerColor = FieldFill,
+    disabledContainerColor = FieldFill,
 )
 
 /** Six-box OTP input. The real text field sits invisible on top of the boxes. */
@@ -110,7 +119,7 @@ fun OtpInput(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(56.dp)
-                                .background(Color.White, RoundedCornerShape(12.dp))
+                                .background(if (isActive) Color.White else FieldFill, RoundedCornerShape(12.dp))
                                 .border(
                                     width = if (isActive) 2.dp else 1.dp,
                                     color = if (isActive) Teal else CardBorder,
@@ -143,18 +152,31 @@ fun DealioButton(
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
+    val isActive = enabled && !loading
+    val fill: Brush = if (isActive) {
+        Brush.horizontalGradient(listOf(Teal, TealDeep))
+    } else {
+        SolidColor(ButtonDisabled)
+    }
     Button(
         onClick = onClick,
-        enabled = enabled && !loading,
+        enabled = isActive,
         modifier = modifier
             .fillMaxWidth()
-            .height(54.dp),
+            .height(54.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(fill, RoundedCornerShape(14.dp)),
         shape = RoundedCornerShape(14.dp),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp,
+            disabledElevation = 0.dp,
+        ),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Navy,
+            containerColor = Color.Transparent,
             contentColor = Color.White,
-            disabledContainerColor = Navy.copy(alpha = 0.4f),
-            disabledContentColor = Color.White.copy(alpha = 0.8f),
+            disabledContainerColor = Color.Transparent,
+            disabledContentColor = TextSecondary,
         ),
     ) {
         if (loading) {

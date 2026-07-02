@@ -15,6 +15,8 @@ val TealDeep = Color(0xFF0A818A)
 val Orange = Color(0xFFFF8930)
 
 val Mist = Color(0xFFF6F8FB)
+val FieldFill = Color(0xFFF3F6FA)
+val ButtonDisabled = Color(0xFFE7ECF3)
 val CardBorder = Color(0xFFE3E9F1)
 val TextPrimary = Color(0xFF13243A)
 val TextSecondary = Color(0xFF5C6B80)

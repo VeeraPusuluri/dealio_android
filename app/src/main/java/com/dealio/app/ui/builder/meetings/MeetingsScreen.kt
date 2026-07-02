@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -47,6 +49,11 @@ import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.formatDate
+import com.dealio.app.ui.components.CalMeeting
+import com.dealio.app.ui.components.ListCalendarToggle
+import com.dealio.app.ui.components.MeetingsCalendar
+import com.dealio.app.ui.components.calDate
+import com.dealio.app.ui.components.meetingStatusColor
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.NavyMid
 import com.dealio.app.ui.theme.TextPrimary
@@ -57,11 +64,26 @@ import com.dealio.app.ui.theme.TextSecondary
 fun MeetingsScreen(nav: NavController, vm: MeetingsViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     var sheet by remember { mutableStateOf<Meeting?>(null) }
+    var calendar by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
     com.dealio.app.ui.builder.RefreshOnResume { vm.load(silent = true) }
 
+    val calMeetings = state.visible.mapNotNull { m ->
+        val d = calDate(m.confirmedDate ?: m.preferredDate) ?: return@mapNotNull null
+        CalMeeting(
+            id = "mtg-${m.id}", date = d,
+            time = (m.confirmedTime ?: m.preferredTime).ifBlank { null },
+            title = m.customerName.ifBlank { "Visitor" }, subtitle = m.projectName,
+            status = m.status, color = meetingStatusColor(m.status),
+        )
+    }
+
     com.dealio.app.ui.builder.SubScreenScaffold("Site visits", nav) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
+            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.weight(1f))
+                ListCalendarToggle(calendar = calendar, onChange = { calendar = it })
+            }
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 state.filters.forEach { f ->
                     val sel = state.filter == f
@@ -82,6 +104,9 @@ fun MeetingsScreen(nav: NavController, vm: MeetingsViewModel = viewModel()) {
             when {
                 state.loading -> LoadingState()
                 state.error != null -> ErrorState(state.error!!, vm::load)
+                calendar -> Column(Modifier.verticalScroll(rememberScrollState())) {
+                    MeetingsCalendar(calMeetings)
+                }
                 state.visible.isEmpty() -> EmptyState(Icons.Outlined.CalendarMonth, "No ${state.filter.lowercase()} site visits", "Visit requests from customers appear here.")
                 else -> LazyColumn(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),

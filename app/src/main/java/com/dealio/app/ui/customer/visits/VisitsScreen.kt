@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -47,6 +49,13 @@ import com.dealio.app.ui.builder.RefreshOnResume
 import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.TabHeader
 import com.dealio.app.ui.builder.formatDate
+import com.dealio.app.ui.components.CalMeeting
+import com.dealio.app.ui.components.ListCalendarToggle
+import com.dealio.app.ui.components.MeetingsCalendar
+import com.dealio.app.ui.components.calDate
+import com.dealio.app.ui.components.meetingStatusColor
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.dealio.app.ui.theme.Orange
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
@@ -55,8 +64,19 @@ import com.dealio.app.ui.theme.TextSecondary
 fun VisitsScreen(nav: NavController, vm: VisitsViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    var calendar by remember { mutableStateOf(false) }
     RefreshOnResume { vm.load(silent = true) }
     LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
+
+    val calMeetings = state.meetings.mapNotNull { m ->
+        val d = calDate(m.confirmedDate ?: m.preferredDate) ?: return@mapNotNull null
+        CalMeeting(
+            id = "mtg-${m.id}", date = d,
+            time = (m.confirmedTime ?: m.preferredTime).ifBlank { null },
+            title = m.projectName.ifBlank { "Site visit" }, subtitle = m.meetingType,
+            status = m.status, color = meetingStatusColor(m.status),
+        )
+    }
 
     Scaffold(
         containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background,
@@ -66,14 +86,23 @@ fun VisitsScreen(nav: NavController, vm: VisitsViewModel = viewModel()) {
         when {
             state.loading -> LoadingState(Modifier.padding(inner))
             state.error != null -> ErrorState(state.error!!, onRetry = { vm.load() }, modifier = Modifier.padding(inner))
-            state.meetings.isEmpty() -> Box(Modifier.padding(inner)) {
-                EmptyState(Icons.Outlined.CalendarMonth, "No visits yet", "Book a site visit from any project to see it here.")
-            }
-            else -> LazyColumn(
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = inner.calculateTopPadding() + 8.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(state.meetings.size) { i -> VisitCard(state.meetings[i], onRate = { r -> vm.rate(state.meetings[i].id, r) }) }
+            else -> Column(Modifier.padding(inner).fillMaxSize()) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.weight(1f))
+                    ListCalendarToggle(calendar = calendar, onChange = { calendar = it })
+                }
+                if (calendar) {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        MeetingsCalendar(calMeetings)
+                    }
+                } else if (state.meetings.isEmpty()) {
+                    EmptyState(Icons.Outlined.CalendarMonth, "No visits yet", "Book a site visit from any project to see it here.")
+                } else LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(state.meetings.size) { i -> VisitCard(state.meetings[i], onRate = { r -> vm.rate(state.meetings[i].id, r) }) }
+                }
             }
         }
     }

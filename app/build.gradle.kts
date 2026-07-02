@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.coil.compose)
     implementation(libs.lottie.compose)
+    implementation(libs.androidx.biometric)
     debugImplementation(libs.androidx.ui.tooling)
     implementation(platform("com.google.firebase:firebase-bom:34.15.0"))
     implementation("com.google.firebase:firebase-analytics")

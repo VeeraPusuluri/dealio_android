@@ -11,22 +11,11 @@ import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.SpaceDashboard
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -34,6 +23,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.dealio.app.ui.components.FloatingPillNav
+import com.dealio.app.ui.components.PillTab
 import com.dealio.app.ui.cp.calllogs.CallLogsScreen
 import com.dealio.app.ui.cp.contacts.ContactsScreen
 import com.dealio.app.ui.cp.conversations.ConversationsScreen
@@ -58,9 +49,6 @@ import com.dealio.app.ui.cp.overview.CpOverviewScreen
 import com.dealio.app.ui.cp.profile.CpProfileScreen
 import com.dealio.app.ui.cp.projects.CpProjectDetailScreen
 import com.dealio.app.ui.cp.projects.CpProjectsScreen
-import com.dealio.app.ui.theme.Navy
-import com.dealio.app.ui.theme.Teal
-import com.dealio.app.ui.theme.TextSecondary
 
 object CpRoutes {
     const val HOME = "cp_home"
@@ -95,17 +83,15 @@ object CpRoutes {
     fun projectDetail(id: Long) = "$PROJECT_DETAIL/$id"
 }
 
-private data class CpTab(val route: String, val label: String, val selectedIcon: ImageVector, val icon: ImageVector)
-
 private val tabs = listOf(
-    CpTab(CpRoutes.HOME, "Home", Icons.Filled.SpaceDashboard, Icons.Outlined.SpaceDashboard),
-    CpTab(CpRoutes.LEADS, "Leads", Icons.Outlined.Groups, Icons.Outlined.Groups),
-    CpTab(CpRoutes.PROJECTS, "Projects", Icons.Outlined.Apartment, Icons.Outlined.Apartment),
-    CpTab(CpRoutes.EARNINGS, "Earnings", Icons.Outlined.Payments, Icons.Outlined.Payments),
-    CpTab(CpRoutes.MORE, "More", Icons.Filled.GridView, Icons.Outlined.GridView),
+    PillTab(CpRoutes.HOME, "Home", Icons.Filled.SpaceDashboard, Icons.Outlined.SpaceDashboard),
+    PillTab(CpRoutes.LEADS, "Leads", Icons.Outlined.Groups, Icons.Outlined.Groups),
+    PillTab(CpRoutes.PROJECTS, "Projects", Icons.Outlined.Apartment, Icons.Outlined.Apartment),
+    PillTab(CpRoutes.EARNINGS, "Earnings", Icons.Outlined.Payments, Icons.Outlined.Payments),
+    PillTab(CpRoutes.MORE, "More", Icons.Filled.GridView, Icons.Outlined.GridView),
 )
 
-/** The channel-partner app shell: bottom navigation + nested route host. */
+/** The channel-partner app shell: floating pill navigation + nested route host. */
 @Composable
 fun CpRoot(onLogout: () -> Unit) {
     val nav = rememberNavController()
@@ -118,31 +104,17 @@ fun CpRoot(onLogout: () -> Unit) {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar(containerColor = Color.White, tonalElevation = 0.dp) {
-                    val hierarchy = backStack?.destination?.hierarchy
-                    tabs.forEach { tab ->
-                        val selected = hierarchy?.any { it.route == tab.route } == true
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                nav.navigate(tab.route) {
-                                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = { Icon(if (selected) tab.selectedIcon else tab.icon, tab.label) },
-                            label = { Text(tab.label, fontSize = 11.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Teal,
-                                selectedTextColor = Navy,
-                                unselectedIconColor = TextSecondary,
-                                unselectedTextColor = TextSecondary,
-                                indicatorColor = Teal.copy(alpha = 0.12f),
-                            ),
-                        )
-                    }
-                }
+                FloatingPillNav(
+                    tabs = tabs,
+                    selectedRoute = currentRoute,
+                    onSelect = { tab ->
+                        nav.navigate(tab.route) {
+                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
             }
         },
     ) { inner ->

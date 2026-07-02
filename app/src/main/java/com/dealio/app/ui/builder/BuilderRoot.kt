@@ -12,22 +12,11 @@ import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Handshake
 import androidx.compose.material.icons.outlined.SpaceDashboard
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -61,10 +50,8 @@ import com.dealio.app.ui.builder.rera.ReraScreen
 import com.dealio.app.ui.builder.settings.BuilderSettingsScreen
 import com.dealio.app.ui.builder.shortlists.ShortlistsScreen
 import com.dealio.app.ui.builder.units.UnitMatrixScreen
-import com.dealio.app.ui.theme.CardBorder
-import com.dealio.app.ui.theme.Navy
-import com.dealio.app.ui.theme.Teal
-import com.dealio.app.ui.theme.TextSecondary
+import com.dealio.app.ui.components.FloatingPillNav
+import com.dealio.app.ui.components.PillTab
 
 object BuilderRoutes {
     const val HOME = "home"
@@ -100,22 +87,15 @@ object BuilderRoutes {
     fun projectForm(id: Long? = null) = if (id == null) PROJECT_FORM else "$PROJECT_FORM?id=$id"
 }
 
-private data class BottomTab(
-    val route: String,
-    val label: String,
-    val selectedIcon: ImageVector,
-    val icon: ImageVector,
-)
-
 private val bottomTabs = listOf(
-    BottomTab(BuilderRoutes.HOME, "Home", Icons.Filled.SpaceDashboard, Icons.Outlined.SpaceDashboard),
-    BottomTab(BuilderRoutes.PROJECTS, "Projects", Icons.Outlined.Apartment, Icons.Outlined.Apartment),
-    BottomTab(BuilderRoutes.PIPELINE, "Pipeline", Icons.Outlined.Groups, Icons.Outlined.Groups),
-    BottomTab(BuilderRoutes.DEALS, "Deals", Icons.Filled.Handshake, Icons.Outlined.Handshake),
-    BottomTab(BuilderRoutes.MORE, "More", Icons.Filled.GridView, Icons.Outlined.GridView),
+    PillTab(BuilderRoutes.HOME, "Home", Icons.Filled.SpaceDashboard, Icons.Outlined.SpaceDashboard),
+    PillTab(BuilderRoutes.PROJECTS, "Projects", Icons.Outlined.Apartment, Icons.Outlined.Apartment),
+    PillTab(BuilderRoutes.PIPELINE, "Pipeline", Icons.Outlined.Groups, Icons.Outlined.Groups),
+    PillTab(BuilderRoutes.DEALS, "Deals", Icons.Filled.Handshake, Icons.Outlined.Handshake),
+    PillTab(BuilderRoutes.MORE, "More", Icons.Filled.GridView, Icons.Outlined.GridView),
 )
 
-/** The builder app shell: bottom navigation + nested route host. */
+/** The builder app shell: floating pill navigation + nested route host. */
 @Composable
 fun BuilderRoot(onLogout: () -> Unit) {
     val nav = rememberNavController()
@@ -128,31 +108,17 @@ fun BuilderRoot(onLogout: () -> Unit) {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar(containerColor = Color.White, tonalElevation = 0.dp) {
-                    val hierarchy = backStack?.destination?.hierarchy
-                    bottomTabs.forEach { tab ->
-                        val selected = hierarchy?.any { it.route == tab.route } == true
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                nav.navigate(tab.route) {
-                                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = { Icon(if (selected) tab.selectedIcon else tab.icon, tab.label) },
-                            label = { Text(tab.label, fontSize = 11.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Teal,
-                                selectedTextColor = Navy,
-                                unselectedIconColor = TextSecondary,
-                                unselectedTextColor = TextSecondary,
-                                indicatorColor = Teal.copy(alpha = 0.12f),
-                            ),
-                        )
-                    }
-                }
+                FloatingPillNav(
+                    tabs = bottomTabs,
+                    selectedRoute = currentRoute,
+                    onSelect = { tab ->
+                        nav.navigate(tab.route) {
+                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                )
             }
         },
     ) { innerPadding ->

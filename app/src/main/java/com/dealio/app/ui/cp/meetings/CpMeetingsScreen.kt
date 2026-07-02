@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
@@ -52,7 +55,12 @@ import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.builder.formatDate
+import com.dealio.app.ui.components.CalMeeting
+import com.dealio.app.ui.components.ListCalendarToggle
+import com.dealio.app.ui.components.MeetingsCalendar
+import com.dealio.app.ui.components.calDate
 import com.dealio.app.ui.components.dealioFieldColors
+import com.dealio.app.ui.components.meetingStatusColor
 import com.dealio.app.ui.cp.CpViewModel
 import com.dealio.app.ui.theme.Orange
 import com.dealio.app.ui.theme.Teal
@@ -102,23 +110,41 @@ class CpMeetingsViewModel(app: Application) : CpViewModel(app) {
 fun CpMeetingsScreen(nav: NavController, vm: CpMeetingsViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     var noteTarget by remember { mutableStateOf<Meeting?>(null) }
+    var calendar by remember { mutableStateOf(false) }
     LaunchedEffect(state.message) { state.message?.let { vm.clearMessage() } }
+
+    val calMeetings = state.items.mapNotNull { m ->
+        val d = calDate(m.confirmedDate ?: m.preferredDate) ?: return@mapNotNull null
+        CalMeeting(
+            id = "mtg-${m.id}", date = d,
+            time = (m.confirmedTime ?: m.preferredTime).ifBlank { null },
+            title = m.customerName.ifBlank { "Visitor" }, subtitle = m.projectName,
+            status = m.status, color = meetingStatusColor(m.status),
+        )
+    }
 
     SubScreenScaffold("Meetings", nav) { inner ->
         when {
             state.loading -> LoadingState(Modifier.padding(inner))
             state.error != null -> ErrorState(state.error!!, onRetry = { vm.load() }, modifier = Modifier.padding(inner))
-            state.items.isEmpty() -> Box(Modifier.padding(inner)) {
-                EmptyState(Icons.Outlined.CalendarMonth, "No meetings", "Meetings you arrange will appear here.")
-            }
-            else -> LazyColumn(
-                modifier = Modifier.padding(inner),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(state.items.size) { i ->
-                    val m = state.items[i]
-                    DealioCard(Modifier.clickable { noteTarget = m }) {
+            else -> Column(Modifier.padding(inner).fillMaxSize()) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.weight(1f))
+                    ListCalendarToggle(calendar = calendar, onChange = { calendar = it })
+                }
+                if (calendar) {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        MeetingsCalendar(calMeetings)
+                    }
+                } else if (state.items.isEmpty()) {
+                    EmptyState(Icons.Outlined.CalendarMonth, "No meetings", "Meetings you arrange will appear here.")
+                } else LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(state.items.size) { i ->
+                        val m = state.items[i]
+                        DealioCard(Modifier.clickable { noteTarget = m }) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(m.customerName, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
@@ -142,6 +168,7 @@ fun CpMeetingsScreen(nav: NavController, vm: CpMeetingsViewModel = viewModel()) 
                         }
                     }
                 }
+            }
             }
         }
     }

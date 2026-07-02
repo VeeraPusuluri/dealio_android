@@ -63,6 +63,7 @@ import androidx.navigation.NavController
 import com.dealio.app.data.ApiResult
 import com.dealio.app.ui.builder.DealioCard
 import com.dealio.app.ui.builder.SectionLabel
+import com.dealio.app.ui.components.AppLockToggleRow
 import com.dealio.app.ui.builder.initialsOf
 import com.dealio.app.ui.components.dealioFieldColors
 import com.dealio.app.ui.customer.CustomerRoutes
@@ -237,6 +238,13 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
                     ActionRow("Snagging report", Icons.Outlined.Handyman, IconRed) { nav.navigate(CustomerRoutes.SNAGGING) }
                     ActionRow("Contact us", Icons.Outlined.SupportAgent, IconGreen) { nav.navigate(CustomerRoutes.CONTACT) }
                     ActionRow("Notifications", Icons.Outlined.Notifications, IconPurple) { nav.navigate(CustomerRoutes.NOTIFICATIONS) }
+                }
+
+                // Security
+                DealioCard {
+                    SectionLabel("Security")
+                    Spacer(Modifier.height(10.dp))
+                    AppLockToggleRow()
                 }
 
                 Button(

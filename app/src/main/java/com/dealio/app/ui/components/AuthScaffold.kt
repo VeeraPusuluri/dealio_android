@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -36,8 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dealio.app.ui.theme.NavyDeep
 import com.dealio.app.ui.theme.NavyMid
-import com.dealio.app.ui.theme.NavyPrimary
 import com.dealio.app.ui.theme.TealBright
+import com.dealio.app.ui.theme.TealDeep
 import com.dealio.app.ui.theme.TextSecondary
 
 /**
@@ -71,16 +72,22 @@ fun AuthScaffold(
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
-                        .background(Brush.verticalGradient(listOf(NavyDeep, NavyMid, NavyPrimary))),
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(NavyDeep, NavyMid, TealDeep),
+                                start = Offset(0f, 0f),
+                                end = Offset.Infinite,
+                            ),
+                        ),
                 ) {
-                    // Teal glow + soft orbs add depth and colour to the flat navy.
+                    // Teal glow + soft orbs add depth and energy to the navy.
                     Box(
                         Modifier
                             .align(Alignment.TopEnd)
                             .offset(x = 40.dp, y = (-70).dp)
-                            .size(230.dp)
+                            .size(270.dp)
                             .background(
-                                Brush.radialGradient(listOf(TealBright.copy(alpha = 0.24f), Color.Transparent)),
+                                Brush.radialGradient(listOf(TealBright.copy(alpha = 0.38f), Color.Transparent)),
                                 CircleShape,
                             ),
                     )
@@ -88,9 +95,9 @@ fun AuthScaffold(
                         Modifier
                             .align(Alignment.BottomStart)
                             .offset(x = (-55).dp, y = 45.dp)
-                            .size(180.dp)
+                            .size(200.dp)
                             .background(
-                                Brush.radialGradient(listOf(TealBright.copy(alpha = 0.10f), Color.Transparent)),
+                                Brush.radialGradient(listOf(TealBright.copy(alpha = 0.16f), Color.Transparent)),
                                 CircleShape,
                             ),
                     )
