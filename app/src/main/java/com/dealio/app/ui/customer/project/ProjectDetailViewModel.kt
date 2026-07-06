@@ -47,7 +47,10 @@ class ProjectDetailViewModel(app: Application) : CustomerViewModel(app) {
 
     fun bookVisit(date: String, time: String, type: String, notes: String, onDone: () -> Unit) {
         val p = _state.value.project ?: return
-        val builderId = p.builderId ?: return
+        val builderId = p.builderId ?: run {
+            _state.update { it.copy(message = "This project can't take bookings right now — builder details are unavailable.") }
+            return
+        }
         _state.update { it.copy(working = true) }
         viewModelScope.launch {
             val r = repo.bookMeeting(builderId, p.id, date, time, type, notes.ifBlank { null }, null)

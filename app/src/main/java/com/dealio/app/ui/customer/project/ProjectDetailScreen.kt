@@ -85,6 +85,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
+import org.json.JSONArray
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -195,11 +197,23 @@ fun ProjectDetailScreen(nav: NavController, projectId: Long, vm: ProjectDetailVi
                     }
                 }
 
-                // Floor plans
+                // Floor plans — every uploaded plan, or an honest "not provided" note
                 val floorPlans = floorPlanUrls(state.documents)
-                if (floorPlans.isNotEmpty()) {
-                    item { Section("Floor plans") { FloorPlansRow(floorPlans) } }
+                item {
+                    Section("Floor plans") {
+                        if (floorPlans.isEmpty()) {
+                            PlanNotProvided(Icons.Outlined.Map, "Floor plans not provided by the builder yet. You can request them during a site visit.")
+                        } else {
+                            FloorPlansRow(floorPlans)
+                        }
+                    }
                 }
+
+                // Tower plans — per-tower selector, strict per-tower matching
+                item { Section("Tower plans") { TowerPlansSection(p, state.documents) } }
+
+                // Virtual tour — walkthrough video links, or "not provided"
+                item { Section("Virtual tour") { VirtualTourSection(p.videoUrl) } }
 
                 // Home-loan EMI calculator
                 item { Section("Home loan") { LoanCalculator(p.priceLow() ?: p.priceHigh() ?: 50_00_000.0) } }
@@ -362,72 +376,79 @@ private fun priceText(p: Project): String {
 
 @Composable
 private fun HeroHeader(p: Project, images: List<String>, onBack: () -> Unit) {
-    Box(Modifier.fillMaxWidth().height(270.dp).background(Brush.linearGradient(listOf(NavyMid, Teal)))) {
-        when {
-            images.size > 1 -> {
-                val pagerState = rememberPagerState { images.size }
-                // Peeking horizontal scroll — the next/previous image peeks in at the
-                // edges, mirroring the website's continuous horizontal gallery.
-                HorizontalPager(
-                    state = pagerState,
-                    contentPadding = PaddingValues(horizontal = 24.dp),
-                    pageSpacing = 12.dp,
-                    modifier = Modifier.fillMaxSize(),
-                ) { page ->
-                    AsyncImage(
-                        model = images[page],
-                        contentDescription = p.name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
-                    )
-                }
-                Row(
-                    Modifier.align(Alignment.TopCenter).padding(top = 14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    repeat(images.size) { i ->
-                        Box(
-                            Modifier.size(if (i == pagerState.currentPage) 8.dp else 6.dp)
-                                .background(Color.White.copy(alpha = if (i == pagerState.currentPage) 1f else 0.5f), CircleShape),
+    val pagerState = rememberPagerState { images.size }
+    Column(Modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().height(270.dp).background(Brush.linearGradient(listOf(NavyMid, Teal)))) {
+            when {
+                images.size > 1 -> {
+                    // Peeking horizontal scroll — the next/previous image peeks in at the
+                    // edges, mirroring the website's horizontal gallery carousel.
+                    HorizontalPager(
+                        state = pagerState,
+                        contentPadding = PaddingValues(horizontal = 24.dp),
+                        pageSpacing = 12.dp,
+                        modifier = Modifier.fillMaxSize(),
+                    ) { page ->
+                        AsyncImage(
+                            model = images[page],
+                            contentDescription = p.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
                         )
                     }
                 }
+                images.size == 1 -> AsyncImage(model = images[0], contentDescription = p.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.Apartment, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(56.dp))
+                }
             }
-            images.size == 1 -> AsyncImage(model = images[0], contentDescription = p.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.Apartment, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(56.dp))
+            // Bottom scrim for legible overlay text
+            Box(
+                Modifier.matchParentSize().background(
+                    Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.65f))),
+                ),
+            )
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.padding(8.dp).background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
+            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
+
+            Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
+                if (!p.status.isNullOrBlank()) {
+                    Text(
+                        titleCase(p.status),
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.background(Teal, RoundedCornerShape(8.dp)).padding(horizontal = 9.dp, vertical = 4.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                Text(p.name, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.LocationOn, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        listOfNotNull(p.locality, p.city).joinToString(", ").ifBlank { "—" },
+                        color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp,
+                    )
+                }
             }
         }
-        // Bottom scrim for legible overlay text
-        Box(
-            Modifier.matchParentSize().background(
-                Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.65f))),
-            ),
-        )
-        IconButton(
-            onClick = onBack,
-            modifier = Modifier.padding(8.dp).background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
-        ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
-
-        Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
-            if (!p.status.isNullOrBlank()) {
-                Text(
-                    titleCase(p.status),
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.background(Teal, RoundedCornerShape(8.dp)).padding(horizontal = 9.dp, vertical = 4.dp),
-                )
-                Spacer(Modifier.height(8.dp))
-            }
-            Text(p.name, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.LocationOn, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    listOfNotNull(p.locality, p.city).joinToString(", ").ifBlank { "—" },
-                    color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp,
-                )
+        // Dots below the images showing the current image — matches the website carousel
+        if (images.size > 1) {
+            Row(
+                Modifier.fillMaxWidth().padding(top = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+            ) {
+                repeat(images.size) { i ->
+                    val active = i == pagerState.currentPage
+                    Box(
+                        Modifier
+                            .size(width = if (active) 20.dp else 8.dp, height = 8.dp)
+                            .background(if (active) Teal else Color.LightGray, CircleShape),
+                    )
+                }
             }
         }
     }
@@ -658,22 +679,36 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
 
 private fun isImageDoc(d: ProjectDocument): Boolean {
     val u = d.url.lowercase()
-    return u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".png") || u.endsWith(".webp")
+    if (listOf(".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp").any { u.endsWith(it) }) return true
+    // Uploads without a recognizable extension: trust the document type,
+    // mirroring the website's gallery filter.
+    val t = d.docType.lowercase()
+    return t.contains("image") || t.contains("photo")
+}
+private fun isTowerPlanDoc(d: ProjectDocument): Boolean {
+    val t = d.docType.lowercase()
+    return t.contains("tower") && t.contains("plan")
 }
 private fun isFloorPlanDoc(d: ProjectDocument): Boolean {
     val t = d.docType.lowercase()
-    return t.contains("floor") || t.contains("plan") || t.contains("layout")
+    return (t.contains("floor") || t.contains("layout")) && !isTowerPlanDoc(d)
 }
 /** Cover image followed by project photos (deduped) for the hero gallery. */
 private fun galleryUrls(p: Project, docs: List<ProjectDocument>): List<String> {
     val urls = LinkedHashSet<String>()
     resolveUrl(p.imageUrl ?: p.coverUrl)?.let { urls.add(it) }
-    docs.filter { isImageDoc(it) && !isFloorPlanDoc(it) }.forEach { d -> resolveUrl(d.url)?.let { urls.add(it) } }
+    docs.filter { isImageDoc(it) && !isFloorPlanDoc(it) && !isTowerPlanDoc(it) }
+        .forEach { d -> resolveUrl(d.url)?.let { urls.add(it) } }
     return urls.toList()
+}
+/** "Floor Plan - 3 BHK - East" → "3 BHK · East"; plain "Floor Plan" → "General". */
+private fun floorPlanLabel(d: ProjectDocument): String {
+    val rest = d.docType.replace(Regex("(?i)floor\\s*plan"), "").trim(' ', '-', '–', '·')
+    return if (rest.isEmpty()) d.name.ifBlank { "General" } else rest.replace(" - ", " · ")
 }
 private fun floorPlanUrls(docs: List<ProjectDocument>): List<Pair<String, String>> =
     docs.filter { isFloorPlanDoc(it) && isImageDoc(it) }
-        .mapNotNull { d -> resolveUrl(d.url)?.let { it to d.name.ifBlank { "Floor plan" } } }
+        .mapNotNull { d -> resolveUrl(d.url)?.let { it to floorPlanLabel(d) } }
 
 @Composable
 private fun FloorPlansRow(plans: List<Pair<String, String>>) {
@@ -689,6 +724,131 @@ private fun FloorPlansRow(plans: List<Pair<String, String>>) {
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(name, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlanNotProvided(icon: ImageVector, message: String) {
+    Column(
+        Modifier.fillMaxWidth()
+            .background(Mist, RoundedCornerShape(14.dp))
+            .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
+            .padding(vertical = 32.dp, horizontal = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(icon, null, tint = TextSecondary, modifier = Modifier.size(28.dp))
+        Spacer(Modifier.height(8.dp))
+        Text(message, color = TextSecondary, fontSize = 12.sp, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun TowerPlansSection(p: Project, docs: List<ProjectDocument>) {
+    val ctx = LocalContext.current
+    val towerDocs = remember(docs) { docs.filter { isTowerPlanDoc(it) && isImageDoc(it) } }
+    val towerCount = maxOf(p.towers ?: towerDocs.size, 1)
+    var selected by remember { mutableStateOf(0) }
+    // Strict "Tower Plan - {n}" match first, then a digit-boundary fallback —
+    // never another tower's plan as a stand-in.
+    fun planFor(i: Int): ProjectDocument? =
+        towerDocs.firstOrNull { it.docType == "Tower Plan - ${i + 1}" }
+            ?: towerDocs.firstOrNull { Regex("(^|[^0-9])${i + 1}([^0-9]|$)").containsMatchIn(it.docType) }
+
+    Column {
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            repeat(towerCount) { i ->
+                val sel = selected == i
+                val hasPlan = planFor(i) != null
+                Row(
+                    Modifier
+                        .background(if (sel) Teal else Color.White, RoundedCornerShape(10.dp))
+                        .border(1.dp, if (sel) Teal else CardBorder, RoundedCornerShape(10.dp))
+                        .clickable { selected = i }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        "Tower ${i + 1}",
+                        color = if (sel) Color.White else TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal,
+                    )
+                    Box(
+                        Modifier.size(6.dp).background(
+                            when {
+                                hasPlan -> if (sel) Color.White else Teal
+                                else -> CardBorder
+                            },
+                            CircleShape,
+                        ),
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        val url = planFor(selected)?.let { resolveUrl(it.url) }
+        if (url != null) {
+            AsyncImage(
+                model = url,
+                contentDescription = "Tower ${selected + 1} plan",
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Mist)
+                    .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
+                    .clickable { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
+            )
+        } else {
+            PlanNotProvided(Icons.Outlined.Apartment, "Tower ${selected + 1} plan not provided by the builder yet.")
+        }
+    }
+}
+
+/**
+ * `videoUrl` is either a plain URL or a JSON array of `{label, url}` —
+ * the same format the website's tour section parses.
+ */
+private fun parseTours(videoUrl: String?): List<Pair<String, String>> {
+    if (videoUrl.isNullOrBlank()) return emptyList()
+    val fromJson = runCatching {
+        val arr = JSONArray(videoUrl)
+        (0 until arr.length()).mapNotNull { i ->
+            val o = arr.optJSONObject(i) ?: return@mapNotNull null
+            val url = o.optString("url")
+            if (url.isBlank()) null else o.optString("label").ifBlank { "Project Tour" } to url
+        }
+    }.getOrNull()
+    if (fromJson != null) return fromJson
+    return listOf("Project Tour" to videoUrl)
+}
+
+@Composable
+private fun VirtualTourSection(videoUrl: String?) {
+    val ctx = LocalContext.current
+    val tours = remember(videoUrl) { parseTours(videoUrl) }
+    if (tours.isEmpty()) {
+        PlanNotProvided(Icons.Outlined.PlayCircle, "Virtual tour not provided by the builder yet.")
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            tours.forEach { (label, url) ->
+                Row(
+                    Modifier.fillMaxWidth()
+                        .background(Brush.linearGradient(listOf(NavyMid, Teal)), RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Outlined.PlayCircle, null, tint = Color.White, modifier = Modifier.size(34.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text("Watch the project walkthrough", color = Color.White.copy(alpha = 0.75f), fontSize = 12.sp)
+                    }
+                }
             }
         }
     }

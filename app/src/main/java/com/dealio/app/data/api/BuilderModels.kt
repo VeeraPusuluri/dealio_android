@@ -375,10 +375,12 @@ data class BuilderNotification(
 
 data class ProjectDocument(
     val id: Long = 0,
-    val name: String = "",
-    val url: String = "",
+    // The documents endpoint responds with fileName/fileUrl/uploadedAt —
+    // accept both shapes.
+    @SerializedName(value = "name", alternate = ["fileName"]) val name: String = "",
+    @SerializedName(value = "url", alternate = ["fileUrl"]) val url: String = "",
     val docType: String = "",
-    val createdAt: String = "",
+    @SerializedName(value = "createdAt", alternate = ["uploadedAt"]) val createdAt: String = "",
 )
 
 // ─── Simple request bodies ───────────────────────────────────────────────────
