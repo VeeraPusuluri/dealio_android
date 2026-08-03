@@ -54,6 +54,9 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     /** Remembered from [sendOtp] so an auto-retrieved code can finish signup itself. */
     private var pendingSignup: PendingSignup? = null
 
+    /** Guards against two credentials being redeemed at once — see [exchange]. */
+    private var exchanging = false
+
     private data class PendingSignup(
         val fullName: String,
         val role: String,
@@ -91,24 +94,63 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         val e164 = toE164(phone, countryCode)
         _state.update { it.copy(loading = true, error = null) }
 
-        FirebasePhoneAuth.sendCode(
-            activity = activity,
-            e164Phone = e164,
-            resendToken = if (isResend) resendToken else null,
-        ) { event ->
-            when (event) {
-                is PhoneVerification.CodeSent -> {
-                    verificationId = event.verificationId
-                    resendToken = event.resendToken
-                    _state.update {
-                        it.copy(loading = false, step = AuthStep.OTP, maskedPhone = maskPhone(e164))
+        viewModelScope.launch {
+            // Firebase sends the code from the device, so the backend never sees
+            // the number first. On login, ask it whether an account exists before
+            // spending an SMS — otherwise an unregistered number only finds out
+            // after typing a code it can never redeem.
+            if (!isSignup) {
+                when (val lookup = repository.phoneLookup(e164)) {
+                    is ApiResult.Error -> {
+                        // A 404 is the one failure that isn't about this number:
+                        // the server is up but predates /auth/phone/lookup. An
+                        // installed app outlives any single backend deploy, so
+                        // treat the pre-flight as the optimisation it is and go
+                        // on to send the code — /auth/firebase still rejects
+                        // unregistered and suspended numbers after the OTP, so
+                        // this costs an avoidable SMS, not a security check.
+                        // Every other failure fails closed: the token exchange
+                        // would not have worked either.
+                        if (lookup.code != 404) {
+                            _state.update { it.copy(loading = false, error = lookup.message) }
+                            return@launch
+                        }
                     }
-                    startResendCountdown()
+                    is ApiResult.Success -> {
+                        val error = when {
+                            !lookup.data.exists ->
+                                "No account found for this number. Create an account first."
+                            lookup.data.suspended ->
+                                "Account suspended. Please contact support."
+                            else -> null
+                        }
+                        if (error != null) {
+                            _state.update { it.copy(loading = false, error = error) }
+                            return@launch
+                        }
+                    }
                 }
-                // Firebase resolved the number on its own — no code to type.
-                is PhoneVerification.Completed -> exchange(event.credential, isSignup)
-                is PhoneVerification.Failed ->
-                    _state.update { it.copy(loading = false, error = event.message) }
+            }
+
+            FirebasePhoneAuth.sendCode(
+                activity = activity,
+                e164Phone = e164,
+                resendToken = if (isResend) resendToken else null,
+            ) { event ->
+                when (event) {
+                    is PhoneVerification.CodeSent -> {
+                        verificationId = event.verificationId
+                        resendToken = event.resendToken
+                        _state.update {
+                            it.copy(loading = false, step = AuthStep.OTP, maskedPhone = maskPhone(e164))
+                        }
+                        startResendCountdown()
+                    }
+                    // Firebase resolved the number on its own — no code to type.
+                    is PhoneVerification.Completed -> exchange(event.credential, isSignup)
+                    is PhoneVerification.Failed ->
+                        _state.update { it.copy(loading = false, error = event.message) }
+                }
             }
         }
     }
@@ -132,10 +174,16 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Check the credential with Firebase, then trade its ID token for a session. */
     private fun exchange(credential: PhoneAuthCredential, isSignup: Boolean) {
+        // Auto-retrieval races the user: onVerificationCompleted can land while
+        // the code they typed is already in flight, and on signup a second
+        // exchange is a second account-creation attempt. First one wins.
+        if (exchanging) return
+        exchanging = true
         viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
             val tokenResult = FirebasePhoneAuth.idTokenFor(credential)
             val idToken = tokenResult.getOrElse { e ->
+                exchanging = false
                 _state.update { it.copy(loading = false, error = FirebasePhoneAuth.errorMessage(e)) }
                 return@launch
             }
@@ -172,8 +220,11 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 com.dealio.app.push.Push.ensureRegistered(getApplication())
                 _state.update { it.copy(loading = false, loggedInUser = result.data.user) }
             }
-            is ApiResult.Error -> _state.update {
-                it.copy(loading = false, error = result.message)
+            // Released only on failure. After a success the screen navigates away
+            // and a late auto-retrieval must not open a second session.
+            is ApiResult.Error -> {
+                exchanging = false
+                _state.update { it.copy(loading = false, error = result.message) }
             }
         }
     }
@@ -184,6 +235,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         // code minted for the previous one still be submitted.
         verificationId = null
         resendToken = null
+        exchanging = false
         _state.update {
             it.copy(step = AuthStep.DETAILS, error = null, demoCode = null, resendSecondsLeft = 0)
         }

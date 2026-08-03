@@ -47,11 +47,16 @@ import com.dealio.app.ui.theme.TextSecondary
  * form card that overlaps the hero. A footer is pinned to the bottom so short
  * steps read as deliberate breathing room rather than empty space. The [content]
  * slot holds the step-specific fields and actions.
+ *
+ * [bottomEndBadge] is an optional pill pinned to the bottom-right of the screen
+ * (above the scrolling body) — used to keep the chosen role in view while the
+ * form is filled in. The footer makes room for it so the two never collide.
  */
 @Composable
 fun AuthScaffold(
     headline: String,
     subtitle: String,
+    bottomEndBadge: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.White)) {
@@ -161,9 +166,24 @@ fun AuthScaffold(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(start = 30.dp, end = 30.dp, top = 8.dp, bottom = 20.dp),
+                        .padding(
+                            start = 30.dp,
+                            end = 30.dp,
+                            top = 8.dp,
+                            bottom = if (bottomEndBadge != null) 78.dp else 20.dp,
+                        ),
                 )
             }
+        }
+
+        if (bottomEndBadge != null) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .imePadding()
+                    .navigationBarsPadding()
+                    .padding(end = 16.dp, bottom = 16.dp),
+            ) { bottomEndBadge() }
         }
     }
 }

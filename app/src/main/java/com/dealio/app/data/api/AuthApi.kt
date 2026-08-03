@@ -23,6 +23,14 @@ interface AuthApi {
     suspend fun verifySignupOtp(@Body body: VerifySignupRequest): Response<ApiEnvelope<AuthData>>
 
     /**
+     * Sign-in pre-flight: is this number registered, and under which role?
+     * Firebase sends the OTP from the device, so this is the only chance to
+     * reject an unknown number before an SMS is spent on it.
+     */
+    @POST("auth/phone/lookup")
+    suspend fun phoneLookup(@Body body: PhoneLookupRequest): Response<ApiEnvelope<PhoneLookupData>>
+
+    /**
      * Exchanges a Firebase ID token (from the phone-OTP flow) for a Dealio
      * session. `mode = "signup"` may create the account and needs a role;
      * anything else is treated as a login and requires an existing account.
@@ -50,6 +58,10 @@ data class SendOtpRequest(
 data class VerifyLoginRequest(
     val phone: String,
     val otp: String,
+)
+
+data class PhoneLookupRequest(
+    val phone: String,
 )
 
 data class VerifySignupRequest(
@@ -82,6 +94,13 @@ data class SendOtpData(
     val maskedPhone: String? = null,
     /** Echoed by the backend only outside production — handy on the emulator. */
     val demoCode: String? = null,
+)
+
+data class PhoneLookupData(
+    val exists: Boolean,
+    val suspended: Boolean = false,
+    /** The account's role, or null when unregistered or suspended. */
+    val role: String? = null,
 )
 
 data class AuthData(

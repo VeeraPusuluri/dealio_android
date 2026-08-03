@@ -1,18 +1,26 @@
 package com.dealio.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -29,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dealio.app.ui.auth.AuthStep
 import com.dealio.app.ui.auth.AuthViewModel
@@ -78,10 +87,12 @@ fun SignupScreen(
     }
 
     val onDetails = state.step == AuthStep.DETAILS
+    val selectedRole = signupRoles.first { it.value == role }
     AuthScaffold(
         headline = if (onDetails) "Create your account" else "Verify your phone",
         subtitle = if (onDetails) "Join Dealio — free forever, for every role."
         else "We sent a 6-digit code to ${state.maskedPhone ?: "your phone"}.",
+        bottomEndBadge = { RoleBadge(selectedRole) },
     ) {
         if (onDetails) {
             OutlinedTextField(
@@ -220,6 +231,43 @@ fun SignupScreen(
             Text("Already have an account?", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
             TextButton(onClick = onGoToLogin) {
                 Text("Sign in", color = Teal, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+/**
+ * Floating pill that keeps the picked role visible through both signup steps, so
+ * the account being created is never a surprise at the verify screen.
+ */
+@Composable
+private fun RoleBadge(role: RoleOption) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = Color.White,
+        shadowElevation = 10.dp,
+        border = BorderStroke(1.dp, role.color.copy(alpha = 0.28f)),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(9.dp),
+        ) {
+            Box(Modifier.size(9.dp).background(role.color, CircleShape))
+            Column {
+                Text(
+                    "SIGNING UP AS",
+                    color = TextSecondary,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.9.sp,
+                )
+                Text(
+                    role.label,
+                    color = role.color,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                )
             }
         }
     }

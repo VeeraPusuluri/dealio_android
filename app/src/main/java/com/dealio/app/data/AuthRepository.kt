@@ -4,6 +4,8 @@ import com.dealio.app.data.api.ApiEnvelope
 import com.dealio.app.data.api.AuthApi
 import com.dealio.app.data.api.AuthData
 import com.dealio.app.data.api.FirebaseAuthRequest
+import com.dealio.app.data.api.PhoneLookupData
+import com.dealio.app.data.api.PhoneLookupRequest
 import com.dealio.app.data.api.SendOtpData
 import com.dealio.app.data.api.SendOtpRequest
 import com.dealio.app.data.api.VerifyLoginRequest
@@ -14,7 +16,15 @@ import java.io.IOException
 
 sealed class ApiResult<out T> {
     data class Success<T>(val data: T) : ApiResult<T>()
-    data class Error(val message: String) : ApiResult<Nothing>()
+
+    /**
+     * [code] is the HTTP status when the failure came from a response, and null
+     * when it came from the transport (no connection, malformed body). Callers
+     * that need to tell "the server said no" apart from "this build of the
+     * server has never heard of that route" read it — see the phone-lookup
+     * pre-flight in AuthViewModel.
+     */
+    data class Error(val message: String, val code: Int? = null) : ApiResult<Nothing>()
 }
 
 class AuthRepository(
@@ -28,6 +38,14 @@ class AuthRepository(
             val body = SendOtpRequest(phone = phone, countryCode = countryCode)
             if (isSignup) api.sendSignupOtp(body) else api.sendLoginOtp(body)
         }
+
+    /**
+     * Sign-in pre-flight — whether [phone] has an account, and its role.
+     * Firebase sends the OTP from the device, so this is the only chance to
+     * reject an unknown number before an SMS is spent on it.
+     */
+    suspend fun phoneLookup(phone: String): ApiResult<PhoneLookupData> =
+        call { api.phoneLookup(PhoneLookupRequest(phone = phone)) }
 
     suspend fun verifyLogin(phone: String, otp: String): ApiResult<AuthData> =
         call { api.verifyLoginOtp(VerifyLoginRequest(phone = phone, otp = otp)) }
@@ -88,10 +106,11 @@ class AuthRepository(
                     runCatching { gson.fromJson(raw, ApiEnvelope::class.java) }.getOrNull()
                 }?.let { ApiEnvelope<T>(ok = it.ok, message = it.message) }
             }
+            val status = response.code()
             when {
-                envelope == null -> ApiResult.Error("Unexpected server response (HTTP ${response.code()})")
-                !envelope.ok -> ApiResult.Error(envelope.message ?: "Request failed")
-                envelope.data == null -> ApiResult.Error(envelope.message ?: "Empty response from server")
+                envelope == null -> ApiResult.Error("Unexpected server response (HTTP $status)", status)
+                !envelope.ok -> ApiResult.Error(envelope.message ?: "Request failed", status)
+                envelope.data == null -> ApiResult.Error(envelope.message ?: "Empty response from server", status)
                 else -> ApiResult.Success(envelope.data)
             }
         } catch (e: IOException) {
