@@ -21,7 +21,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -86,6 +88,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import org.json.JSONArray
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -105,6 +108,7 @@ import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.StatusColors
+import com.dealio.app.ui.builder.availableUnitsOrDerived
 import com.dealio.app.ui.builder.formatINR
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.priceHigh
@@ -174,182 +178,14 @@ fun ProjectDetailScreen(nav: NavController, projectId: Long, vm: ProjectDetailVi
                 contentPadding = PaddingValues(bottom = inner.calculateBottomPadding() + 16.dp),
             ) {
                 item { HeroHeader(p, galleryUrls(p, state.documents)) { nav.navigateUp() } }
-                item {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("Starting price", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
-                        Spacer(Modifier.height(2.dp))
-                        Text(priceText(p), color = Teal, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        if ((p.pricePerSqftFrom ?: 0.0) > 0) {
-                            Text("₹${p.pricePerSqftFrom!!.toLong()}/sq.ft onwards", color = TextSecondary, fontSize = 12.sp)
-                        }
-                    }
-                }
-
-                // Quick facts
-                item {
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Fact("Config", p.configurations?.firstOrNull() ?: "—", Modifier.weight(1f))
-                        Fact("Towers", p.towers?.toString() ?: "—", Modifier.weight(1f))
-                        Fact("Possession", p.possessionDate?.take(7) ?: "—", Modifier.weight(1f))
-                    }
-                }
-
-                // Floor plans — every uploaded plan, or an honest "not provided" note
-                val floorPlans = floorPlanUrls(state.documents)
-                item {
-                    Section("Floor plans") {
-                        if (floorPlans.isEmpty()) {
-                            PlanNotProvided(Icons.Outlined.Map, "Floor plans not provided by the builder yet. You can request them during a site visit.")
-                        } else {
-                            FloorPlansRow(floorPlans)
-                        }
-                    }
-                }
-
-                // Tower plans — per-tower selector, strict per-tower matching
-                item { Section("Tower plans") { TowerPlansSection(p, state.documents) } }
-
-                // Virtual tour — walkthrough video links, or "not provided"
-                item { Section("Virtual tour") { VirtualTourSection(p.videoUrl) } }
-
-                // Home-loan EMI calculator
-                item { Section("Home loan") { LoanCalculator(p.priceLow() ?: p.priceHigh() ?: 50_00_000.0) } }
-
-                // Availability
-                if ((p.totalUnits ?: 0) > 0) {
-                    item { Box(Modifier.padding(top = 12.dp)) { AvailabilityBar(p) } }
-                }
-
-                // Video / Maps quick actions
-                if (!p.videoUrl.isNullOrBlank() || !p.googleMapsLink.isNullOrBlank()) {
-                    item { LinkButtons(p) }
-                }
-
-                // Nearby highlights
-                if (!p.nearbyHighlights.isNullOrEmpty()) {
-                    item {
-                        Section("Nearby") {
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                p.nearbyHighlights!!.forEach { n ->
-                                    Row(
-                                        Modifier.background(Color.White, RoundedCornerShape(8.dp))
-                                            .border(1.dp, CardBorder, RoundedCornerShape(8.dp))
-                                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Icon(Icons.Outlined.Place, null, tint = Teal, modifier = Modifier.size(13.dp))
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(n, color = TextPrimary, fontSize = 12.sp)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (!p.description.isNullOrBlank()) {
-                    item { Section("About this project") { Text(p.description!!, color = TextSecondary, fontSize = 13.sp, lineHeight = 20.sp) } }
-                }
-
-                // Configurations with actions
-                if (!p.configurations.isNullOrEmpty()) {
-                    item {
-                        Section("Configurations") {
-                            p.configurations!!.forEach { cfg ->
-                                ConfigRow(
-                                    cfg = cfg,
-                                    working = state.working,
-                                    onShortlist = {
-                                        vm.shortlist(cfg, mapOf("bhkType" to cfg, "price" to priceText(p)))
-                                    },
-                                    onPricing = {
-                                        vm.requestPricing(cfg, mapOf("bhkType" to cfg), "Please share pricing for $cfg")
-                                    },
-                                )
-                                Spacer(Modifier.height(8.dp))
-                            }
-                        }
-                    }
-                }
-
-                if (!p.amenities.isNullOrEmpty()) {
-                    item {
-                        Section("Amenities") {
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                p.amenities!!.forEach { a ->
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier
-                                            .background(Teal.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
-                                            .padding(horizontal = 10.dp, vertical = 7.dp),
-                                    ) {
-                                        Icon(amenityIcon(a), null, tint = Teal, modifier = Modifier.size(15.dp))
-                                        Spacer(Modifier.width(6.dp))
-                                        Text(a, color = Navy, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                val specs = p.specifications
-                if (specs != null) {
-                    item {
-                        Section("Specifications") {
-                            InfoRow("Structure", specs.structure)
-                            InfoRow("Flooring", specs.flooring)
-                            InfoRow("Kitchen", specs.kitchen)
-                            InfoRow("Bathrooms", specs.bathrooms)
-                            InfoRow("Doors & windows", listOfNotNull(specs.doors, specs.windows).joinToString(" / ").ifBlank { null })
-                            InfoRow("Painting", specs.painting)
-                        }
-                    }
-                }
-
-                if (!p.paymentPlans.isNullOrEmpty()) {
-                    item {
-                        Section("Payment plans") {
-                            p.paymentPlans!!.forEach { plan ->
-                                Column(Modifier.padding(vertical = 4.dp)) {
-                                    Text(plan.name ?: "Plan", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                    if (!plan.description.isNullOrBlank()) Text(plan.description!!, color = TextSecondary, fontSize = 12.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (!p.locationAdvantages.isNullOrEmpty()) {
-                    item {
-                        Section("Location advantages") {
-                            p.locationAdvantages!!.forEach { la ->
-                                InfoRow(
-                                    listOfNotNull(la.name, la.category?.let { "($it)" }).joinToString(" "),
-                                    listOfNotNull(la.distanceKm?.let { "$it km" }, la.driveMinutes?.let { "$it min" }).joinToString(" · ").ifBlank { "—" },
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Builder + RERA
-                item {
-                    Section("Developer") {
-                        InfoRow("Builder", p.builderName)
-                        InfoRow("Established", p.builderYearEstablished?.toString())
-                        InfoRow("Delivered projects", p.builderDeliveredProjects?.toString())
-                        InfoRow("RERA", p.reraNumber)
-                        InfoRow("RERA expiry", p.reraExpiry)
-                        if (!p.status.isNullOrBlank()) {
-                            Spacer(Modifier.height(6.dp))
-                            StatusChip(titleCase(p.status))
-                        }
-                    }
-                }
+                projectDetailSections(
+                    p = p,
+                    documents = state.documents,
+                    showConfigActions = true,
+                    working = state.working,
+                    onShortlist = { cfg -> vm.shortlist(cfg, mapOf("bhkType" to cfg, "price" to priceText(p))) },
+                    onPricing = { cfg -> vm.requestPricing(cfg, mapOf("bhkType" to cfg), "Please share pricing for $cfg") },
+                )
             }
         }
     }
@@ -365,7 +201,7 @@ fun ProjectDetailScreen(nav: NavController, projectId: Long, vm: ProjectDetailVi
 
 }
 
-private fun priceText(p: Project): String {
+internal fun priceText(p: Project): String {
     val lo = p.priceLow(); val hi = p.priceHigh()
     return when {
         (lo ?: 0.0) > 0 && (hi ?: 0.0) > 0 && hi != lo -> "${formatINRShort(lo)} – ${formatINRShort(hi)}"
@@ -374,11 +210,231 @@ private fun priceText(p: Project): String {
     }
 }
 
+/**
+ * The full informational body of a project — price, facts, plans, tour, loan
+ * calculator, availability, amenities, specs, developer, etc. Shared verbatim by
+ * the customer explore detail and the CP portal detail so both stay in parity.
+ *
+ * Callers render the hero themselves (the chrome differs) and then invoke this
+ * inside their `LazyColumn`. Set [showConfigActions] to surface the customer's
+ * shortlist / get-price buttons; the CP portal shows configurations read-only.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+internal fun LazyListScope.projectDetailSections(
+    p: Project,
+    documents: List<ProjectDocument>,
+    showConfigActions: Boolean,
+    working: Boolean = false,
+    onShortlist: (cfg: String) -> Unit = {},
+    onPricing: (cfg: String) -> Unit = {},
+) {
+    item {
+        Column(Modifier.padding(16.dp)) {
+            Text("Starting price", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+            Spacer(Modifier.height(2.dp))
+            Text(priceText(p), color = Teal, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            if ((p.pricePerSqftFrom ?: 0.0) > 0) {
+                Text("₹${p.pricePerSqftFrom!!.toLong()}/sq.ft onwards", color = TextSecondary, fontSize = 12.sp)
+            }
+        }
+    }
+
+    // Quick facts
+    item {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Fact("Config", p.configurations?.firstOrNull() ?: "—", Modifier.weight(1f))
+            Fact("Towers", p.towers?.toString() ?: "—", Modifier.weight(1f))
+            Fact("Possession", p.possessionDate?.take(7) ?: "—", Modifier.weight(1f))
+        }
+    }
+
+    // Floor plans — every uploaded plan, or an honest "not provided" note
+    val floorPlans = floorPlanUrls(documents)
+    item {
+        Section("Floor plans") {
+            if (floorPlans.isEmpty()) {
+                PlanNotProvided(Icons.Outlined.Map, "Floor plans not provided by the builder yet. You can request them during a site visit.")
+            } else {
+                FloorPlansRow(floorPlans)
+            }
+        }
+    }
+
+    // Tower plans — per-tower selector, strict per-tower matching
+    item { Section("Tower plans") { TowerPlansSection(p, documents) } }
+
+    // Virtual tour — walkthrough video links, or "not provided"
+    item { Section("Virtual tour") { VirtualTourSection(p.videoUrl) } }
+
+    // Home-loan EMI calculator
+    item { Section("Loan") { LoanCalculator(p.priceLow() ?: p.priceHigh() ?: 50_00_000.0) } }
+
+    // Availability
+    if ((p.totalUnits ?: 0) > 0) {
+        item { Box(Modifier.padding(top = 12.dp)) { AvailabilityBar(p) } }
+    }
+
+    // Video / Maps quick actions
+    if (!p.videoUrl.isNullOrBlank() || !p.googleMapsLink.isNullOrBlank()) {
+        item { LinkButtons(p) }
+    }
+
+    // Nearby highlights
+    if (!p.nearbyHighlights.isNullOrEmpty()) {
+        item {
+            Section("Nearby") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    p.nearbyHighlights!!.forEach { n ->
+                        Row(
+                            Modifier.background(Color.White, RoundedCornerShape(8.dp))
+                                .border(1.dp, CardBorder, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Outlined.Place, null, tint = Teal, modifier = Modifier.size(13.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(n, color = TextPrimary, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (!p.description.isNullOrBlank()) {
+        item { Section("About this project") { Text(p.description!!, color = TextSecondary, fontSize = 13.sp, lineHeight = 20.sp) } }
+    }
+
+    // Configurations — with customer shortlist / get-price actions, or read-only for the CP portal
+    if (!p.configurations.isNullOrEmpty()) {
+        item {
+            Section("Configurations") {
+                p.configurations!!.forEach { cfg ->
+                    if (showConfigActions) {
+                        ConfigRow(cfg = cfg, working = working, onShortlist = { onShortlist(cfg) }, onPricing = { onPricing(cfg) })
+                    } else {
+                        ConfigInfoRow(cfg)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+
+    if (!p.amenities.isNullOrEmpty()) {
+        item {
+            Section("Amenities") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    p.amenities!!.forEach { a ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .background(Teal.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 10.dp, vertical = 7.dp),
+                        ) {
+                            Icon(amenityIcon(a), null, tint = Teal, modifier = Modifier.size(15.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(a, color = Navy, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val specs = p.specifications
+    if (specs != null) {
+        item {
+            Section("Specifications") {
+                InfoRow("Structure", specs.structure)
+                InfoRow("Flooring", specs.flooring)
+                InfoRow("Kitchen", specs.kitchen)
+                InfoRow("Bathrooms", specs.bathrooms)
+                InfoRow("Doors & windows", listOfNotNull(specs.doors, specs.windows).joinToString(" / ").ifBlank { null })
+                InfoRow("Painting", specs.painting)
+            }
+        }
+    }
+
+    if (!p.paymentPlans.isNullOrEmpty()) {
+        item {
+            Section("Payment plans") {
+                p.paymentPlans!!.forEach { plan ->
+                    Column(Modifier.padding(vertical = 4.dp)) {
+                        Text(plan.name ?: "Plan", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        if (!plan.description.isNullOrBlank()) Text(plan.description!!, color = TextSecondary, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
+
+    if (!p.locationAdvantages.isNullOrEmpty()) {
+        item {
+            Section("Location advantages") {
+                p.locationAdvantages!!.forEach { la ->
+                    // Blank (not null) distance/drive values are the norm here, so filter
+                    // them out — joining them raw produced a bare "km · min" with no numbers.
+                    val detail = listOfNotNull(
+                        la.distanceKm?.takeIf { it.isNotBlank() }?.let { "$it km" },
+                        la.driveMinutes?.takeIf { it.isNotBlank() }?.let { "$it min" },
+                        la.category?.takeIf { it.isNotBlank() && !it.equals("Other", ignoreCase = true) },
+                    ).joinToString(" · ")
+                    splitAdvantagePoints(la.name).forEachIndexed { i, point ->
+                        LocationAdvBullet(point, if (i == 0) detail else "")
+                    }
+                }
+            }
+        }
+    }
+
+    // Builder + RERA
+    item {
+        Section("Developer") {
+            InfoRow("Builder", p.builderName)
+            InfoRow("Established", p.builderYearEstablished?.toString())
+            InfoRow("Delivered projects", p.builderDeliveredProjects?.toString())
+            InfoRow("RERA", p.reraNumber)
+            InfoRow("RERA expiry", p.reraExpiry)
+            if (!p.status.isNullOrBlank()) {
+                Spacer(Modifier.height(6.dp))
+                StatusChip(titleCase(p.status))
+            }
+        }
+    }
+}
+
+/** Read-only configuration tile for portals that don't shortlist (CP). */
 @Composable
-private fun HeroHeader(p: Project, images: List<String>, onBack: () -> Unit) {
+internal fun ConfigInfoRow(cfg: String) {
+    Row(
+        Modifier.fillMaxWidth().background(Teal.copy(alpha = 0.05f), RoundedCornerShape(12.dp)).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Outlined.Apartment, null, tint = Teal, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(cfg, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+/**
+ * Peeking image carousel with pagination dots — the shared gallery used by the
+ * customer hero (with a back button + title overlay) and the CP portal (bare).
+ */
+@Composable
+internal fun ProjectImagePager(
+    images: List<String>,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+    height: Dp = 270.dp,
+    overlay: @Composable BoxScope.() -> Unit = {},
+) {
     val pagerState = rememberPagerState { images.size }
-    Column(Modifier.fillMaxWidth()) {
-        Box(Modifier.fillMaxWidth().height(270.dp).background(Brush.linearGradient(listOf(NavyMid, Teal)))) {
+    Column(modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().height(height).background(Color.White)) {
             when {
                 images.size > 1 -> {
                     // Peeking horizontal scroll — the next/previous image peeks in at the
@@ -391,49 +447,21 @@ private fun HeroHeader(p: Project, images: List<String>, onBack: () -> Unit) {
                     ) { page ->
                         AsyncImage(
                             model = images[page],
-                            contentDescription = p.name,
+                            contentDescription = contentDescription,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
                         )
                     }
                 }
-                images.size == 1 -> AsyncImage(model = images[0], contentDescription = p.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                images.size == 1 -> AsyncImage(model = images[0], contentDescription = contentDescription, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                else -> Box(
+                    Modifier.fillMaxSize().background(Brush.linearGradient(listOf(NavyMid, Teal))),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Icon(Icons.Outlined.Apartment, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(56.dp))
                 }
             }
-            // Bottom scrim for legible overlay text
-            Box(
-                Modifier.matchParentSize().background(
-                    Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.65f))),
-                ),
-            )
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.padding(8.dp).background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
-            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
-
-            Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
-                if (!p.status.isNullOrBlank()) {
-                    Text(
-                        titleCase(p.status),
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.background(Teal, RoundedCornerShape(8.dp)).padding(horizontal = 9.dp, vertical = 4.dp),
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-                Text(p.name, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.LocationOn, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        listOfNotNull(p.locality, p.city).joinToString(", ").ifBlank { "—" },
-                        color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp,
-                    )
-                }
-            }
+            overlay()
         }
         // Dots below the images showing the current image — matches the website carousel
         if (images.size > 1) {
@@ -455,9 +483,47 @@ private fun HeroHeader(p: Project, images: List<String>, onBack: () -> Unit) {
 }
 
 @Composable
+private fun HeroHeader(p: Project, images: List<String>, onBack: () -> Unit) {
+    ProjectImagePager(images, p.name) {
+        // Bottom scrim for legible overlay text
+        Box(
+            Modifier.matchParentSize().background(
+                Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.65f))),
+            ),
+        )
+        IconButton(
+            onClick = onBack,
+            modifier = Modifier.padding(8.dp).background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
+        ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
+
+        Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
+            if (!p.status.isNullOrBlank()) {
+                Text(
+                    titleCase(p.status),
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.background(Teal, RoundedCornerShape(8.dp)).padding(horizontal = 9.dp, vertical = 4.dp),
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+            Text(p.name, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.LocationOn, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    listOfNotNull(p.locality, p.city).joinToString(", ").ifBlank { "—" },
+                    color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun AvailabilityBar(p: Project) {
     val total = (p.totalUnits ?: 0).coerceAtLeast(1)
-    val available = (p.availableUnits ?: 0).coerceIn(0, total)
+    val available = (p.availableUnitsOrDerived() ?: 0).coerceIn(0, total)
     val sold = (p.soldUnits ?: 0).coerceIn(0, total)
     val booked = (p.bookedUnits ?: 0).coerceIn(0, total)
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -558,6 +624,65 @@ private fun Fact(label: String, value: String, modifier: Modifier = Modifier) {
         Text(label.uppercase(), color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
         Spacer(Modifier.height(3.dp))
         Text(value, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
+/**
+ * Breaks a location-advantage blob into readable points.
+ *
+ * Builders paste an entire paragraph into the single `name` field, so every project
+ * arrives as one unpunctuated run-on string with no newline or bullet to split on
+ * ("...Keesara Road 5 Minutes to Yadadri Temple Just 1 KM from RRR Exit 10 Minutes
+ * to Raigiri Railway Station..."). Break before distance/duration phrases and the
+ * usual connectors, which is where a new fact reliably starts. Display-only — the
+ * stored data is untouched, and structured entry in the builder form remains the
+ * real fix.
+ */
+private val ADV_BREAK = Regex(
+    "(?=•)" +
+        "|(?=\\b\\d+(?:\\.\\d+)?\\s*(?:km|kms|kilometers?|meters?|metres?|mins?|minutes?|hrs?|hours?)\\b)" +
+        "|(?=\\b(?:immediate|adjacent|very near|very close|near by|nearby|near to|close to|proposed|opposite|facing|walking distance|just)\\b)",
+    RegexOption.IGNORE_CASE,
+)
+
+private fun splitAdvantagePoints(raw: String?): List<String> {
+    val text = raw?.trim().orEmpty()
+    if (text.isEmpty()) return emptyList()
+    val parts = text.split(ADV_BREAK)
+        .map { it.trim().trimStart('•').trim().trimEnd('&', '·', ',').trim() }
+        .filter { it.isNotEmpty() }
+    // A stray connector ("Just") is the head of the next point, not a point of its own.
+    val merged = mutableListOf<String>()
+    for (part in parts) {
+        if (merged.isNotEmpty() && merged.last().split(" ").size < 3) {
+            merged[merged.lastIndex] = "${merged.last()} $part"
+        } else {
+            merged.add(part)
+        }
+    }
+    return merged.ifEmpty { listOf(text) }
+}
+
+@Composable
+private fun LocationAdvBullet(text: String, detail: String) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            "•",
+            color = Teal,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(end = 10.dp),
+        )
+        Column(Modifier.weight(1f)) {
+            Text(text, color = TextPrimary, fontSize = 13.sp, lineHeight = 19.sp)
+            if (detail.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(detail, color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            }
+        }
     }
 }
 
@@ -694,7 +819,7 @@ private fun isFloorPlanDoc(d: ProjectDocument): Boolean {
     return (t.contains("floor") || t.contains("layout")) && !isTowerPlanDoc(d)
 }
 /** Cover image followed by project photos (deduped) for the hero gallery. */
-private fun galleryUrls(p: Project, docs: List<ProjectDocument>): List<String> {
+internal fun galleryUrls(p: Project, docs: List<ProjectDocument>): List<String> {
     val urls = LinkedHashSet<String>()
     resolveUrl(p.imageUrl ?: p.coverUrl)?.let { urls.add(it) }
     docs.filter { isImageDoc(it) && !isFloorPlanDoc(it) && !isTowerPlanDoc(it) }

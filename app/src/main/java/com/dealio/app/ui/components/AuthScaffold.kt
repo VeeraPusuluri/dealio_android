@@ -1,5 +1,6 @@
 package com.dealio.app.ui.components
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,27 +40,36 @@ import androidx.compose.ui.unit.sp
 import com.dealio.app.ui.theme.NavyDeep
 import com.dealio.app.ui.theme.NavyMid
 import com.dealio.app.ui.theme.TealBright
-import com.dealio.app.ui.theme.TealDeep
 import com.dealio.app.ui.theme.TextSecondary
 
 /**
- * Branded shell for the auth screens: a navy gradient hero (teal glow + trust
- * strip) carrying the Dealio mark and headline, flowing into a floating white
- * form card that overlaps the hero. A footer is pinned to the bottom so short
- * steps read as deliberate breathing room rather than empty space. The [content]
- * slot holds the step-specific fields and actions.
+ * Branded shell for the auth screens: a navy gradient hero carrying the Dealio
+ * mark, the active role, an eyebrow/headline/subtitle block and a step track,
+ * flowing into a floating white form card that overlaps it. A footer is pinned
+ * to the bottom so short steps read as deliberate breathing room rather than
+ * empty space. The [content] slot holds the step-specific fields and actions.
  *
- * [bottomEndBadge] is an optional pill pinned to the bottom-right of the screen
- * (above the scrolling body) — used to keep the chosen role in view while the
- * form is filled in. The footer makes room for it so the two never collide.
+ * [accentOnDark] tints the hero glow, eyebrow and step track — the role pickers
+ * pass the selected role's color through it, so choosing "Builder" re-lights the
+ * whole page in that role's teal. Pass a color already lifted for the navy (see
+ * `Color.onNavy()`); the raw card colors go muddy here.
+ *
+ * [heroTrailing] is an optional slot on the logo row, used for the role chip.
  */
 @Composable
 fun AuthScaffold(
+    eyebrow: String,
     headline: String,
     subtitle: String,
-    bottomEndBadge: (@Composable () -> Unit)? = null,
+    accentOnDark: Color = TealBright,
+    step: Int = 1,
+    totalSteps: Int = 2,
+    highlights: List<String> = emptyList(),
+    heroTrailing: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val accent by animateColorAsState(accentOnDark, label = "authAccent")
+
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.White)) {
         // Force the body to be at least a screen tall so the bottom footer can be
         // pushed down with a weighted spacer; taller content just scrolls.
@@ -79,20 +90,20 @@ fun AuthScaffold(
                         .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
                         .background(
                             Brush.linearGradient(
-                                colors = listOf(NavyDeep, NavyMid, TealDeep),
+                                colors = listOf(NavyDeep, NavyMid, NavyDeep),
                                 start = Offset(0f, 0f),
                                 end = Offset.Infinite,
                             ),
                         ),
                 ) {
-                    // Teal glow + soft orbs add depth and energy to the navy.
+                    // Role-tinted glow + a softer counterweight, for depth on the navy.
                     Box(
                         Modifier
                             .align(Alignment.TopEnd)
                             .offset(x = 40.dp, y = (-70).dp)
                             .size(270.dp)
                             .background(
-                                Brush.radialGradient(listOf(TealBright.copy(alpha = 0.38f), Color.Transparent)),
+                                Brush.radialGradient(listOf(accent.copy(alpha = 0.40f), Color.Transparent)),
                                 CircleShape,
                             ),
                     )
@@ -100,9 +111,9 @@ fun AuthScaffold(
                         Modifier
                             .align(Alignment.BottomStart)
                             .offset(x = (-55).dp, y = 45.dp)
-                            .size(200.dp)
+                            .size(210.dp)
                             .background(
-                                Brush.radialGradient(listOf(TealBright.copy(alpha = 0.16f), Color.Transparent)),
+                                Brush.radialGradient(listOf(accent.copy(alpha = 0.18f), Color.Transparent)),
                                 CircleShape,
                             ),
                     )
@@ -110,29 +121,47 @@ fun AuthScaffold(
                     Column(
                         Modifier
                             .systemBarsPadding()
-                            .padding(start = 26.dp, end = 26.dp, top = 26.dp, bottom = 54.dp),
+                            .padding(start = 26.dp, end = 26.dp, top = 22.dp, bottom = 52.dp),
                     ) {
-                        DealioLogo(onDark = true)
-                        Spacer(Modifier.height(36.dp))
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            DealioLogo(onDark = true)
+                            Spacer(Modifier.weight(1f))
+                            heroTrailing?.invoke()
+                        }
+                        Spacer(Modifier.height(30.dp))
+                        Text(
+                            eyebrow.uppercase(),
+                            color = accent,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.6.sp,
+                        )
+                        Spacer(Modifier.height(9.dp))
                         Text(
                             headline,
                             color = Color.White,
                             fontSize = 30.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.5).sp,
+                            lineHeight = 36.sp,
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
                             subtitle,
-                            color = Color.White.copy(alpha = 0.78f),
-                            fontSize = 15.sp,
+                            color = Color.White.copy(alpha = 0.72f),
+                            fontSize = 14.5.sp,
                             lineHeight = 21.sp,
                         )
                         Spacer(Modifier.height(20.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TrustChip("Free forever")
-                            TrustChip("All roles")
-                            TrustChip("RERA-ready")
+                        StepTrack(step = step, totalSteps = totalSteps, accentOnDark = accent)
+                        if (highlights.isNotEmpty()) {
+                            Spacer(Modifier.height(18.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                highlights.forEach { TrustChip(it) }
+                            }
                         }
                     }
                 }
@@ -166,24 +195,9 @@ fun AuthScaffold(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(
-                            start = 30.dp,
-                            end = 30.dp,
-                            top = 8.dp,
-                            bottom = if (bottomEndBadge != null) 78.dp else 20.dp,
-                        ),
+                        .padding(start = 30.dp, end = 30.dp, top = 8.dp, bottom = 20.dp),
                 )
             }
-        }
-
-        if (bottomEndBadge != null) {
-            Box(
-                Modifier
-                    .align(Alignment.BottomEnd)
-                    .imePadding()
-                    .navigationBarsPadding()
-                    .padding(end = 16.dp, bottom = 16.dp),
-            ) { bottomEndBadge() }
         }
     }
 }
@@ -193,11 +207,11 @@ fun AuthScaffold(
 private fun TrustChip(text: String) {
     Text(
         text,
-        color = Color.White,
-        fontSize = 12.sp,
+        color = Color.White.copy(alpha = 0.85f),
+        fontSize = 11.5.sp,
         fontWeight = FontWeight.Medium,
         modifier = Modifier
-            .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+            .background(Color.White.copy(alpha = 0.10f), RoundedCornerShape(8.dp))
             .padding(horizontal = 10.dp, vertical = 6.dp),
     )
 }

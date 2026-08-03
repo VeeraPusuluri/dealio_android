@@ -7,6 +7,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,10 +30,14 @@ import androidx.compose.material.icons.outlined.KingBed
 import androidx.compose.material.icons.outlined.LocationCity
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,12 +70,15 @@ import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.ErrorRed
 import com.dealio.app.ui.theme.NavyTealGradient
 import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 
 @Composable
 fun ExploreScreen(nav: NavController, vm: ExploreViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     RefreshOnResume { vm.load(silent = true) }
+
+    var showFilters by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -83,51 +92,6 @@ fun ExploreScreen(nav: NavController, vm: ExploreViewModel = viewModel()) {
             state.loading -> item { LoadingState(Modifier.height(220.dp)) }
             state.error != null -> item { ErrorState(state.error!!, onRetry = { vm.load() }, modifier = Modifier.height(220.dp)) }
             else -> {
-                // City chips
-                item {
-                    FilterRow {
-                        FilterChip("All", Icons.Outlined.LocationCity, state.selectedCity == null) { vm.setCity(null) }
-                        state.cities.forEach { c ->
-                            FilterChip(c, Icons.Outlined.LocationCity, state.selectedCity == c) { vm.setCity(c) }
-                        }
-                    }
-                }
-
-                // BHK chips
-                if (state.bhkOptions.isNotEmpty()) {
-                    item {
-                        FilterRow {
-                            FilterChip("Any BHK", Icons.Outlined.KingBed, state.selectedBhk == null) { vm.setBhk(null) }
-                            state.bhkOptions.forEach { n ->
-                                FilterChip(if (n >= 4) "4+ BHK" else "$n BHK", null, state.selectedBhk == n) { vm.setBhk(n) }
-                            }
-                        }
-                    }
-                }
-
-                // Budget chips + clear-all
-                item {
-                    FilterRow {
-                        FilterChip("Any budget", Icons.Outlined.CurrencyRupee, state.selectedBudget == null) { vm.setBudget(null) }
-                        BudgetBucket.entries.forEach { b ->
-                            FilterChip(b.label, null, state.selectedBudget == b) { vm.setBudget(b) }
-                        }
-                        if (state.hasActiveFilters) {
-                            Row(
-                                Modifier
-                                    .border(1.dp, ErrorRed.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-                                    .clickable { vm.clearFilters() }
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(Icons.Outlined.Close, null, tint = ErrorRed, modifier = Modifier.size(12.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("Clear", color = ErrorRed, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
-                }
-
                 // Featured carousel
                 if (state.showFeatured) {
                     item { SectionLabel("Featured", Modifier.padding(horizontal = 16.dp)) }
@@ -155,6 +119,8 @@ fun ExploreScreen(nav: NavController, vm: ExploreViewModel = viewModel()) {
                         if (state.filtered.isNotEmpty()) {
                             Text("${state.filtered.size}", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         }
+                        Spacer(Modifier.width(10.dp))
+                        FiltersButton(activeCount = state.activeFilterCount) { showFilters = true }
                     }
                 }
 
@@ -176,6 +142,109 @@ fun ExploreScreen(nav: NavController, vm: ExploreViewModel = viewModel()) {
             }
         }
     }
+
+    if (showFilters) {
+        FilterSheet(state, vm, onDismiss = { showFilters = false })
+    }
+}
+
+@Composable
+private fun FiltersButton(activeCount: Int, onClick: () -> Unit) {
+    val active = activeCount > 0
+    Row(
+        Modifier
+            .background(if (active) Teal else Color.White, RoundedCornerShape(10.dp))
+            .border(1.dp, if (active) Teal else CardBorder, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Outlined.Tune, null, tint = if (active) Color.White else TextSecondary, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(
+            if (active) "Filters ($activeCount)" else "Filters",
+            color = if (active) Color.White else TextSecondary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun FilterSheet(state: ExploreState, vm: ExploreViewModel, onDismiss: () -> Unit) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Color.White,
+    ) {
+        Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Filters", color = TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                if (state.activeFilterCount > 0) {
+                    Row(
+                        Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { vm.clearFacetFilters() }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Outlined.Close, null, tint = ErrorRed, modifier = Modifier.size(13.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Clear all", color = ErrorRed, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+
+            FilterGroup("City") {
+                FilterChip("All", Icons.Outlined.LocationCity, state.selectedCity == null) { vm.setCity(null) }
+                state.cities.forEach { c ->
+                    FilterChip(c, Icons.Outlined.LocationCity, state.selectedCity == c) { vm.setCity(c) }
+                }
+            }
+
+            if (state.bhkOptions.isNotEmpty()) {
+                FilterGroup("Configuration") {
+                    FilterChip("Any BHK", Icons.Outlined.KingBed, state.selectedBhk == null) { vm.setBhk(null) }
+                    state.bhkOptions.forEach { n ->
+                        FilterChip(if (n >= 4) "4+ BHK" else "$n BHK", null, state.selectedBhk == n) { vm.setBhk(n) }
+                    }
+                }
+            }
+
+            FilterGroup("Budget") {
+                FilterChip("Any budget", Icons.Outlined.CurrencyRupee, state.selectedBudget == null) { vm.setBudget(null) }
+                BudgetBucket.entries.forEach { b ->
+                    FilterChip(b.label, null, state.selectedBudget == b) { vm.setBudget(b) }
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+            Row(
+                Modifier.fillMaxWidth().height(48.dp)
+                    .background(Teal, RoundedCornerShape(12.dp))
+                    .clickable(onClick = onDismiss),
+                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    if (state.filtered.isNotEmpty()) "Show ${state.filtered.size} homes" else "Show homes",
+                    color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FilterGroup(title: String, content: @Composable () -> Unit) {
+    Spacer(Modifier.height(18.dp))
+    Text(title.uppercase(), color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+    Spacer(Modifier.height(10.dp))
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) { content() }
 }
 
 @Composable
@@ -248,14 +317,6 @@ private fun HeroIconButton(icon: androidx.compose.ui.graphics.vector.ImageVector
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, desc, tint = Color.White, modifier = Modifier.size(20.dp)) }
-}
-
-@Composable
-private fun FilterRow(content: @Composable () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) { content() }
 }
 
 @Composable

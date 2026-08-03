@@ -47,6 +47,7 @@ import com.dealio.app.ui.builder.InfoRow
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.StatusChip
+import com.dealio.app.ui.builder.availableUnitsOrDerived
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.resolveUrl
 import com.dealio.app.ui.builder.titleCase
@@ -118,7 +119,7 @@ private fun ProjectDetailBody(p: Project, docCount: Int, modifier: Modifier) {
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Metric("Total units", "${p.totalUnits ?: 0}", Modifier.weight(1f))
-                Metric("Available", "${p.availableUnits ?: 0}", Modifier.weight(1f))
+                Metric("Available", "${p.availableUnitsOrDerived() ?: 0}", Modifier.weight(1f))
                 Metric("Sold", "${p.soldUnits ?: 0}", Modifier.weight(1f))
             }
 

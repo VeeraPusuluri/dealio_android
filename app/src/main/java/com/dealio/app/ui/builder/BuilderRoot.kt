@@ -59,7 +59,6 @@ object BuilderRoutes {
     const val PIPELINE = "pipeline"
     const val DEALS = "deals"
     const val MORE = "more"
-
     const val PROJECT_DETAIL = "project_detail"
     const val PROJECT_FORM = "project_form"
     const val DEAL_DETAIL = "deal_detail"

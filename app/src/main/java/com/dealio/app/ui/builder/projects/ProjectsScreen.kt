@@ -50,6 +50,7 @@ import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.TabHeader
+import com.dealio.app.ui.builder.availableUnitsOrDerived
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.resolveUrl
 import com.dealio.app.ui.builder.titleCase
@@ -183,7 +184,7 @@ fun ProjectCard(p: Project, onClick: () -> Unit) {
             Spacer(Modifier.height(10.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 MetricColumn("Price", if ((p.priceMin ?: 0.0) > 0) "${formatINRShort(p.priceMin)}+" else "—")
-                MetricColumn("Available", "${p.availableUnits ?: 0}/${p.totalUnits ?: 0}")
+                MetricColumn("Available", "${p.availableUnitsOrDerived() ?: 0}/${p.totalUnits ?: 0}")
                 MetricColumn("Config", p.configurations?.joinToString(", ")?.ifBlank { "—" } ?: "—")
             }
         }

@@ -1,6 +1,7 @@
 package com.dealio.app.data
 
 import android.app.Activity
+import com.dealio.app.BuildConfig
 import com.google.firebase.FirebaseException
 import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.FirebaseAuth
@@ -46,6 +47,31 @@ object FirebasePhoneAuth {
     private const val TIMEOUT_SECONDS = 60L
 
     /**
+     * When true, debug builds skip Firebase's app verification — which also limits
+     * them to the fictional numbers registered in the console, since a real number
+     * then has no app identifier to send. Flip to false to exercise the real Play
+     * Integrity path on a debug build.
+     */
+    private const val DISABLE_APP_VERIFICATION_ON_DEBUG = true
+
+    /**
+     * Debug builds are sideloaded, never distributed through Play, so Play
+     * Integrity cannot attest them — it returns UNRECOGNIZED_VERSION and Firebase
+     * rejects the request with "Invalid app info in play_integrity_token". The
+     * package name and both SHA fingerprints are registered correctly; there is
+     * nothing to fix in the console for a local build.
+     *
+     * Turning app verification off on debug lets the emulator run the flow
+     * against the test numbers configured in Firebase Console → Authentication →
+     * Sign-in method → Phone. Release builds keep full verification.
+     */
+    private fun applyDebugAppVerification(auth: FirebaseAuth) {
+        if (BuildConfig.DEBUG && DISABLE_APP_VERIFICATION_ON_DEBUG) {
+            auth.firebaseAuthSettings.setAppVerificationDisabledForTesting(true)
+        }
+    }
+
+    /**
      * Start verification for [e164Phone] (e.g. "+919502320615").
      *
      * [onEvent] may fire more than once: a [PhoneVerification.CodeSent] can be
@@ -78,7 +104,10 @@ object FirebasePhoneAuth {
             }
         }
 
-        val options = PhoneAuthOptions.newBuilder(FirebaseAuth.getInstance())
+        val auth = FirebaseAuth.getInstance()
+        applyDebugAppVerification(auth)
+
+        val options = PhoneAuthOptions.newBuilder(auth)
             .setPhoneNumber(e164Phone)
             .setTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .setActivity(activity)

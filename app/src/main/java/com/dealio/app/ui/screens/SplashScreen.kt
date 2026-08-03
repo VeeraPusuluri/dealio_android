@@ -21,7 +21,7 @@ import kotlinx.coroutines.delay
 /**
  * Launch splash — plays the designed "Dealio Splash" Lottie animation
  * (`res/raw/dealio_splash.json`): the app mark assembles, the wordmark builds
- * in, and the "Find your next deal" tagline wipes in over a navy backdrop.
+ * in, and the "Real estate · made simple" tagline wipes in over a navy backdrop.
  *
  * [onFinished] fires when the animation completes (or after a safety timeout if
  * the composition somehow fails to load), matching the iOS splash behaviour.

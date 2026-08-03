@@ -10,6 +10,22 @@ fun Project.priceLow(): Double? = priceMin ?: priceFrom
 fun Project.priceHigh(): Double? = priceMax ?: priceTo
 
 /**
+ * Units still on offer.
+ *
+ * `availableUnits` is optional in the project form and is null on every live project,
+ * so reading it as `availableUnits ?: 0` reported a fully-sold-out project ("0 of 135
+ * available") whenever the builder only filled in the total. Fall back to the
+ * unaccounted-for remainder — total minus whatever is booked or sold — which is what
+ * the builder side reports. Null only when the total is unknown too, so callers can
+ * show "—" rather than inventing a zero.
+ */
+fun Project.availableUnitsOrDerived(): Int? {
+    availableUnits?.let { return it }
+    val total = totalUnits ?: return null
+    return (total - (bookedUnits ?: 0) - (soldUnits ?: 0)).coerceIn(0, total)
+}
+
+/**
  * Resolves a backend image path to a URL the emulator can actually reach.
  *
  * The backend stores absolute upload URLs using whatever Host header it saw at

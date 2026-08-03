@@ -43,6 +43,10 @@ data class ExploreState(
     val hasActiveFilters: Boolean
         get() = selectedCity != null || selectedBhk != null || selectedBudget != null || query.isNotBlank()
 
+    /** Number of active facet filters (city/BHK/budget), excluding the search query. */
+    val activeFilterCount: Int
+        get() = listOfNotNull(selectedCity, selectedBhk, selectedBudget).size
+
     /** BHK chip options actually present in the catalogue (4+ collapsed to 4). */
     val bhkOptions: List<Int>
         get() = all.flatMap { it.configurations ?: emptyList() }
@@ -110,7 +114,7 @@ class ExploreViewModel(app: Application) : CustomerViewModel(app) {
     fun setQuery(q: String) = _state.update { it.copy(query = q) }
     fun setBhk(bhk: Int?) = _state.update { it.copy(selectedBhk = if (it.selectedBhk == bhk) null else bhk) }
     fun setBudget(b: BudgetBucket?) = _state.update { it.copy(selectedBudget = if (it.selectedBudget == b) null else b) }
-    fun clearFilters() = _state.update {
-        it.copy(selectedCity = null, selectedBhk = null, selectedBudget = null, query = "")
+    fun clearFacetFilters() = _state.update {
+        it.copy(selectedCity = null, selectedBhk = null, selectedBudget = null)
     }
 }

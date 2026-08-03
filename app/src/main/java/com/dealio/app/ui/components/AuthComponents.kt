@@ -1,5 +1,6 @@
 package com.dealio.app.ui.components
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,6 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -29,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -39,7 +42,6 @@ import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.FieldFill
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.Teal
-import com.dealio.app.ui.theme.TealDeep
 import com.dealio.app.ui.theme.TextSecondary
 
 /** Country code + phone number entry, like the web login. */
@@ -50,6 +52,7 @@ fun PhoneField(
     phone: String,
     onPhoneChange: (String) -> Unit,
     enabled: Boolean = true,
+    accent: Color = Teal,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedTextField(
@@ -63,7 +66,7 @@ fun PhoneField(
             label = { Text("Code") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             shape = RoundedCornerShape(14.dp),
-            colors = dealioFieldColors(),
+            colors = dealioFieldColors(accent),
         )
         OutlinedTextField(
             value = phone,
@@ -77,28 +80,47 @@ fun PhoneField(
             placeholder = { Text("9876543210") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             shape = RoundedCornerShape(14.dp),
-            colors = dealioFieldColors(),
+            colors = dealioFieldColors(accent),
         )
     }
 }
 
 @Composable
-fun dealioFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = Teal,
-    focusedLabelColor = Teal,
-    cursorColor = Teal,
+fun dealioFieldColors(accent: Color = Teal) = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = accent,
+    focusedLabelColor = accent,
+    cursorColor = accent,
     unfocusedBorderColor = CardBorder,
     focusedContainerColor = Color.White,
     unfocusedContainerColor = FieldFill,
     disabledContainerColor = FieldFill,
 )
 
-/** Six-box OTP input. The real text field sits invisible on top of the boxes. */
+/** Small uppercase caption introducing a group of fields inside the form card. */
+@Composable
+fun FieldGroupLabel(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text.uppercase(),
+        color = TextSecondary,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 1.1.sp,
+        modifier = modifier,
+    )
+}
+
+/**
+ * Six-box OTP input. The real text field sits invisible on top of the boxes.
+ *
+ * [accent] colors the caret box and the digits already typed, so the code entry
+ * stays in the role's color like the rest of the flow.
+ */
 @Composable
 fun OtpInput(
     value: String,
     onValueChange: (String) -> Unit,
     enabled: Boolean = true,
+    accent: Color = Teal,
     modifier: Modifier = Modifier,
 ) {
     BasicTextField(
@@ -114,15 +136,27 @@ fun OtpInput(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     repeat(6) { index ->
                         val char = value.getOrNull(index)?.toString() ?: ""
+                        val isFilled = char.isNotEmpty()
                         val isActive = enabled && value.length == index
                         Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(56.dp)
-                                .background(if (isActive) Color.White else FieldFill, RoundedCornerShape(12.dp))
+                                .background(
+                                    when {
+                                        isActive -> Color.White
+                                        isFilled -> accent.copy(alpha = 0.06f)
+                                        else -> FieldFill
+                                    },
+                                    RoundedCornerShape(12.dp),
+                                )
                                 .border(
                                     width = if (isActive) 2.dp else 1.dp,
-                                    color = if (isActive) Teal else CardBorder,
+                                    color = when {
+                                        isActive -> accent
+                                        isFilled -> accent.copy(alpha = 0.45f)
+                                        else -> CardBorder
+                                    },
                                     shape = RoundedCornerShape(12.dp),
                                 ),
                             contentAlignment = Alignment.Center,
@@ -143,18 +177,27 @@ fun OtpInput(
     )
 }
 
-/** Full-width navy primary button with a loading spinner state. */
+/**
+ * Full-width gradient primary button with a loading spinner state.
+ *
+ * [accent] drives the gradient — defaults to brand teal; the auth screens pass
+ * the selected role's color so the call to action matches the picker.
+ */
 @Composable
 fun DealioButton(
     text: String,
     onClick: () -> Unit,
     loading: Boolean = false,
     enabled: Boolean = true,
+    accent: Color = Teal,
     modifier: Modifier = Modifier,
 ) {
+    val tone by animateColorAsState(accent, label = "buttonAccent")
     val isActive = enabled && !loading
     val fill: Brush = if (isActive) {
-        Brush.horizontalGradient(listOf(Teal, TealDeep))
+        // Deepen the far end toward navy rather than pairing two fixed teals, so
+        // any role color gets the same left-to-right falloff.
+        Brush.horizontalGradient(listOf(tone, lerp(tone, Navy, 0.34f)))
     } else {
         SolidColor(ButtonDisabled)
     }

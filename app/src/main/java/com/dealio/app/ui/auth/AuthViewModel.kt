@@ -30,6 +30,12 @@ data class AuthUiState(
     val maskedPhone: String? = null,
     val demoCode: String? = null,
     val resendSecondsLeft: Int = 0,
+    /**
+     * Wire value of the account's real role, set when sign-in was attempted under
+     * a different one. Lets the screen offer a one-tap correction instead of
+     * making the user hunt for the right pill.
+     */
+    val mismatchedRole: String? = null,
     /** Non-null once OTP verification succeeded — the screen navigates away. */
     val loggedInUser: AuthUser? = null,
 )
@@ -70,6 +76,9 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
      *
      * Pass [signup] on the signup flow so an auto-retrieved SMS can complete the
      * account without the user typing anything.
+     *
+     * On login, [role] is the account type the user picked and is checked against
+     * the number's real role before any SMS is spent.
      */
     fun sendOtp(
         activity: Activity,
@@ -92,7 +101,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
 
         pendingSignup = if (isSignup) PendingSignup(fullName.trim(), role, referralCode.trim()) else null
         val e164 = toE164(phone, countryCode)
-        _state.update { it.copy(loading = true, error = null) }
+        _state.update { it.copy(loading = true, error = null, mismatchedRole = null) }
 
         viewModelScope.launch {
             // Firebase sends the code from the device, so the backend never sees
@@ -117,15 +126,30 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                         }
                     }
                     is ApiResult.Success -> {
+                        // Only enforce roles the picker can actually express. The
+                        // backend also has VENDOR/LANDOWNER/REFERRAL, which have no
+                        // pill — blocking those would lock them out of the app.
+                        val actual = roleFor(lookup.data.role)
+                        val mismatched = actual != null &&
+                            role.isNotBlank() &&
+                            !actual.value.equals(role, ignoreCase = true)
                         val error = when {
                             !lookup.data.exists ->
                                 "No account found for this number. Create an account first."
                             lookup.data.suspended ->
                                 "Account suspended. Please contact support."
+                            mismatched ->
+                                "This number is registered as a ${actual!!.label} account."
                             else -> null
                         }
                         if (error != null) {
-                            _state.update { it.copy(loading = false, error = error) }
+                            _state.update {
+                                it.copy(
+                                    loading = false,
+                                    error = error,
+                                    mismatchedRole = if (mismatched) actual!!.value else null,
+                                )
+                            }
                             return@launch
                         }
                     }
@@ -237,12 +261,18 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
         resendToken = null
         exchanging = false
         _state.update {
-            it.copy(step = AuthStep.DETAILS, error = null, demoCode = null, resendSecondsLeft = 0)
+            it.copy(
+                step = AuthStep.DETAILS,
+                error = null,
+                demoCode = null,
+                resendSecondsLeft = 0,
+                mismatchedRole = null,
+            )
         }
     }
 
     fun clearError() {
-        _state.update { it.copy(error = null) }
+        _state.update { it.copy(error = null, mismatchedRole = null) }
     }
 
     private fun startResendCountdown(seconds: Int = 30) {

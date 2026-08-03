@@ -40,13 +40,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.dealio.app.data.api.Shortlist
 import com.dealio.app.ui.builder.DealioCard
-import com.dealio.app.ui.builder.EmptyState
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.RefreshOnResume
 import com.dealio.app.ui.builder.StatusChip
-import com.dealio.app.ui.builder.TabHeader
 import com.dealio.app.ui.builder.titleCase
+import com.dealio.app.ui.customer.CustomerEmptyState
+import com.dealio.app.ui.customer.CustomerHeader
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.TextPrimary
@@ -62,13 +62,29 @@ fun SavedScreen(nav: NavController, vm: SavedViewModel = viewModel()) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
-        topBar = { TabHeader("Saved homes", subtitle = "${state.items.size} shortlisted") },
+        topBar = {
+            CustomerHeader(
+                title = "Saved homes",
+                subtitle = "Your shortlist, side by side",
+                stats = buildList {
+                    add("${state.items.size}" to "shortlisted")
+                    val projects = state.items.map { it.projectId }.distinct().size
+                    if (projects > 0) add("$projects" to "projects")
+                },
+            )
+        },
     ) { inner ->
         when {
             state.loading -> LoadingState(Modifier.padding(inner))
             state.error != null -> ErrorState(state.error!!, onRetry = { vm.load() }, modifier = Modifier.padding(inner))
             state.items.isEmpty() -> Box(Modifier.padding(inner)) {
-                EmptyState(Icons.Outlined.Bookmark, "Nothing saved yet", "Shortlist a configuration from any project to compare later.")
+                CustomerEmptyState(
+                    icon = Icons.Outlined.Bookmark,
+                    title = "Nothing shortlisted yet",
+                    subtitle = "Save a configuration from any project and it lands here, ready to compare and ask pricing on.",
+                    actionLabel = "Browse homes",
+                    onAction = { nav.navigate(CustomerRoutes.EXPLORE) },
+                )
             }
             else -> LazyColumn(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = inner.calculateTopPadding() + 8.dp, bottom = 16.dp),

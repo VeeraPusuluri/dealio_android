@@ -40,6 +40,7 @@ import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.SubScreenScaffold
+import com.dealio.app.ui.builder.availableUnitsOrDerived
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,7 +87,7 @@ fun UnitMatrixScreen(nav: NavController, vm: UnitsViewModel = viewModel()) {
 @Composable
 private fun InventoryCard(p: Project, onClick: () -> Unit) {
     val total = (p.totalUnits ?: 0).coerceAtLeast(1)
-    val available = p.availableUnits ?: 0
+    val available = p.availableUnitsOrDerived() ?: 0
     val booked = p.bookedUnits ?: 0
     val sold = p.soldUnits ?: 0
     DealioCard(Modifier.clickable { onClick() }) {

@@ -42,12 +42,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.dealio.app.data.api.Meeting
 import com.dealio.app.ui.builder.DealioCard
-import com.dealio.app.ui.builder.EmptyState
+import com.dealio.app.ui.customer.CustomerEmptyState
+import com.dealio.app.ui.customer.CustomerHeader
+import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.RefreshOnResume
 import com.dealio.app.ui.builder.StatusChip
-import com.dealio.app.ui.builder.TabHeader
 import com.dealio.app.ui.builder.formatDate
 import com.dealio.app.ui.components.CalMeeting
 import com.dealio.app.ui.components.ListCalendarToggle
@@ -81,7 +82,17 @@ fun VisitsScreen(nav: NavController, vm: VisitsViewModel = viewModel()) {
     Scaffold(
         containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
-        topBar = { TabHeader("Site visits", subtitle = "${state.meetings.size} scheduled") },
+        topBar = {
+            val completed = state.meetings.count { it.status.equals("Completed", true) }
+            CustomerHeader(
+                title = "Site visits",
+                subtitle = "See homes before you commit",
+                stats = buildList {
+                    add("${state.meetings.size - completed}" to "upcoming")
+                    if (completed > 0) add("$completed" to "visited")
+                },
+            )
+        },
     ) { inner ->
         when {
             state.loading -> LoadingState(Modifier.padding(inner))
@@ -96,7 +107,13 @@ fun VisitsScreen(nav: NavController, vm: VisitsViewModel = viewModel()) {
                         MeetingsCalendar(calMeetings)
                     }
                 } else if (state.meetings.isEmpty()) {
-                    EmptyState(Icons.Outlined.CalendarMonth, "No visits yet", "Book a site visit from any project to see it here.")
+                    CustomerEmptyState(
+                        icon = Icons.Outlined.CalendarMonth,
+                        title = "No visits booked",
+                        subtitle = "Walking the site is the fastest way to tell a shortlist apart. Book one from any project page.",
+                        actionLabel = "Find a project",
+                        onAction = { nav.navigate(CustomerRoutes.EXPLORE) },
+                    )
                 } else LazyColumn(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
