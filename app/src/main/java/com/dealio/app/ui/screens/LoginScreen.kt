@@ -17,9 +17,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.dealio.app.ui.findActivity
 import com.dealio.app.ui.auth.AuthStep
 import com.dealio.app.ui.auth.AuthViewModel
 import com.dealio.app.ui.components.AuthScaffold
@@ -38,6 +40,9 @@ fun LoginScreen(
     viewModel: AuthViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    // Firebase attaches its app verification (Play Integrity, reCAPTCHA fallback)
+    // to the hosting Activity, so the OTP send needs it.
+    val activity = LocalContext.current.findActivity()
 
     var countryCode by remember { mutableStateOf("+91") }
     var phone by remember { mutableStateOf("") }
@@ -66,7 +71,14 @@ fun LoginScreen(
                 text = "Send code",
                 loading = state.loading,
                 enabled = phone.length >= 6,
-                onClick = { viewModel.sendOtp(isSignup = false, phone = phone, countryCode = countryCode) },
+                onClick = {
+                    viewModel.sendOtp(
+                        activity = activity,
+                        isSignup = false,
+                        phone = phone,
+                        countryCode = countryCode,
+                    )
+                },
             )
             ErrorText(state.error)
         } else {
@@ -81,7 +93,7 @@ fun LoginScreen(
                 text = "Verify & sign in",
                 loading = state.loading,
                 enabled = otp.length == 6,
-                onClick = { viewModel.verifyLogin(phone = phone, otp = otp) },
+                onClick = { viewModel.verifyLogin(otp = otp) },
             )
             ErrorText(state.error)
             Spacer(Modifier.height(16.dp))
@@ -103,7 +115,13 @@ fun LoginScreen(
                 } else {
                     TextButton(onClick = {
                         otp = ""
-                        viewModel.sendOtp(isSignup = false, phone = phone, countryCode = countryCode)
+                        viewModel.sendOtp(
+                            activity = activity,
+                            isSignup = false,
+                            phone = phone,
+                            countryCode = countryCode,
+                            isResend = true,
+                        )
                     }) {
                         Text("Resend code", color = Teal, fontWeight = FontWeight.SemiBold)
                     }

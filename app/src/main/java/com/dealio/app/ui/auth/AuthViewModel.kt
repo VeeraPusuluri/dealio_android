@@ -1,13 +1,18 @@
 package com.dealio.app.ui.auth
 
+import android.app.Activity
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.dealio.app.data.ApiResult
 import com.dealio.app.data.AuthRepository
+import com.dealio.app.data.FirebasePhoneAuth
+import com.dealio.app.data.PhoneVerification
 import com.dealio.app.data.TokenStore
 import com.dealio.app.data.api.ApiClient
 import com.dealio.app.data.api.AuthUser
+import com.google.firebase.auth.PhoneAuthCredential
+import com.google.firebase.auth.PhoneAuthProvider
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,64 +47,143 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
 
     private var countdownJob: Job? = null
 
-    fun sendOtp(isSignup: Boolean, phone: String, countryCode: String) {
+    /** Set once Firebase has sent a code; pairs with whatever the user types. */
+    private var verificationId: String? = null
+    private var resendToken: PhoneAuthProvider.ForceResendingToken? = null
+
+    /** Remembered from [sendOtp] so an auto-retrieved code can finish signup itself. */
+    private var pendingSignup: PendingSignup? = null
+
+    private data class PendingSignup(
+        val fullName: String,
+        val role: String,
+        val referralCode: String,
+    )
+
+    /**
+     * Start Firebase phone verification. Needs the hosting [activity] because
+     * Firebase attaches its app-verification (Play Integrity / reCAPTCHA
+     * fallback) to it.
+     *
+     * Pass [signup] on the signup flow so an auto-retrieved SMS can complete the
+     * account without the user typing anything.
+     */
+    fun sendOtp(
+        activity: Activity,
+        isSignup: Boolean,
+        phone: String,
+        countryCode: String,
+        fullName: String = "",
+        role: String = "",
+        referralCode: String = "",
+        isResend: Boolean = false,
+    ) {
         if (phone.isBlank()) {
             _state.update { it.copy(error = "Enter your phone number") }
             return
         }
-        viewModelScope.launch {
-            _state.update { it.copy(loading = true, error = null) }
-            when (val result = repository.sendOtp(isSignup, phone.trim(), countryCode.trim())) {
-                is ApiResult.Success -> {
+        if (isSignup && fullName.isBlank()) {
+            _state.update { it.copy(error = "Enter your full name") }
+            return
+        }
+
+        pendingSignup = if (isSignup) PendingSignup(fullName.trim(), role, referralCode.trim()) else null
+        val e164 = toE164(phone, countryCode)
+        _state.update { it.copy(loading = true, error = null) }
+
+        FirebasePhoneAuth.sendCode(
+            activity = activity,
+            e164Phone = e164,
+            resendToken = if (isResend) resendToken else null,
+        ) { event ->
+            when (event) {
+                is PhoneVerification.CodeSent -> {
+                    verificationId = event.verificationId
+                    resendToken = event.resendToken
                     _state.update {
-                        it.copy(
-                            loading = false,
-                            step = AuthStep.OTP,
-                            maskedPhone = result.data.maskedPhone,
-                            demoCode = result.data.demoCode,
-                        )
+                        it.copy(loading = false, step = AuthStep.OTP, maskedPhone = maskPhone(e164))
                     }
                     startResendCountdown()
                 }
-                is ApiResult.Error -> _state.update {
-                    it.copy(loading = false, error = result.message)
-                }
+                // Firebase resolved the number on its own — no code to type.
+                is PhoneVerification.Completed -> exchange(event.credential, isSignup)
+                is PhoneVerification.Failed ->
+                    _state.update { it.copy(loading = false, error = event.message) }
             }
         }
     }
 
-    fun verifyLogin(phone: String, otp: String) {
-        verify { repository.verifyLogin(phone.trim(), otp.trim()) }
-    }
+    fun verifyLogin(otp: String) = submitCode(otp, isSignup = false)
 
-    fun verifySignup(phone: String, otp: String, fullName: String, role: String, referralCode: String) {
-        if (fullName.isBlank()) {
-            _state.update { it.copy(error = "Enter your full name") }
+    fun verifySignup(otp: String) = submitCode(otp, isSignup = true)
+
+    private fun submitCode(otp: String, isSignup: Boolean) {
+        val id = verificationId
+        if (id == null) {
+            _state.update { it.copy(error = "Request a code first") }
             return
         }
-        verify {
-            repository.verifySignup(phone.trim(), otp.trim(), fullName.trim(), role, referralCode.trim())
+        if (otp.isBlank()) {
+            _state.update { it.copy(error = "Enter the 6-digit code") }
+            return
+        }
+        exchange(FirebasePhoneAuth.credentialFor(id, otp.trim()), isSignup)
+    }
+
+    /** Check the credential with Firebase, then trade its ID token for a session. */
+    private fun exchange(credential: PhoneAuthCredential, isSignup: Boolean) {
+        viewModelScope.launch {
+            _state.update { it.copy(loading = true, error = null) }
+            val tokenResult = FirebasePhoneAuth.idTokenFor(credential)
+            val idToken = tokenResult.getOrElse { e ->
+                _state.update { it.copy(loading = false, error = FirebasePhoneAuth.errorMessage(e)) }
+                return@launch
+            }
+            val signup = pendingSignup
+            verify {
+                repository.firebaseExchange(
+                    idToken = idToken,
+                    isSignup = isSignup,
+                    fullName = signup?.fullName,
+                    role = signup?.role,
+                    referralCode = signup?.referralCode,
+                )
+            }
         }
     }
 
-    private fun verify(block: suspend () -> ApiResult<com.dealio.app.data.api.AuthData>) {
-        viewModelScope.launch {
-            _state.update { it.copy(loading = true, error = null) }
-            when (val result = block()) {
-                is ApiResult.Success -> {
-                    // Register this device for push now that we're authenticated.
-                    com.dealio.app.push.Push.ensureRegistered(getApplication())
-                    _state.update { it.copy(loading = false, loggedInUser = result.data.user) }
-                }
-                is ApiResult.Error -> _state.update {
-                    it.copy(loading = false, error = result.message)
-                }
+    private fun toE164(phone: String, countryCode: String): String {
+        val digits = phone.filter { it.isDigit() }
+        if (phone.trim().startsWith("+")) return "+$digits"
+        val cc = countryCode.filter { it.isDigit() }.ifBlank { "91" }
+        return "+$cc$digits"
+    }
+
+    private fun maskPhone(e164: String): String =
+        if (e164.length <= 4) e164
+        else e164.take(3) + "*".repeat((e164.length - 7).coerceAtLeast(0)) + e164.takeLast(4)
+
+    /** Already inside a coroutine — suspends rather than launching its own. */
+    private suspend fun verify(block: suspend () -> ApiResult<com.dealio.app.data.api.AuthData>) {
+        _state.update { it.copy(loading = true, error = null) }
+        when (val result = block()) {
+            is ApiResult.Success -> {
+                // Register this device for push now that we're authenticated.
+                com.dealio.app.push.Push.ensureRegistered(getApplication())
+                _state.update { it.copy(loading = false, loggedInUser = result.data.user) }
+            }
+            is ApiResult.Error -> _state.update {
+                it.copy(loading = false, error = result.message)
             }
         }
     }
 
     fun backToDetails() {
         countdownJob?.cancel()
+        // Drop the in-flight verification too — editing the number must not let a
+        // code minted for the previous one still be submitted.
+        verificationId = null
+        resendToken = null
         _state.update {
             it.copy(step = AuthStep.DETAILS, error = null, demoCode = null, resendSecondsLeft = 0)
         }

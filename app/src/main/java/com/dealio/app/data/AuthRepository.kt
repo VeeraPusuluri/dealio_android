@@ -3,6 +3,7 @@ package com.dealio.app.data
 import com.dealio.app.data.api.ApiEnvelope
 import com.dealio.app.data.api.AuthApi
 import com.dealio.app.data.api.AuthData
+import com.dealio.app.data.api.FirebaseAuthRequest
 import com.dealio.app.data.api.SendOtpData
 import com.dealio.app.data.api.SendOtpRequest
 import com.dealio.app.data.api.VerifyLoginRequest
@@ -46,6 +47,30 @@ class AuthRepository(
                     otp = otp,
                     fullName = fullName,
                     role = role,
+                    referralCode = referralCode?.takeIf { it.isNotBlank() },
+                )
+            )
+        }.also { if (it is ApiResult.Success) tokenStore.save(it.data) }
+
+    /**
+     * Trades a Firebase ID token (proof the caller controls the phone number)
+     * for a Dealio session. Used by the Firebase OTP flow in place of
+     * [verifyLogin] / [verifySignup].
+     */
+    suspend fun firebaseExchange(
+        idToken: String,
+        isSignup: Boolean,
+        fullName: String? = null,
+        role: String? = null,
+        referralCode: String? = null,
+    ): ApiResult<AuthData> =
+        call {
+            api.firebaseAuth(
+                FirebaseAuthRequest(
+                    idToken = idToken,
+                    mode = if (isSignup) "signup" else "login",
+                    fullName = fullName?.takeIf { it.isNotBlank() },
+                    role = role?.takeIf { it.isNotBlank() },
                     referralCode = referralCode?.takeIf { it.isNotBlank() },
                 )
             )

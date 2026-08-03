@@ -22,6 +22,14 @@ interface AuthApi {
     @POST("auth/signup/phone/verify-otp")
     suspend fun verifySignupOtp(@Body body: VerifySignupRequest): Response<ApiEnvelope<AuthData>>
 
+    /**
+     * Exchanges a Firebase ID token (from the phone-OTP flow) for a Dealio
+     * session. `mode = "signup"` may create the account and needs a role;
+     * anything else is treated as a login and requires an existing account.
+     */
+    @POST("auth/firebase")
+    suspend fun firebaseAuth(@Body body: FirebaseAuthRequest): Response<ApiEnvelope<AuthData>>
+
     /** Registers this device's FCM token for push notifications (requires auth). */
     @POST("auth/device-token")
     suspend fun registerDeviceToken(@Body body: DeviceTokenRequest): Response<ApiEnvelope<Unit>>
@@ -49,6 +57,15 @@ data class VerifySignupRequest(
     val otp: String,
     val fullName: String,
     val role: String,
+    val referralCode: String? = null,
+)
+
+data class FirebaseAuthRequest(
+    val idToken: String,
+    /** "login" or "signup". */
+    val mode: String,
+    val fullName: String? = null,
+    val role: String? = null,
     val referralCode: String? = null,
 )
 

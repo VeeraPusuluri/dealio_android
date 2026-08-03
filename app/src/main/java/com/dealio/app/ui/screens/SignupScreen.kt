@@ -25,12 +25,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dealio.app.ui.auth.AuthStep
 import com.dealio.app.ui.auth.AuthViewModel
+import com.dealio.app.ui.findActivity
 import com.dealio.app.ui.components.AuthScaffold
 import com.dealio.app.ui.components.DealioButton
 import com.dealio.app.ui.components.DemoCodeHint
@@ -60,6 +62,9 @@ fun SignupScreen(
     viewModel: AuthViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    // Firebase attaches its app verification (Play Integrity, reCAPTCHA fallback)
+    // to the hosting Activity, so the OTP send needs it.
+    val activity = LocalContext.current.findActivity()
 
     var fullName by remember { mutableStateOf("") }
     var role by remember { mutableStateOf("CUSTOMER") }
@@ -142,7 +147,17 @@ fun SignupScreen(
                 text = "Send code",
                 loading = state.loading,
                 enabled = phone.length >= 6 && fullName.isNotBlank(),
-                onClick = { viewModel.sendOtp(isSignup = true, phone = phone, countryCode = countryCode) },
+                onClick = {
+                    viewModel.sendOtp(
+                        activity = activity,
+                        isSignup = true,
+                        phone = phone,
+                        countryCode = countryCode,
+                        fullName = fullName,
+                        role = role,
+                        referralCode = referralCode,
+                    )
+                },
             )
             ErrorText(state.error)
         } else {
@@ -157,15 +172,7 @@ fun SignupScreen(
                 text = "Verify & create account",
                 loading = state.loading,
                 enabled = otp.length == 6,
-                onClick = {
-                    viewModel.verifySignup(
-                        phone = phone,
-                        otp = otp,
-                        fullName = fullName,
-                        role = role,
-                        referralCode = referralCode,
-                    )
-                },
+                onClick = { viewModel.verifySignup(otp = otp) },
             )
             ErrorText(state.error)
             Spacer(Modifier.height(16.dp))
@@ -187,7 +194,16 @@ fun SignupScreen(
                 } else {
                     TextButton(onClick = {
                         otp = ""
-                        viewModel.sendOtp(isSignup = true, phone = phone, countryCode = countryCode)
+                        viewModel.sendOtp(
+                            activity = activity,
+                            isSignup = true,
+                            phone = phone,
+                            countryCode = countryCode,
+                            fullName = fullName,
+                            role = role,
+                            referralCode = referralCode,
+                            isResend = true,
+                        )
                     }) {
                         Text("Resend code", color = Teal, fontWeight = FontWeight.SemiBold)
                     }
