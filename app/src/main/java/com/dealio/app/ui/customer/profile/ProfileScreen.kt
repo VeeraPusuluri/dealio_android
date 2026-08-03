@@ -24,10 +24,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.AddCard
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Handyman
@@ -37,6 +39,7 @@ import androidx.compose.material.icons.outlined.SupportAgent
 import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -51,11 +54,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dealio.app.BuildConfig
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -96,17 +102,29 @@ class ProfileViewModel(app: Application) : CustomerViewModel(app) {
 
     init {
         val u = repo.currentUser
-        _state.update { it.copy(name = u?.fullName ?: "Customer", phone = u?.phone ?: "", email = u?.email ?: "") }
+        _state.update {
+            it.copy(
+                name = u?.fullName ?: "Customer",
+                phone = u?.phone ?: "",
+                email = u?.email ?: "",
+                selectedCity = repo.preferredCity,
+            )
+        }
         viewModelScope.launch {
             (repo.getCities() as? ApiResult.Success)?.let { r -> _state.update { it.copy(cities = r.data) } }
         }
     }
 
     fun setCity(city: String) {
+        val previous = _state.value.selectedCity
         _state.update { it.copy(selectedCity = city) }
         viewModelScope.launch {
-            val r = repo.setPreferredCity(city)
-            _state.update { it.copy(message = (r as? ApiResult.Error)?.message ?: "Preferred city set to $city") }
+            when (val r = repo.setPreferredCity(city)) {
+                // Put the chip back where it was rather than leaving the UI
+                // claiming a city the server never accepted.
+                is ApiResult.Error -> _state.update { it.copy(selectedCity = previous, message = r.message) }
+                is ApiResult.Success -> _state.update { it.copy(message = "Preferred city set to $city") }
+            }
         }
     }
 
@@ -142,37 +160,61 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
             Modifier.fillMaxSize().padding(bottom = inner.calculateBottomPadding()).verticalScroll(rememberScrollState()),
         ) {
             // ── Branded header ──
-            Column(
+            Box(
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
-                    .background(NavyTealGradient)
-                    .statusBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .background(NavyTealGradient),
             ) {
                 Box(
-                    Modifier.size(76.dp).background(TealBright, CircleShape),
-                    contentAlignment = Alignment.Center,
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .size(260.dp)
+                        .background(
+                            Brush.radialGradient(listOf(TealBright.copy(alpha = 0.22f), Color.Transparent)),
+                            CircleShape,
+                        ),
+                )
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 20.dp, vertical = 26.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(initialsOf(state.name), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp)
-                }
-                Spacer(Modifier.height(12.dp))
-                Text(state.name, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                if (state.phone.isNotBlank()) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(state.phone, color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp)
-                }
-                if (state.email.isNotBlank()) {
-                    Spacer(Modifier.height(10.dp))
-                    Row(
-                        Modifier.background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(50))
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Box(
+                        Modifier
+                            .size(88.dp)
+                            .border(2.dp, Color.White.copy(alpha = 0.35f), CircleShape)
+                            .padding(5.dp)
+                            .background(
+                                Brush.linearGradient(listOf(TealBright, Teal)),
+                                CircleShape,
+                            ),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Outlined.Email, null, tint = Color.White, modifier = Modifier.size(13.dp))
-                        Spacer(Modifier.width(5.dp))
-                        Text(state.email, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Text(
+                            initialsOf(state.name),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 28.sp,
+                        )
+                    }
+                    Spacer(Modifier.height(14.dp))
+                    Text(state.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    if (state.phone.isNotBlank()) {
+                        Spacer(Modifier.height(3.dp))
+                        Text(state.phone, color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        HeaderChip(
+                            icon = Icons.Outlined.Email,
+                            text = state.email.ifBlank { "Add your email" },
+                        )
+                        if (state.selectedCity != null) {
+                            HeaderChip(icon = Icons.Outlined.LocationOn, text = state.selectedCity!!)
+                        }
                     }
                 }
             }
@@ -181,64 +223,89 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
                 Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // Preferences card
+                // City and email were sharing one card behind a single "Save
+                // changes" button that only ever saved the email — splitting them
+                // makes it clear the city applies the moment it's tapped.
                 DealioCard {
                     SectionLabel("Preferred city")
-                    Spacer(Modifier.height(10.dp))
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        state.cities.forEach { c ->
-                            val sel = state.selectedCity == c
-                            Text(
-                                c,
-                                color = if (sel) Color.White else TextSecondary,
-                                fontSize = 12.sp,
-                                fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal,
-                                modifier = Modifier
-                                    .background(if (sel) Teal else Color.White, RoundedCornerShape(10.dp))
-                                    .border(1.dp, if (sel) Teal else CardBorder, RoundedCornerShape(10.dp))
-                                    .clickable { vm.setCity(c) }
-                                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                            )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        "Sets which city's new launches you hear about.",
+                        color = TextSecondary,
+                        fontSize = 11.5.sp,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    if (state.cities.isEmpty()) {
+                        // Without this the card renders as a heading over blank
+                        // space whenever the cities call fails.
+                        Text(
+                            if (state.selectedCity != null) {
+                                "Currently ${state.selectedCity}. Other cities couldn't be loaded — pull back later to change it."
+                            } else {
+                                "Cities couldn't be loaded right now."
+                            },
+                            color = TextSecondary,
+                            fontSize = 12.5.sp,
+                        )
+                    } else {
+                        Row(
+                            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            state.cities.forEach { c -> CityChip(c, state.selectedCity == c) { vm.setCity(c) } }
                         }
                     }
-                    Spacer(Modifier.height(18.dp))
+                }
+
+                DealioCard {
                     SectionLabel("Email")
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        "Where booking confirmations and documents are sent.",
+                        color = TextSecondary,
+                        fontSize = 11.5.sp,
+                    )
+                    Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = state.email,
                         onValueChange = vm::setEmailField,
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("you@example.com") },
                         singleLine = true,
+                        leadingIcon = { Icon(Icons.Outlined.Email, null, tint = TextSecondary, modifier = Modifier.size(18.dp)) },
                         shape = RoundedCornerShape(12.dp),
                         colors = dealioFieldColors(),
                     )
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     Button(
                         onClick = vm::saveEmail,
                         modifier = Modifier.fillMaxWidth().height(46.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Teal),
-                    ) { Text("Save changes", color = Color.White, fontWeight = FontWeight.SemiBold) }
+                    ) { Text("Save email", color = Color.White, fontWeight = FontWeight.SemiBold) }
                 }
 
-                // Home & finance
-                ActionGroup("Home & finance") {
-                    ActionRow("My properties", Icons.Outlined.Home, IconBlue) { nav.navigate(CustomerRoutes.PROPERTY) }
-                    ActionRow("Home loans", Icons.Outlined.AccountBalance, IconGreen) { nav.navigate(CustomerRoutes.LOANS) }
-                    ActionRow("Loan top-up", Icons.Outlined.AddCard, IconOrange) { nav.navigate(CustomerRoutes.TOPUP) }
-                    ActionRow("Investments", Icons.Outlined.TrendingUp, IconPurple) { nav.navigate(CustomerRoutes.INVESTMENTS) }
-                }
+                ActionGroup(
+                    "Home & finance",
+                    listOf(
+                        ActionItem("My properties", Icons.Outlined.Home, IconBlue) { nav.navigate(CustomerRoutes.PROPERTY) },
+                        ActionItem("Home loans", Icons.Outlined.AccountBalance, IconGreen) { nav.navigate(CustomerRoutes.LOANS) },
+                        ActionItem("Loan top-up", Icons.Outlined.AddCard, IconOrange) { nav.navigate(CustomerRoutes.TOPUP) },
+                        ActionItem("Investments", Icons.Outlined.TrendingUp, IconPurple) { nav.navigate(CustomerRoutes.INVESTMENTS) },
+                    ),
+                )
 
-                // Documents & support
-                ActionGroup("Documents & support") {
-                    ActionRow("Documents", Icons.Outlined.Description, IconBlue) { nav.navigate(CustomerRoutes.DOCUMENTS) }
-                    ActionRow("Conversations", Icons.Outlined.ChatBubbleOutline, Teal) { nav.navigate(CustomerRoutes.CONVERSATIONS) }
-                    ActionRow("Possession tracker", Icons.Outlined.HomeWork, IconOrange) { nav.navigate(CustomerRoutes.POSSESSION) }
-                    ActionRow("Snagging report", Icons.Outlined.Handyman, IconRed) { nav.navigate(CustomerRoutes.SNAGGING) }
-                    ActionRow("Contact us", Icons.Outlined.SupportAgent, IconGreen) { nav.navigate(CustomerRoutes.CONTACT) }
-                    ActionRow("Notifications", Icons.Outlined.Notifications, IconPurple) { nav.navigate(CustomerRoutes.NOTIFICATIONS) }
-                }
+                ActionGroup(
+                    "Documents & support",
+                    listOf(
+                        ActionItem("Documents", Icons.Outlined.Description, IconBlue) { nav.navigate(CustomerRoutes.DOCUMENTS) },
+                        ActionItem("Conversations", Icons.Outlined.ChatBubbleOutline, Teal) { nav.navigate(CustomerRoutes.CONVERSATIONS) },
+                        ActionItem("Possession tracker", Icons.Outlined.HomeWork, IconOrange) { nav.navigate(CustomerRoutes.POSSESSION) },
+                        ActionItem("Snagging report", Icons.Outlined.Handyman, IconRed) { nav.navigate(CustomerRoutes.SNAGGING) },
+                        ActionItem("Contact us", Icons.Outlined.SupportAgent, IconGreen) { nav.navigate(CustomerRoutes.CONTACT) },
+                        ActionItem("Notifications", Icons.Outlined.Notifications, IconPurple) { nav.navigate(CustomerRoutes.NOTIFICATIONS) },
+                    ),
+                )
 
                 // Security
                 DealioCard {
@@ -257,33 +324,108 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
                     Spacer(Modifier.width(8.dp))
                     Text("Log out", fontWeight = FontWeight.SemiBold)
                 }
+
+                Text(
+                    "Dealio v${BuildConfig.VERSION_NAME}",
+                    color = TextSecondary,
+                    fontSize = 11.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
+/** Translucent pill in the profile hero. */
+@Composable
+private fun HeaderChip(icon: ImageVector, text: String) {
+    Row(
+        Modifier
+            .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(50))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, null, tint = Color.White, modifier = Modifier.size(13.dp))
+        Spacer(Modifier.width(5.dp))
+        Text(text, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+/** City selector chip — ticks the active city so the saved choice is visible. */
+@Composable
+private fun CityChip(city: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .background(if (selected) Teal else Color.White, RoundedCornerShape(10.dp))
+            .border(1.dp, if (selected) Teal else CardBorder, RoundedCornerShape(10.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 14.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (selected) {
+            Icon(Icons.Outlined.Check, null, tint = Color.White, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(5.dp))
+        }
+        Text(
+            city,
+            color = if (selected) Color.White else TextSecondary,
+            fontSize = 12.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        )
+    }
+}
+
+/**
+ * Grouped rows share one rounded container with hairline dividers, rather than
+ * each row being its own floating card — six separate outlined boxes in a column
+ * read as noise.
+ */
+private data class ActionItem(
+    val label: String,
+    val icon: ImageVector,
+    val tint: Color,
+    val onClick: () -> Unit,
+)
+
+@Composable
+private fun ActionGroup(title: String, items: List<ActionItem>) {
+    Column {
+        SectionLabel(title, Modifier.padding(start = 4.dp, bottom = 8.dp))
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .background(Color.White, RoundedCornerShape(16.dp))
+                .border(1.dp, CardBorder, RoundedCornerShape(16.dp)),
+        ) {
+            items.forEachIndexed { index, item ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        color = CardBorder.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(start = 58.dp),
+                    )
+                }
+                ActionRow(item.label, item.icon, item.tint, item.onClick)
             }
         }
     }
 }
 
 @Composable
-private fun ActionGroup(title: String, content: @Composable () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionLabel(title, Modifier.padding(start = 4.dp))
-        content()
-    }
-}
-
-@Composable
 private fun ActionRow(label: String, icon: ImageVector, tint: Color, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(14.dp))
-            .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
+        Modifier
+            .fillMaxWidth()
             .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 11.dp),
+            .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Tinted tile rather than a solid block of colour — six saturated squares
+        // stacked down the screen fought with the content.
         Box(
-            Modifier.size(34.dp).background(tint, RoundedCornerShape(9.dp)),
+            Modifier.size(34.dp).background(tint.copy(alpha = 0.13f), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
-        ) { Icon(icon, null, tint = Color.White, modifier = Modifier.size(18.dp)) }
+        ) { Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp)) }
         Spacer(Modifier.width(12.dp))
         Text(label, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
         Icon(Icons.Outlined.ChevronRight, null, tint = TextSecondary, modifier = Modifier.size(20.dp))

@@ -52,8 +52,12 @@ class CustomerRepository(context: Context) {
     suspend fun getAvailableCPs(): ApiResult<List<AvailableCP>> = call { api.getAvailableCPs() }
 
     // ── Profile / notifications ─────────────────────────────────────────────
+    /** The city last chosen on this device — see [TokenStore.preferredCity]. */
+    val preferredCity: String? get() = tokenStore.preferredCity
+
     suspend fun setPreferredCity(city: String?): ApiResult<Any> =
         call { api.setPreferredCity(PreferredCityRequest(city)) }
+            .also { if (it is ApiResult.Success) tokenStore.preferredCity = city }
 
     suspend fun updateProfile(email: String?): ApiResult<Any> =
         call { api.updateProfile(ProfileUpdateRequest(email)) }

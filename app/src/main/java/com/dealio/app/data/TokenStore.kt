@@ -44,6 +44,17 @@ class TokenStore(context: Context) {
         )
     }
 
+    /**
+     * The customer's preferred city, remembered locally.
+     *
+     * The API can only be told the city (PATCH /customer/preferred-city) — there
+     * is no endpoint that reads it back, so without this the settings screen
+     * showed no city selected even right after the user picked one.
+     */
+    var preferredCity: String?
+        get() = prefs.getString(KEY_PREFERRED_CITY, null)
+        set(value) = prefs.edit { putString(KEY_PREFERRED_CITY, value) }
+
     fun clear() {
         prefs.edit { clear() }
     }
@@ -56,5 +67,6 @@ class TokenStore(context: Context) {
         const val KEY_PHONE = "phone"
         const val KEY_ROLE = "role"
         const val KEY_EMAIL = "email"
+        const val KEY_PREFERRED_CITY = "preferred_city"
     }
 }
