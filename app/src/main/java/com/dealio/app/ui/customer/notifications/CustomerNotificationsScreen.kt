@@ -1,6 +1,7 @@
 package com.dealio.app.ui.customer.notifications
 
 import android.app.Application
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,7 @@ import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.builder.formatDate
 import com.dealio.app.ui.customer.CustomerViewModel
+import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,12 +58,31 @@ class CustomerNotificationsViewModel(app: Application) : CustomerViewModel(app) 
         _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             when (val r = repo.getNotifications()) {
-                is ApiResult.Success -> {
-                    _state.update { it.copy(loading = false, items = r.data) }
-                    repo.markAllNotificationsRead()
-                }
+                // Deliberately does NOT mark everything read here. Marking on open
+                // meant the unread dots were decoration -- they could never survive
+                // the load that drew them -- and it silently cleared alerts the user
+                // had not looked at. Read is now an explicit act: tap one, or use
+                // "Mark all read".
+                is ApiResult.Success -> _state.update { it.copy(loading = false, items = r.data) }
                 is ApiResult.Error -> _state.update { it.copy(loading = false, error = r.message) }
             }
+        }
+    }
+
+    fun markAllRead() {
+        viewModelScope.launch {
+            repo.markAllNotificationsRead()
+            _state.update { s -> s.copy(items = s.items.map { it.copy(read = true) }) }
+        }
+    }
+
+    /** Persist the read *before* redrawing: the list endpoint serves unread-only,
+     *  so a purely local flag would be undone by the next load. */
+    fun markRead(id: Long) {
+        if (_state.value.items.none { it.id == id && !it.read }) return
+        viewModelScope.launch {
+            repo.markNotificationRead(id)
+            _state.update { s -> s.copy(items = s.items.map { if (it.id == id) it.copy(read = true) else it }) }
         }
     }
 }
@@ -69,7 +90,15 @@ class CustomerNotificationsViewModel(app: Application) : CustomerViewModel(app) 
 @Composable
 fun CustomerNotificationsScreen(nav: NavController, vm: CustomerNotificationsViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
-    SubScreenScaffold("Notifications", nav) { inner ->
+    SubScreenScaffold(
+        "Notifications", nav,
+        actions = {
+            if (state.items.any { !it.read }) {
+                Text("Mark all read", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(end = 14.dp).clickable { vm.markAllRead() })
+            }
+        },
+    ) { inner ->
         when {
             state.loading -> LoadingState(Modifier.padding(inner))
             state.error != null -> ErrorState(state.error!!, onRetry = vm::load, modifier = Modifier.padding(inner))
@@ -83,7 +112,7 @@ fun CustomerNotificationsScreen(nav: NavController, vm: CustomerNotificationsVie
             ) {
                 items(state.items.size) { i ->
                     val n = state.items[i]
-                    DealioCard {
+                    DealioCard(onClick = { vm.markRead(n.id) }) {
                         Text(n.title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(3.dp))
                         Text(n.message, color = TextSecondary, fontSize = 13.sp)

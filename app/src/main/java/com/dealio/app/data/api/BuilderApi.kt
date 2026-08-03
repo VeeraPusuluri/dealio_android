@@ -157,4 +157,9 @@ interface BuilderApi {
 
     @PATCH("builder/notifications/read-all")
     suspend fun markAllNotificationsRead(): Response<ApiEnvelope<Any>>
+
+    /** Marks one notification read. The list endpoint returns unread-only, so
+     *  without this a tapped notification comes straight back on the next load. */
+    @PATCH("builder/notifications/{id}/read")
+    suspend fun markNotificationRead(@Path("id") id: Long): Response<ApiEnvelope<Any>>
 }

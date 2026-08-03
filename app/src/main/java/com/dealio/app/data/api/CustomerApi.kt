@@ -48,6 +48,11 @@ interface CustomerApi {
     @PATCH("customer/notifications/read-all")
     suspend fun markAllNotificationsRead(): Response<ApiEnvelope<Any>>
 
+    /** Marks one notification read. The list endpoint returns unread-only, so
+     *  without this a tapped notification comes straight back on the next load. */
+    @PATCH("customer/notifications/{id}/read")
+    suspend fun markNotificationRead(@Path("id") id: Long): Response<ApiEnvelope<Any>>
+
     // ── Meetings / site visits ────────────────────────────────────────────────
     @GET("portal/customer/meetings")
     suspend fun getMyMeetings(@Query("phone") phone: String): Response<ApiEnvelope<List<Meeting>>>

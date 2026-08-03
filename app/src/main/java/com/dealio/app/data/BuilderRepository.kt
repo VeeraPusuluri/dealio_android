@@ -154,6 +154,9 @@ class BuilderRepository(context: Context) {
     suspend fun markAllNotificationsRead(): ApiResult<Any> =
         call { api.markAllNotificationsRead() }
 
+    suspend fun markNotificationRead(id: Long): ApiResult<Any> =
+        call { api.markNotificationRead(id) }
+
     // ── Helpers ─────────────────────────────────────────────────────────────
     private suspend fun <T> withBuilder(block: suspend (Long) -> ApiResult<T>): ApiResult<T> =
         when (val b = builderId()) {

@@ -24,10 +24,16 @@ class DealioFcmService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val title = message.notification?.title ?: message.data["title"] ?: "Dealio"
         val body = message.notification?.body ?: message.data["body"] ?: ""
-        showNotification(title, body)
+        // The server sends the persisted Notification row id. Posting under it means
+        // FCM's at-least-once redelivery updates the existing tray entry instead of
+        // stacking a second copy of the same alert. Fall back to a unique id only
+        // when the id is absent, so unrelated alerts still can't overwrite each other.
+        val notifId = message.data["notificationId"]?.toIntOrNull()
+            ?: System.currentTimeMillis().toInt()
+        showNotification(notifId, title, body)
     }
 
-    private fun showNotification(title: String, body: String) {
+    private fun showNotification(notifId: Int, title: String, body: String) {
         // POST_NOTIFICATIONS may be denied on Android 13+ — bail quietly if so.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             androidx.core.content.ContextCompat.checkSelfPermission(
@@ -53,6 +59,6 @@ class DealioFcmService : FirebaseMessagingService() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
 
-        NotificationManagerCompat.from(this).notify(System.currentTimeMillis().toInt(), notification)
+        NotificationManagerCompat.from(this).notify(notifId, notification)
     }
 }

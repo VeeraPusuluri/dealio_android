@@ -3,6 +3,7 @@ package com.dealio.app.data
 import android.content.Context
 import com.dealio.app.data.api.ApiClient
 import com.dealio.app.data.api.ApiEnvelope
+import com.dealio.app.data.api.BookMeetingRequest
 import com.dealio.app.data.api.BuilderNotification
 import com.dealio.app.data.api.CpApi
 import com.dealio.app.data.api.CpCommission
@@ -23,6 +24,7 @@ import com.dealio.app.data.api.CreateFollowUpRequest
 import com.dealio.app.data.api.Meeting
 import com.dealio.app.data.api.MeetingNoteRequest
 import com.dealio.app.data.api.Project
+import com.dealio.app.data.api.ProjectDocument
 import com.dealio.app.data.api.SendPhoneOtpRequest
 import com.dealio.app.data.api.ShareLinkResponse
 import com.dealio.app.data.api.VerifyPhoneRequest
@@ -50,6 +52,8 @@ class CpRepository(context: Context) {
     // ── Projects ──────────────────────────────────────────────────────────────
     suspend fun getProjects(): ApiResult<List<Project>> = call { api.getPublicProjects() }
     suspend fun getProject(id: Long): ApiResult<Project> = call { api.getProject(id) }
+    suspend fun getProjectDocuments(builderId: Long, projectId: Long): ApiResult<List<ProjectDocument>> =
+        call { api.getProjectDocuments(builderId, projectId) }
     suspend fun getShareLink(projectId: Long): ApiResult<ShareLinkResponse> = call { api.getShareLink(cpUserId, projectId) }
 
     // ── Leads ─────────────────────────────────────────────────────────────────
@@ -76,6 +80,32 @@ class CpRepository(context: Context) {
     suspend fun getMeetings(): ApiResult<List<Meeting>> = call { api.getMeetings(cpUserId) }
     suspend fun addMeetingNote(meetingId: Long, notes: String, rating: Int?): ApiResult<Any> =
         call { api.addMeetingNote(cpUserId, meetingId, MeetingNoteRequest(notes, rating)) }
+
+    /** Books a builder appointment for a customer; the meeting is attributed to this CP. */
+    suspend fun bookVisit(
+        builderId: Long,
+        projectId: Long?,
+        customerName: String,
+        customerPhone: String,
+        date: String,
+        time: String,
+        type: String?,
+        notes: String?,
+    ): ApiResult<Any> = call {
+        api.bookMeeting(
+            BookMeetingRequest(
+                builderId = builderId,
+                projectId = projectId,
+                customerName = customerName,
+                customerPhone = customerPhone,
+                preferredDate = date,
+                preferredTime = time,
+                meetingType = type,
+                notes = notes,
+                cpUserId = cpUserId,
+            ),
+        )
+    }
 
     // ── Due today ──────────────────────────────────────────────────────────────
     suspend fun getDueToday(): ApiResult<CpDueToday> = call { api.getDueToday(cpUserId) }
@@ -109,6 +139,7 @@ class CpRepository(context: Context) {
     // ── Notifications ──────────────────────────────────────────────────────────
     suspend fun getNotifications(): ApiResult<List<BuilderNotification>> = call { api.getNotifications() }
     suspend fun markAllNotificationsRead(): ApiResult<Any> = call { api.markAllNotificationsRead() }
+    suspend fun markNotificationRead(id: Long): ApiResult<Any> = call { api.markNotificationRead(id) }
 
     // ── Helper ──────────────────────────────────────────────────────────────
     private suspend fun <T> call(block: suspend () -> Response<ApiEnvelope<T>>): ApiResult<T> {

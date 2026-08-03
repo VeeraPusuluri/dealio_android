@@ -72,6 +72,16 @@ class NotificationsViewModel(app: Application) : BuilderViewModel(app) {
             _state.update { s -> s.copy(items = s.items.map { it.copy(read = true) }) }
         }
     }
+
+    /** Persist the read *before* redrawing: the list endpoint serves unread-only,
+     *  so a purely local flag would be undone by the next load. */
+    fun markRead(id: Long) {
+        if (_state.value.items.none { it.id == id && !it.read }) return
+        viewModelScope.launch {
+            repo.markNotificationRead(id)
+            _state.update { s -> s.copy(items = s.items.map { if (it.id == id) it.copy(read = true) else it }) }
+        }
+    }
 }
 
 @Composable
@@ -93,7 +103,7 @@ fun NotificationsScreen(nav: NavController, vm: NotificationsViewModel = viewMod
             else -> LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(state.items.size) { i ->
                     val n = state.items[i]
-                    DealioCard {
+                    DealioCard(onClick = { vm.markRead(n.id) }) {
                         Row {
                             if (!n.read) {
                                 Box(Modifier.size(8.dp).padding(top = 5.dp).background(Teal, RoundedCornerShape(4.dp)))

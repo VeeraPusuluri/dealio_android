@@ -64,6 +64,9 @@ class CustomerRepository(context: Context) {
     suspend fun markAllNotificationsRead(): ApiResult<Any> =
         call { api.markAllNotificationsRead() }
 
+    suspend fun markNotificationRead(id: Long): ApiResult<Any> =
+        call { api.markNotificationRead(id) }
+
     // ── Meetings ──────────────────────────────────────────────────────────────
     suspend fun getMyMeetings(): ApiResult<List<Meeting>> = call { api.getMyMeetings(phone) }
 

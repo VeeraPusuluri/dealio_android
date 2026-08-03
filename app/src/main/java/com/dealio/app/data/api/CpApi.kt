@@ -25,6 +25,13 @@ interface CpApi {
     @GET("customer/projects/{id}")
     suspend fun getProject(@Path("id") id: Long): Response<ApiEnvelope<Project>>
 
+    // Project photos / floor plans / brochures (shared builder doc vault).
+    @GET("builder/{builderId}/projects/{projectId}/documents")
+    suspend fun getProjectDocuments(
+        @Path("builderId") builderId: Long,
+        @Path("projectId") projectId: Long,
+    ): Response<ApiEnvelope<List<ProjectDocument>>>
+
     @POST("cp/{cpUserId}/projects/{projectId}/share-link")
     suspend fun getShareLink(
         @Path("cpUserId") cpUserId: Long,
@@ -68,6 +75,11 @@ interface CpApi {
     // ── Meetings ──────────────────────────────────────────────────────────────
     @GET("cp/{cpUserId}/meetings")
     suspend fun getMeetings(@Path("cpUserId") cpUserId: Long): Response<ApiEnvelope<List<Meeting>>>
+
+    // Books a builder appointment on behalf of a customer. Shares the customer
+    // portal endpoint; the CP is attached via BookMeetingRequest.cpUserId.
+    @POST("portal/customer/meetings")
+    suspend fun bookMeeting(@Body body: BookMeetingRequest): Response<ApiEnvelope<Any>>
 
     @PATCH("cp/{cpUserId}/meetings/{meetingId}/notes")
     suspend fun addMeetingNote(@Path("cpUserId") cpUserId: Long, @Path("meetingId") meetingId: Long, @Body body: MeetingNoteRequest): Response<ApiEnvelope<Any>>
@@ -121,4 +133,9 @@ interface CpApi {
 
     @PATCH("cp/notifications/read-all")
     suspend fun markAllNotificationsRead(): Response<ApiEnvelope<Any>>
+
+    /** Marks one notification read. The list endpoint returns unread-only, so
+     *  without this a tapped notification comes straight back on the next load. */
+    @PATCH("cp/notifications/{id}/read")
+    suspend fun markNotificationRead(@Path("id") id: Long): Response<ApiEnvelope<Any>>
 }
