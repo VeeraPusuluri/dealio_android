@@ -88,17 +88,36 @@ val RoleAdmin = DealioRole(
 /** Roles that can open an account from the app — admins are provisioned, not signed up. */
 val SignupRoles = listOf(RoleCustomer, RoleCp, RoleBuilder, RoleBank, RoleNri)
 
-/** Roles the sign-in picker can express — a superset of [SignupRoles]. */
-val SigninRoles = SignupRoles + RoleAdmin
+/**
+ * Roles the sign-in picker offers. Administration is a web-portal job, so there
+ * is no Admin pill — but see [KnownRoles]: admin still has to be *recognised*,
+ * or an admin's number would sail through under whichever pill was selected.
+ */
+val SigninRoles = SignupRoles
+
+/**
+ * Every role this app can name, picker or not.
+ *
+ * Admin is here and not in [SigninRoles] on purpose. `roleFor` returning null
+ * means "don't enforce" (see AuthViewModel), which is right for the backend
+ * roles the app has no concept of — VENDOR, LANDOWNER, REFERRAL — but would be
+ * a hole for admin: the pre-flight would stop objecting and an admin could sign
+ * in as a Customer. Keeping it here makes the mismatch fire and the message
+ * accurate.
+ */
+val KnownRoles = SignupRoles + RoleAdmin
 
 /**
  * Look up a role by its wire value. Null for the backend roles that have no
- * picker entry (VENDOR, LANDOWNER, REFERRAL) — callers must not block on those.
+ * entry at all (VENDOR, LANDOWNER, REFERRAL) — callers must not block on those.
  */
 fun roleFor(value: String?): DealioRole? {
     val wire = value?.trim()?.uppercase() ?: return null
-    return SigninRoles.firstOrNull { it.value == wire }
+    return KnownRoles.firstOrNull { it.value == wire }
 }
+
+/** Whether the sign-in picker can actually select this role. */
+fun DealioRole.isSignInOption(): Boolean = this in SigninRoles
 
 /**
  * Role colors are picked to read on white cards, so the darker ones (bank blue,

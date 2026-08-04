@@ -37,6 +37,7 @@ import com.dealio.app.ui.auth.AuthViewModel
 import com.dealio.app.ui.auth.DealioRole
 import com.dealio.app.ui.auth.RoleCustomer
 import com.dealio.app.ui.auth.SigninRoles
+import com.dealio.app.ui.auth.isSignInOption
 import com.dealio.app.ui.auth.onNavy
 import com.dealio.app.ui.auth.roleFor
 import com.dealio.app.ui.components.AuthScaffold
@@ -130,7 +131,10 @@ fun LoginScreen(
 
             // The pre-flight knows which role this number really is, so offer the
             // fix rather than leaving the user to guess which pill to try next.
-            val suggested = roleFor(state.mismatchedRole)
+            // Only for roles the picker has: an admin number still gets the
+            // "registered as an Admin account" error, but no shortcut in — that
+            // would put back the sign-in path the Admin pill was removed to close.
+            val suggested = roleFor(state.mismatchedRole)?.takeIf { it.isSignInOption() }
             AnimatedVisibility(visible = suggested != null) {
                 if (suggested != null) {
                     Spacer(Modifier.height(12.dp))
