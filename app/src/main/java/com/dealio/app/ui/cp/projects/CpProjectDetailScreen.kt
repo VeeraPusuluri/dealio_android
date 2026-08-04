@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -59,6 +60,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -195,19 +197,28 @@ fun CpProjectDetailScreen(nav: NavController, projectId: Long, vm: CpProjectDeta
             TopAppBar(
                 title = { Text(p?.name ?: "Project", fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 1) },
                 navigationIcon = { IconButton(onClick = { nav.navigateUp() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Navy) } },
-                // All three project actions live here as icons. Adding a lead sits
-                // rightmost, under the thumb and last in the row, because it is the
-                // one that changes something — the other two only pass the project on.
+                // Colour carries rank here rather than category. Sharing a link and
+                // booking a visit pass the project on and sit in brand teal; adding
+                // a lead is the only one that creates something, so it is filled —
+                // three icons in three unrelated colours would just be noise.
                 actions = {
                     if (p != null) {
                         IconButton(onClick = { vm.share() }, enabled = !state.working) {
-                            Icon(Icons.Outlined.Share, "Share link", tint = Navy)
+                            Icon(Icons.Outlined.Share, "Share link", tint = Teal)
                         }
                         IconButton(onClick = { showBooking = true }) {
-                            Icon(Icons.Outlined.CalendarMonth, "Book a visit", tint = Navy)
+                            Icon(Icons.Outlined.CalendarMonth, "Book a visit", tint = Teal)
                         }
                         IconButton(onClick = { showAddLead = true }) {
-                            Icon(Icons.Outlined.PersonAdd, "Add lead", tint = Navy)
+                            Box(
+                                Modifier.size(34.dp).clip(CircleShape).background(Teal),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Outlined.PersonAdd, "Add lead",
+                                    tint = Color.White, modifier = Modifier.size(18.dp),
+                                )
+                            }
                         }
                     }
                 },

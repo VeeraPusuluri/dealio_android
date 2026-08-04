@@ -56,6 +56,7 @@ import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Pool
 import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Spa
 import androidx.compose.material.icons.outlined.SportsBasketball
 import androidx.compose.material.icons.outlined.SportsTennis
@@ -125,6 +126,7 @@ import com.dealio.app.ui.builder.priceLow
 import com.dealio.app.ui.builder.resolveUrl
 import com.dealio.app.ui.builder.titleCase
 import com.dealio.app.ui.components.dealioFieldColors
+import com.dealio.app.ui.components.shareViaWhatsApp
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.Navy
@@ -312,11 +314,29 @@ internal fun LazyListScope.projectDetailSections(
         item { Section("Tower plans") { TowerPlansSection(p, documents) } }
     }
 
+    // Everything else the builder uploaded.
+    //
+    // The gallery takes the photographs and the section above takes the plans;
+    // nothing took the rest, so a brochure or a RERA certificate was stored,
+    // listed in the builder's own portal, and then simply absent here. Sorted
+    // brochure-first because that is the file a partner sends a customer.
+    val extraDocs = otherDocs(documents)
+    if (extraDocs.isNotEmpty()) {
+        item {
+            Section("Documents") {
+                extraDocs.forEachIndexed { i, d ->
+                    if (i > 0) Spacer(Modifier.height(8.dp))
+                    DocumentRow(d)
+                }
+            }
+        }
+    }
+
     // Virtual tour — walkthrough video links, or "not provided"
     item { Section("Virtual tour") { VirtualTourSection(p.videoUrl) } }
 
     // Home-loan EMI calculator
-    item { Section("Loan") { LoanCalculator(p.priceLow() ?: p.priceHigh() ?: 50_00_000.0) } }
+    item { Section("Loan") { LoanCalculator(p.priceLow() ?: p.priceHigh() ?: 50_00_000.0, p.name) } }
 
     // Availability
     if ((p.totalUnits ?: 0) > 0) {
@@ -1196,6 +1216,100 @@ private fun FloorPlansRow(plans: List<PlanDoc>) {
     }
 }
 
+/**
+ * The EMI estimate as a message.
+ *
+ * Laid out as inputs then results, because the customer needs to see what was
+ * assumed before the monthly figure means anything. It closes by saying the
+ * numbers are indicative: this comes off a slider a partner just dragged, and
+ * arriving in a chat with no caveat it would read like an offer from a lender.
+ */
+private fun emiShareText(
+    projectName: String,
+    propertyValue: Double,
+    downAmt: Double,
+    downPct: Int,
+    loanAmt: Double,
+    rate: Float,
+    years: Int,
+    emi: Double,
+    totalInterest: Double,
+    totalPayment: Double,
+): String = buildString {
+    appendLine("$projectName — home loan estimate")
+    appendLine()
+    appendLine("Property value: ${formatINRShort(propertyValue)}")
+    appendLine("Down payment: ${formatINRShort(downAmt)} ($downPct%)")
+    appendLine("Loan amount: ${formatINRShort(loanAmt)}")
+    appendLine("Interest: ${"%.2f".format(rate)}% p.a. over $years years")
+    appendLine()
+    appendLine("Monthly EMI: ${formatINR(emi)}")
+    appendLine("Total interest: ${formatINRShort(totalInterest)}")
+    appendLine("Total cost: ${formatINRShort(totalPayment)}")
+    appendLine()
+    append("Indicative only — the actual rate and eligibility are set by the lender.")
+}
+
+/**
+ * Documents with nowhere else to go: brochures, RERA certificates, anything a
+ * builder uploads that is neither a photograph nor a plan.
+ *
+ * Brochure first — it is the one a partner forwards to a customer.
+ */
+private fun otherDocs(docs: List<ProjectDocument>): List<ProjectDocument> =
+    docs.filter { !isImageDoc(it) && !isFloorPlanDoc(it) && !isTowerPlanDoc(it) }
+        .sortedBy { if (it.docType.contains("brochure", ignoreCase = true)) 0 else 1 }
+
+@Composable
+private fun DocumentRow(d: ProjectDocument) {
+    val ctx = LocalContext.current
+    val url = resolveUrl(d.url)
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Color.White)
+            .border(1.dp, CardBorder, shape)
+            .clickable(enabled = url != null) {
+                url?.let { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, it.toUri())) } }
+            }
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Teal.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.Description, null, tint = Teal, modifier = Modifier.size(18.dp))
+        }
+        Spacer(Modifier.width(11.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                d.docType.ifBlank { "Document" },
+                color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                d.name.substringBeforeLast('.').ifBlank { "Open" },
+                color = TextSecondary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+        }
+        // A brochure exists to be forwarded, so the link is one tap away rather
+        // than something to open first and share from wherever it lands.
+        if (url != null) {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                Modifier.size(34.dp).clip(CircleShape)
+                    .clickable { shareViaWhatsApp(ctx, "${d.docType.ifBlank { "Document" }}\n$url", "Share document") },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Outlined.Share, "Share ${d.docType}", tint = Teal, modifier = Modifier.size(17.dp))
+            }
+        }
+    }
+}
+
 /** Stand-in for a plan that is a document rather than a picture. */
 @Composable
 private fun PdfPlanTile(modifier: Modifier = Modifier) {
@@ -1346,7 +1460,7 @@ private fun VirtualTourSection(videoUrl: String?) {
 // ─── Inline home-loan EMI calculator ─────────────────────────────────────────
 
 @Composable
-private fun LoanCalculator(price: Double) {
+private fun LoanCalculator(price: Double, projectName: String) {
     var propertyValue by remember { mutableFloatStateOf(price.toFloat().coerceAtLeast(5_00_000f)) }
     var downPct by remember { mutableFloatStateOf(20f) }
     var rate by remember { mutableFloatStateOf(8.65f) }
@@ -1394,6 +1508,40 @@ private fun LoanCalculator(price: Double) {
         CalcSlider("Down payment", "${downPct.toInt()}%", downPct, 10f..50f, steps = 7) { downPct = it }
         CalcSlider("Interest rate", "${"%.2f".format(rate)}%", rate, 7f..15f) { rate = it }
         CalcSlider("Tenure", "${years.toInt()} yr", years, 5f..30f) { years = it }
+
+        // The numbers are worked out with a customer on the phone, so they need a
+        // way off the screen. Sends whatever the sliders currently say.
+        val ctx = LocalContext.current
+        Spacer(Modifier.height(6.dp))
+        Row(
+            Modifier
+                .clip(RoundedCornerShape(11.dp))
+                .background(Teal.copy(alpha = 0.10f))
+                .clickable {
+                    shareViaWhatsApp(
+                        ctx,
+                        emiShareText(
+                            projectName = projectName,
+                            propertyValue = propertyValue.toDouble(),
+                            downAmt = downAmt.toDouble(),
+                            downPct = downPct.toInt(),
+                            loanAmt = loanAmt.toDouble(),
+                            rate = rate,
+                            years = years.toInt(),
+                            emi = emi.toDouble(),
+                            totalInterest = totalInterest.toDouble(),
+                            totalPayment = totalPayment.toDouble(),
+                        ),
+                        "Share EMI estimate",
+                    )
+                }
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Outlined.Share, null, tint = Teal, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Share this estimate", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 
