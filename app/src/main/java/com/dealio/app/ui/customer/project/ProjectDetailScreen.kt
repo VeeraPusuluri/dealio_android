@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.lazy.LazyColumn
@@ -115,6 +116,7 @@ import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.availableUnitsOrDerived
 import com.dealio.app.ui.builder.formatINR
+import com.dealio.app.ui.builder.formatDate
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.priceHigh
 import com.dealio.app.ui.builder.priceLow
@@ -126,7 +128,10 @@ import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.Mist
 import com.dealio.app.ui.theme.NavyMid
+import com.dealio.app.ui.theme.NavyPrimary
+import com.dealio.app.ui.theme.NavyDeep
 import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.TealBright
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import java.time.LocalDate
@@ -342,16 +347,27 @@ internal fun LazyListScope.projectDetailSections(
 
     // Configurations — with customer shortlist / get-price actions, or read-only
     // for the CP portal. For land these rows are the yardages on sale.
+    //
+    // Read-only, the sizes are near-identical strings; stacked as full-width rows
+    // they read as filler and push the page down. A partner asking "what can I
+    // offer?" wants them at a glance, so they sit as spec tiles with the figure
+    // large and its unit engraved beneath. Customers keep the rows, which carry
+    // shortlist and pricing actions the tiles have no room for.
     if (!p.configurations.isNullOrEmpty()) {
         item {
             Section(if (isPlot) "Plot sizes" else "Configurations") {
-                p.configurations!!.forEach { cfg ->
-                    if (showConfigActions) {
+                if (showConfigActions) {
+                    p.configurations!!.forEach { cfg ->
                         ConfigRow(cfg = cfg, working = working, onShortlist = { onShortlist(cfg) }, onPricing = { onPricing(cfg) })
-                    } else {
-                        ConfigInfoRow(cfg, isPlot = isPlot)
+                        Spacer(Modifier.height(8.dp))
                     }
-                    Spacer(Modifier.height(8.dp))
+                } else {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        p.configurations!!.forEach { cfg -> SpecTile(cfg) }
+                    }
                 }
             }
         }
@@ -362,15 +378,25 @@ internal fun LazyListScope.projectDetailSections(
             Section("Amenities") {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     p.amenities!!.forEach { a ->
+                        // A flat teal wash behind every chip made the whole block one
+                        // colour and buried the icons that tell them apart. White with
+                        // a hairline lets each amenity's own icon do the work.
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .background(Teal.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 10.dp, vertical = 7.dp),
+                                .clip(RoundedCornerShape(11.dp))
+                                .background(Color.White)
+                                .border(1.dp, CardBorder, RoundedCornerShape(11.dp))
+                                .padding(start = 7.dp, end = 13.dp, top = 7.dp, bottom = 7.dp),
                         ) {
-                            Icon(amenityIcon(a), null, tint = Teal, modifier = Modifier.size(15.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(a, color = Navy, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                            Box(
+                                Modifier.size(24.dp).clip(CircleShape).background(Teal.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(amenityIcon(a), null, tint = Teal, modifier = Modifier.size(14.dp))
+                            }
+                            Spacer(Modifier.width(9.dp))
+                            Text(a, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                         }
                     }
                 }
@@ -410,34 +436,184 @@ internal fun LazyListScope.projectDetailSections(
     if (!p.locationAdvantages.isNullOrEmpty()) {
         item {
             Section("Location advantages") {
-                p.locationAdvantages!!.forEach { la ->
-                    // Blank (not null) distance/drive values are the norm here, so filter
-                    // them out — joining them raw produced a bare "km · min" with no numbers.
-                    val detail = listOfNotNull(
-                        la.distanceKm?.takeIf { it.isNotBlank() }?.let { "$it km" },
-                        la.driveMinutes?.takeIf { it.isNotBlank() }?.let { "$it min" },
-                        la.category?.takeIf { it.isNotBlank() && !it.equals("Other", ignoreCase = true) },
-                    ).joinToString(" · ")
-                    splitAdvantagePoints(la.name).forEachIndexed { i, point ->
-                        LocationAdvBullet(point, if (i == 0) detail else "")
+                // Proximity is the whole point of this section, so the distance is
+                // pulled out of the sentence and set right-aligned where it can be
+                // scanned down the column instead of hunted for inside prose.
+                val points = buildList {
+                    p.locationAdvantages!!.forEach { la ->
+                        // Blank (not null) distance/drive values are the norm here, so filter
+                        // them out — joining them raw produced a bare "km · min" with no numbers.
+                        //
+                        // Category is deliberately not among these. It reads as a measure in
+                        // a right-aligned metric column — "CORPORATE" set where a distance
+                        // belongs looks like one — and it describes the place, not how far
+                        // away it is, which is what this section is for.
+                        val detail = listOfNotNull(
+                            la.distanceKm?.takeIf { it.isNotBlank() }?.let { "$it km" },
+                            la.driveMinutes?.takeIf { it.isNotBlank() }?.let { "$it min" },
+                        ).joinToString(" · ")
+                        splitAdvantagePoints(la.name).forEachIndexed { i, point ->
+                            add(point to if (i == 0) detail else "")
+                        }
                     }
+                }
+                points.forEachIndexed { i, (point, detail) ->
+                    if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(CardBorder.copy(alpha = 0.5f)))
+                    LocationAdvRow(point, detail)
                 }
             }
         }
     }
 
-    // Builder + RERA
+    // The developer's own credential: who is building this, how long they have
+    // been at it, and the registration number that makes it checkable. Rendered
+    // as a plate rather than label/value rows because a partner reads it out to a
+    // customer — and because RERA is a certificate, not a table cell.
     item {
         Section("Developer") {
-            InfoRow("Builder", p.builderName)
-            InfoRow("Established", p.builderYearEstablished?.toString())
-            InfoRow("Delivered projects", p.builderDeliveredProjects?.toString())
-            InfoRow("RERA", p.reraNumber)
-            InfoRow("RERA expiry", p.reraExpiry)
-            if (!p.status.isNullOrBlank()) {
-                Spacer(Modifier.height(6.dp))
-                StatusChip(titleCase(p.status))
+            DeveloperPlate(p)
+        }
+    }
+}
+
+@Composable
+private fun DeveloperPlate(p: Project) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Brush.linearGradient(listOf(NavyDeep, NavyPrimary)))
+            .padding(18.dp),
+    ) {
+        // No "Developer" label here — the section heading above the plate already
+        // says it, and printing it twice is the kind of thing that reads as
+        // decoration rather than structure.
+        Text(
+            p.builderName?.takeIf { it.isNotBlank() } ?: "—",
+            color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+            letterSpacing = (-0.3).sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+        )
+
+        val established = p.builderYearEstablished?.toString()
+        val delivered = p.builderDeliveredProjects?.toString()
+        if (established != null || delivered != null) {
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+                established?.let { PlateStat("Established", it) }
+                delivered?.let { PlateStat("Delivered", it) }
             }
+        }
+
+        if (!p.reraNumber.isNullOrBlank()) {
+            Spacer(Modifier.height(16.dp))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.14f)))
+            Spacer(Modifier.height(14.dp))
+            PlateLabel("RERA registration", Color.White.copy(alpha = 0.45f))
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    p.reraNumber!!,
+                    color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.8.sp, modifier = Modifier.weight(1f),
+                )
+                p.reraExpiry?.takeIf { it.isNotBlank() }?.let {
+                    Text(
+                        "Valid to ${formatDate(it)}",
+                        color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+        }
+
+        if (!p.status.isNullOrBlank()) {
+            Spacer(Modifier.height(14.dp))
+            Row(
+                Modifier.clip(RoundedCornerShape(9.dp)).background(Color.White.copy(alpha = 0.13f))
+                    .padding(horizontal = 11.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.size(6.dp).clip(CircleShape).background(TealBright))
+                Spacer(Modifier.width(7.dp))
+                Text(titleCase(p.status), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlateLabel(text: String, color: Color) {
+    Text(
+        text.uppercase(), color = color,
+        fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp,
+    )
+}
+
+@Composable
+private fun PlateStat(label: String, value: String) {
+    Column {
+        PlateLabel(label, Color.White.copy(alpha = 0.45f))
+        Spacer(Modifier.height(3.dp))
+        Text(value, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/**
+ * One size on sale — "200 sq yd", "3BHK".
+ *
+ * The figure is what distinguishes one from the next, so it is set large with
+ * its unit engraved beneath. A label with no leading number ("Penthouse") has
+ * nothing to split and is simply set whole.
+ */
+@Composable
+private fun SpecTile(label: String) {
+    val split = Regex("^\\s*(\\d+(?:\\.\\d+)?)\\s*(.+)$").find(label.trim())
+    val shape = RoundedCornerShape(14.dp)
+    Column(
+        Modifier
+            .widthIn(min = 92.dp)
+            .clip(shape)
+            .background(Color.White)
+            .border(1.dp, CardBorder, shape)
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (split != null) {
+            Text(
+                split.groupValues[1], color = TextPrimary, fontSize = 22.sp,
+                fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp,
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                split.groupValues[2].trim().uppercase(), color = TextSecondary,
+                fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp,
+            )
+        } else {
+            Text(label, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun LocationAdvRow(text: String, detail: String) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(
+            Modifier.size(26.dp).clip(CircleShape).background(Teal.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.Place, null, tint = Teal, modifier = Modifier.size(14.dp))
+        }
+        Spacer(Modifier.width(11.dp))
+        Text(text, color = TextPrimary, fontSize = 13.sp, lineHeight = 19.sp, modifier = Modifier.weight(1f))
+        if (detail.isNotBlank()) {
+            Spacer(Modifier.width(10.dp))
+            Text(
+                detail.uppercase(), color = TextSecondary,
+                fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
     }
 }
