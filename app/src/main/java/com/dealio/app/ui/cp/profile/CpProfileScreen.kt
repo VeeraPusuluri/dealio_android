@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,15 +15,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.PendingActions
+import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -32,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -49,6 +55,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -66,9 +73,14 @@ import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.components.AppLockToggleRow
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.SubScreenScaffold
+import com.dealio.app.ui.theme.ButtonDisabled
+import com.dealio.app.ui.theme.CardBorder
+import com.dealio.app.ui.theme.ErrorRed
+import com.dealio.app.ui.theme.subtleShadow
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.initialsOf
 import com.dealio.app.ui.components.dealioFieldColors
+import com.dealio.app.ui.cp.CpCredentialCard
 import com.dealio.app.ui.cp.CpViewModel
 import com.dealio.app.ui.theme.Orange
 import com.dealio.app.ui.theme.Teal
@@ -107,9 +119,15 @@ class CpProfileViewModel(app: Application) : CpViewModel(app) {
         }
     }
 
-    fun save(city: String, bio: String, rera: String) {
+    fun save(fullName: String, city: String, bio: String) {
         viewModelScope.launch {
-            val r = repo.updateProfile(CpProfileUpdateRequest(city = city.ifBlank { null }, bio = bio.ifBlank { null }, reraNumber = rera.ifBlank { null }))
+            val r = repo.updateProfile(
+                CpProfileUpdateRequest(
+                    fullName = fullName.ifBlank { null },
+                    city = city.ifBlank { null },
+                    bio = bio.ifBlank { null },
+                ),
+            )
             _state.update { it.copy(message = (r as? ApiResult.Error)?.message ?: "Profile updated") }
             if (r is ApiResult.Success) load(silent = true)
         }
@@ -123,10 +141,13 @@ class CpProfileViewModel(app: Application) : CpViewModel(app) {
         _state.update { it.copy(uploadingDoc = docType) }
         viewModelScope.launch {
             val r = repo.uploadDocument(docType, bytes, "$docType.$ext", mime)
+            // A profile photo isn't reviewed by anyone, so "pending review" would be
+            // a lie about what happens next.
+            val done = if (docType == "photo") "Profile photo updated" else "Document uploaded — pending review"
             _state.update {
                 it.copy(
                     uploadingDoc = null,
-                    message = (r as? ApiResult.Error)?.message ?: "Document uploaded — pending review",
+                    message = (r as? ApiResult.Error)?.message ?: done,
                 )
             }
             if (r is ApiResult.Success) load(silent = true)
@@ -185,6 +206,9 @@ fun CpProfileScreen(nav: NavController, vm: CpProfileViewModel = viewModel()) {
     val panPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { vm.uploadDocument("pan", it) }
     }
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { vm.uploadDocument("photo", it) }
+    }
 
     SubScreenScaffold("Profile", nav) { inner ->
         when {
@@ -198,39 +222,19 @@ fun CpProfileScreen(nav: NavController, vm: CpProfileViewModel = viewModel()) {
                     Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    DealioCard {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(Teal),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                val photo = cp?.photoUrl
-                                if (!photo.isNullOrBlank()) {
-                                    AsyncImage(
-                                        model = photo,
-                                        contentDescription = p?.fullName,
-                                        modifier = Modifier.size(52.dp),
-                                        contentScale = ContentScale.Crop,
-                                    )
-                                } else {
-                                    Text(initialsOf(p?.fullName), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                                }
-                            }
-                            Spacer(Modifier.width(14.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(p?.fullName ?: "Partner", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                                Text(p?.phone ?: "", color = TextSecondary, fontSize = 13.sp)
-                            }
-                            Row(
-                                Modifier.background(Orange.copy(alpha = 0.12f), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(Icons.Outlined.WorkspacePremium, null, tint = Orange, modifier = Modifier.size(14.dp))
-                                Spacer(Modifier.width(3.dp))
-                                Text(cp?.tier ?: "Silver", color = Orange, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
+                    // The credential is the hero. Everything below it is plain white
+                    // surfaces so the card is the only thing on the page with shine.
+                    CpCredentialCard(
+                        name = p?.fullName ?: "Partner",
+                        tier = cp?.tier ?: "Silver",
+                        photoUrl = cp?.photoUrl,
+                        phone = p?.phone,
+                        city = cp?.city,
+                        reraNumber = cp?.reraNumber,
+                        authorizedBuilders = p?.authorizedBuilders ?: emptyList(),
+                        uploadingPhoto = state.uploadingDoc == "photo",
+                        onPhotoClick = { photoPicker.launch("image/*") },
+                    )
 
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         StatBox("Total earned", formatINRShort(cp?.totalEarnings ?: 0.0), Modifier.weight(1f))
@@ -265,18 +269,37 @@ fun CpProfileScreen(nav: NavController, vm: CpProfileViewModel = viewModel()) {
                     DealioCard {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             SectionLabel("Details", Modifier.weight(1f))
-                            Text("Edit", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(4.dp).background(Teal.copy(alpha = 0.10f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 5.dp)
-                                    .let { it }
+                            // Was styled as a button but had no click handler, so the
+                            // only way to edit was the slab at the bottom of the page.
+                            // Wiring it here lets that slab go.
+                            Text(
+                                "Edit", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Teal.copy(alpha = 0.10f))
+                                    .clickable { showEdit = true }
+                                    .padding(horizontal = 10.dp, vertical = 5.dp),
                             )
                         }
                         Spacer(Modifier.height(8.dp))
-                        InfoRow("City", cp?.city)
-                        InfoRow("RERA number", cp?.reraNumber)
-                        InfoRow("Email", p?.email)
-                        if (!cp?.bio.isNullOrBlank()) {
-                            Spacer(Modifier.height(6.dp))
-                            Text(cp!!.bio!!, color = TextSecondary, fontSize = 12.sp)
+                        // InfoRow draws nothing for a null value, so a CP who has
+                        // filled in none of these got a card with a heading and an
+                        // empty body. Say what's missing and where to fix it.
+                        val hasDetails = !cp?.city.isNullOrBlank() || !cp?.reraNumber.isNullOrBlank() ||
+                            !p?.email.isNullOrBlank() || !cp?.bio.isNullOrBlank()
+                        if (!hasDetails) {
+                            Text(
+                                "Nothing added yet. Tap Edit to add your city and a line about what you sell.",
+                                color = TextSecondary, fontSize = 12.sp,
+                            )
+                        } else {
+                            InfoRow("City", cp?.city)
+                            InfoRow("RERA number", cp?.reraNumber)
+                            InfoRow("Email", p?.email)
+                            if (!cp?.bio.isNullOrBlank()) {
+                                Spacer(Modifier.height(6.dp))
+                                Text(cp!!.bio!!, color = TextSecondary, fontSize = 12.sp)
+                            }
                         }
                     }
 
@@ -286,18 +309,18 @@ fun CpProfileScreen(nav: NavController, vm: CpProfileViewModel = viewModel()) {
                         AppLockToggleRow()
                     }
 
-                    Button(
-                        onClick = { showEdit = true },
-                        modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Teal),
-                    ) { Text("Edit profile", color = Color.White, fontWeight = FontWeight.SemiBold) }
+                    Spacer(Modifier.height(4.dp))
                 }
 
                 SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
                 }
 
                 if (showEdit) {
-                    EditDialog(cp, onDismiss = { showEdit = false }) { city, bio, rera -> vm.save(city, bio, rera); showEdit = false }
+                    EditDialog(
+                        fullName = p?.fullName,
+                        cp = cp,
+                        onDismiss = { showEdit = false },
+                    ) { name, city, bio -> vm.save(name, city, bio); showEdit = false }
                 }
 
                 phoneOtpDialogFor?.let { phone ->
@@ -318,12 +341,20 @@ fun CpProfileScreen(nav: NavController, vm: CpProfileViewModel = viewModel()) {
 
 @Composable
 private fun StatBox(label: String, value: String, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(18.dp)
     Column(
-        modifier.background(Color.White, RoundedCornerShape(14.dp))
-            .padding(14.dp),
+        modifier
+            .subtleShadow(radius = 18.dp)
+            .clip(shape)
+            .background(Color.White, shape)
+            .border(1.dp, CardBorder.copy(alpha = 0.6f), shape)
+            .padding(16.dp),
     ) {
-        Text(value, color = TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-        Text(label, color = TextSecondary, fontSize = 12.sp)
+        // Label above value: the figure is what you scan for, so it gets the
+        // last word rather than being read past on the way down.
+        SectionLabel(label)
+        Spacer(Modifier.height(6.dp))
+        Text(value, color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.5).sp)
     }
 }
 
@@ -415,22 +446,103 @@ private fun PhoneOtpDialog(
     )
 }
 
+/**
+ * Edit sheet.
+ *
+ * Only the three things a partner actually maintains: the name customers see,
+ * the city they work, and how they introduce themselves. RERA is issued by a
+ * regulator and verified by an admin — it was editable here, which invited a CP
+ * to type a number nobody had checked. It still shows on the profile and on the
+ * credential; it is just no longer something you can set about yourself.
+ *
+ * Styled as a plain white sheet on purpose: the credential is the only surface
+ * in this flow that gets any shine, and a form competing with it would read as
+ * decoration rather than hierarchy.
+ */
 @Composable
-private fun EditDialog(cp: CpInfo?, onDismiss: () -> Unit, onSave: (String, String, String) -> Unit) {
+private fun EditDialog(
+    fullName: String?,
+    cp: CpInfo?,
+    onDismiss: () -> Unit,
+    onSave: (String, String, String) -> Unit,
+) {
+    var name by remember { mutableStateOf(fullName ?: "") }
     var city by remember { mutableStateOf(cp?.city ?: "") }
     var bio by remember { mutableStateOf(cp?.bio ?: "") }
-    var rera by remember { mutableStateOf(cp?.reraNumber ?: "") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = { onSave(city, bio, rera) }) { Text("Save", color = Teal, fontWeight = FontWeight.SemiBold) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary) } },
-        title = { Text("Edit profile", fontWeight = FontWeight.Bold, color = TextPrimary) },
-        text = {
-            Column {
-                OutlinedTextField(value = city, onValueChange = { city = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), label = { Text("City") }, singleLine = true, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors())
-                OutlinedTextField(value = rera, onValueChange = { rera = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), label = { Text("RERA number") }, singleLine = true, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors())
-                OutlinedTextField(value = bio, onValueChange = { bio = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), label = { Text("Bio") }, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors(), minLines = 2)
+    val canSave = name.isNotBlank()
+
+    // Three fields plus labels and a validation line is taller than a dialog
+    // window on a short screen, and a Dialog does not scroll on its own — the
+    // sheet has to bound itself and scroll inside, or it renders off-screen.
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(24.dp), color = Color.White) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 560.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(22.dp),
+            ) {
+                SectionLabel("Edit profile")
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "This is what customers and builders see.",
+                    color = TextSecondary, fontSize = 12.sp,
+                )
+
+                Spacer(Modifier.height(18.dp))
+                FieldLabel("Name")
+                OutlinedTextField(
+                    value = name, onValueChange = { name = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    placeholder = { Text("Your full name", color = TextSecondary.copy(alpha = 0.6f)) },
+                    isError = name.isBlank(),
+                    shape = RoundedCornerShape(14.dp), colors = dealioFieldColors(),
+                )
+                if (name.isBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text("Add a name so customers know who they're dealing with.", color = ErrorRed, fontSize = 11.sp)
+                }
+
+                Spacer(Modifier.height(14.dp))
+                FieldLabel("City")
+                OutlinedTextField(
+                    value = city, onValueChange = { city = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    placeholder = { Text("Where you work", color = TextSecondary.copy(alpha = 0.6f)) },
+                    shape = RoundedCornerShape(14.dp), colors = dealioFieldColors(),
+                )
+
+                Spacer(Modifier.height(14.dp))
+                FieldLabel("Bio")
+                OutlinedTextField(
+                    value = bio, onValueChange = { bio = it },
+                    modifier = Modifier.fillMaxWidth(), minLines = 3,
+                    placeholder = { Text("A line about what you sell", color = TextSecondary.copy(alpha = 0.6f)) },
+                    shape = RoundedCornerShape(14.dp), colors = dealioFieldColors(),
+                )
+
+                Spacer(Modifier.height(20.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary, fontWeight = FontWeight.SemiBold) }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = { onSave(name, city, bio) },
+                        enabled = canSave,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Teal, disabledContainerColor = ButtonDisabled),
+                    ) { Text("Save changes", color = Color.White, fontWeight = FontWeight.SemiBold) }
+                }
             }
-        },
+        }
+    }
+}
+
+@Composable
+private fun FieldLabel(text: String) {
+    Text(
+        text.uppercase(),
+        color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp,
+        modifier = Modifier.padding(bottom = 6.dp),
     )
 }

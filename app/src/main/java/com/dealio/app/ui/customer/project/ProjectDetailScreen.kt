@@ -45,6 +45,7 @@ import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.LocalParking
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Landscape
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Park
 import androidx.compose.material.icons.outlined.Place
@@ -231,6 +232,13 @@ internal fun LazyListScope.projectDetailSections(
     onShortlist: (cfg: String) -> Unit = {},
     onPricing: (cfg: String) -> Unit = {},
 ) {
+    // A plotted layout is sold by the yard, not by the bedroom. The builder form
+    // already drops BHK configurations, towers and floors for this type and asks
+    // for plot sizes and a plot count instead — so the detail view has to read
+    // the same way, or a partner is shown "Towers —" and "Configurations" for
+    // land that has neither.
+    val isPlot = p.projectType.equals("Plot", ignoreCase = true)
+
     item {
         Column(Modifier.padding(16.dp)) {
             Text("Starting price", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
@@ -248,26 +256,39 @@ internal fun LazyListScope.projectDetailSections(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Fact("Config", p.configurations?.firstOrNull() ?: "—", Modifier.weight(1f))
-            Fact("Towers", p.towers?.toString() ?: "—", Modifier.weight(1f))
+            if (isPlot) {
+                Fact("Plot size", p.configurations?.firstOrNull() ?: "—", Modifier.weight(1f))
+                Fact("Total plots", p.totalUnits?.toString() ?: "—", Modifier.weight(1f))
+            } else {
+                Fact("Config", p.configurations?.firstOrNull() ?: "—", Modifier.weight(1f))
+                Fact("Towers", p.towers?.toString() ?: "—", Modifier.weight(1f))
+            }
             Fact("Possession", p.possessionDate?.take(7) ?: "—", Modifier.weight(1f))
         }
     }
 
-    // Floor plans — every uploaded plan, or an honest "not provided" note
+    // Plans. Land has a layout, not floor plans — same uploaded documents, named
+    // for what they actually are.
     val floorPlans = floorPlanUrls(documents)
     item {
-        Section("Floor plans") {
+        Section(if (isPlot) "Layout plan" else "Floor plans") {
             if (floorPlans.isEmpty()) {
-                PlanNotProvided(Icons.Outlined.Map, "Floor plans not provided by the builder yet. You can request them during a site visit.")
+                PlanNotProvided(
+                    Icons.Outlined.Map,
+                    if (isPlot) "Layout plan not provided by the builder yet. You can request it during a site visit."
+                    else "Floor plans not provided by the builder yet. You can request them during a site visit.",
+                )
             } else {
                 FloorPlansRow(floorPlans)
             }
         }
     }
 
-    // Tower plans — per-tower selector, strict per-tower matching
-    item { Section("Tower plans") { TowerPlansSection(p, documents) } }
+    // Tower plans — per-tower selector, strict per-tower matching. A plotted
+    // layout has no towers, so the section would only ever be empty.
+    if (!isPlot) {
+        item { Section("Tower plans") { TowerPlansSection(p, documents) } }
+    }
 
     // Virtual tour — walkthrough video links, or "not provided"
     item { Section("Virtual tour") { VirtualTourSection(p.videoUrl) } }
@@ -277,7 +298,7 @@ internal fun LazyListScope.projectDetailSections(
 
     // Availability
     if ((p.totalUnits ?: 0) > 0) {
-        item { Box(Modifier.padding(top = 12.dp)) { AvailabilityBar(p) } }
+        item { Box(Modifier.padding(top = 12.dp)) { AvailabilityBar(p, isPlot) } }
     }
 
     // Video / Maps quick actions
@@ -311,15 +332,16 @@ internal fun LazyListScope.projectDetailSections(
         item { Section("About this project") { Text(p.description!!, color = TextSecondary, fontSize = 13.sp, lineHeight = 20.sp) } }
     }
 
-    // Configurations — with customer shortlist / get-price actions, or read-only for the CP portal
+    // Configurations — with customer shortlist / get-price actions, or read-only
+    // for the CP portal. For land these rows are the yardages on sale.
     if (!p.configurations.isNullOrEmpty()) {
         item {
-            Section("Configurations") {
+            Section(if (isPlot) "Plot sizes" else "Configurations") {
                 p.configurations!!.forEach { cfg ->
                     if (showConfigActions) {
                         ConfigRow(cfg = cfg, working = working, onShortlist = { onShortlist(cfg) }, onPricing = { onPricing(cfg) })
                     } else {
-                        ConfigInfoRow(cfg)
+                        ConfigInfoRow(cfg, isPlot = isPlot)
                     }
                     Spacer(Modifier.height(8.dp))
                 }
@@ -348,8 +370,10 @@ internal fun LazyListScope.projectDetailSections(
         }
     }
 
+    // Structure, flooring, kitchen, bathrooms — all things a built unit has and
+    // a plot does not. Shown for a plot they would read as an empty promise.
     val specs = p.specifications
-    if (specs != null) {
+    if (specs != null && !isPlot) {
         item {
             Section("Specifications") {
                 InfoRow("Structure", specs.structure)
@@ -412,12 +436,16 @@ internal fun LazyListScope.projectDetailSections(
 
 /** Read-only configuration tile for portals that don't shortlist (CP). */
 @Composable
-internal fun ConfigInfoRow(cfg: String) {
+internal fun ConfigInfoRow(cfg: String, isPlot: Boolean = false) {
     Row(
         Modifier.fillMaxWidth().background(Teal.copy(alpha = 0.05f), RoundedCornerShape(12.dp)).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Outlined.Apartment, null, tint = Teal, modifier = Modifier.size(16.dp))
+        // A building icon next to "200 sq yd" describes the wrong thing.
+        Icon(
+            if (isPlot) Icons.Outlined.Landscape else Icons.Outlined.Apartment,
+            null, tint = Teal, modifier = Modifier.size(16.dp),
+        )
         Spacer(Modifier.width(8.dp))
         Text(cfg, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
     }
@@ -524,15 +552,16 @@ private fun HeroHeader(p: Project, images: List<String>, onBack: () -> Unit) {
 }
 
 @Composable
-private fun AvailabilityBar(p: Project) {
+private fun AvailabilityBar(p: Project, isPlot: Boolean = false) {
     val total = (p.totalUnits ?: 0).coerceAtLeast(1)
     val available = (p.availableUnitsOrDerived() ?: 0).coerceIn(0, total)
     val sold = (p.soldUnits ?: 0).coerceIn(0, total)
     val booked = (p.bookedUnits ?: 0).coerceIn(0, total)
+    val noun = if (isPlot) "plots" else "units"
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Availability", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
-            Text("$available of ${p.totalUnits} available", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text("$available of ${p.totalUnits} $noun available", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth().height(10.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {

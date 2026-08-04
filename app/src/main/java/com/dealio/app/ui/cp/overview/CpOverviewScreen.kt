@@ -221,6 +221,7 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
             photoUrl = state.photoUrl,
             phone = state.phone,
             city = state.city,
+            reraNumber = state.reraNumber,
             authorizedBuilders = state.authorizedBuilders,
             uploadingPhoto = state.uploadingPhoto,
             onPickPhoto = { vm.uploadPhoto(it) },
