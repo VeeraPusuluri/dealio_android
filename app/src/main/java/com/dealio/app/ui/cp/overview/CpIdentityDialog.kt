@@ -1,5 +1,7 @@
 package com.dealio.app.ui.cp.overview
 
+import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -54,6 +57,7 @@ fun CpIdentityDialog(
         uri?.let(onPickPhoto)
     }
     val metal = metalFor(tier)
+    val context = LocalContext.current
 
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -91,24 +95,88 @@ fun CpIdentityDialog(
                     .clip(RoundedCornerShape(14.dp))
                     .background(NavyDeep.copy(alpha = 0.88f))
                     .padding(horizontal = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 EngravedLabel(
                     "Close",
                     Color.White.copy(alpha = 0.60f),
                     Modifier.clip(RoundedCornerShape(10.dp)).clickable { onDismiss() }
-                        .padding(horizontal = 14.dp, vertical = 11.dp),
+                        .padding(horizontal = 12.dp, vertical = 11.dp),
+                    size = 11,
+                )
+                EngravedLabel(
+                    "Share",
+                    metal.face,
+                    Modifier.clip(RoundedCornerShape(10.dp))
+                        .clickable {
+                            shareCredential(context, name, tier, phone, city, reraNumber, authorizedBuilders)
+                        }
+                        .padding(horizontal = 12.dp, vertical = 11.dp),
                     size = 11,
                 )
                 EngravedLabel(
                     "View profile",
                     metal.face,
                     Modifier.clip(RoundedCornerShape(10.dp)).clickable { onViewProfile() }
-                        .padding(horizontal = 14.dp, vertical = 11.dp),
+                        .padding(horizontal = 12.dp, vertical = 11.dp),
                     size = 11,
                 )
             }
         }
     }
+}
+
+/**
+ * What a partner sends a customer to prove who they are.
+ *
+ * Written as a message someone would actually paste into a chat — no field
+ * labels, no "Dealio profile" preamble — because it is read by a customer, not
+ * filled in by the partner. The builder authorisation leads, since that is the
+ * part the customer cannot verify for themselves.
+ */
+private fun credentialShareText(
+    name: String,
+    tier: String,
+    phone: String?,
+    city: String?,
+    reraNumber: String?,
+    authorizedBuilders: List<CpAuthorizedBuilder>,
+): String = buildString {
+    appendLine(name)
+    authorizedBuilders.forEach { appendLine("Authorised channel partner for ${it.companyName}") }
+    if (authorizedBuilders.isEmpty()) appendLine("$tier Partner on Dealio")
+    city?.takeIf { it.isNotBlank() }?.let { appendLine(it) }
+    reraNumber?.takeIf { it.isNotBlank() }?.let { appendLine("RERA $it") }
+    phone?.takeIf { it.isNotBlank() }?.let { appendLine(it) }
+}.trim()
+
+/**
+ * Shares the credential, preferring WhatsApp.
+ *
+ * Aiming straight at WhatsApp skips a chooser the partner would pick it from
+ * anyway, but the app may not be installed — so a failure falls through to the
+ * ordinary chooser rather than dead-ending on a tap that appears to do nothing.
+ */
+private fun shareCredential(
+    context: Context,
+    name: String,
+    tier: String,
+    phone: String?,
+    city: String?,
+    reraNumber: String?,
+    authorizedBuilders: List<CpAuthorizedBuilder>,
+) {
+    val text = credentialShareText(name, tier, phone, city, reraNumber, authorizedBuilders)
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    val whatsApp = Intent(send).setPackage("com.whatsapp")
+    if (runCatching { context.startActivity(whatsApp) }.isSuccess) return
+
+    val business = Intent(send).setPackage("com.whatsapp.w4b")
+    if (runCatching { context.startActivity(business) }.isSuccess) return
+
+    runCatching { context.startActivity(Intent.createChooser(send, "Share your credential")) }
 }

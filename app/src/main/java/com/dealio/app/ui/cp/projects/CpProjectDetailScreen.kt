@@ -232,39 +232,34 @@ fun CpProjectDetailScreen(nav: NavController, projectId: Long, vm: CpProjectDeta
                                     modifier = Modifier.background(Teal.copy(alpha = 0.10f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 6.dp),
                                 )
                             }
+
+                            // Both actions sit under the project's identity, where a
+                            // partner can reach them without reading to the end and
+                            // without a bar covering the page the whole way down.
+                            Spacer(Modifier.height(14.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                OutlinedButton(
+                                    onClick = { vm.share() }, enabled = !state.working,
+                                    modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(13.dp),
+                                ) {
+                                    Icon(Icons.Outlined.Share, null, tint = Navy, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp)); Text("Share link", color = Navy, fontWeight = FontWeight.SemiBold)
+                                }
+                                Button(
+                                    onClick = { showBooking = true },
+                                    modifier = Modifier.weight(1.2f).height(46.dp), shape = RoundedCornerShape(13.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Teal),
+                                ) {
+                                    Icon(Icons.Outlined.CalendarMonth, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp)); Text("Book a visit", color = Color.White, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
 
                     // The full project detail — shared verbatim with the customer view
                     // (read-only configurations; no shortlist/get-price actions for the CP).
                     projectDetailSections(p = p, documents = state.documents, showConfigActions = false)
-
-                    // Sharing a project or booking a visit is what a partner does
-                    // *after* reading it, so the actions sit at the end of the page
-                    // rather than as a bar pinned over the content the whole way
-                    // down. Nothing above needs covering to reach them.
-                    item {
-                        Row(
-                            Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            OutlinedButton(
-                                onClick = { vm.share() }, enabled = !state.working,
-                                modifier = Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(14.dp),
-                            ) {
-                                Icon(Icons.Outlined.Share, null, tint = Navy, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(6.dp)); Text("Share link", color = Navy, fontWeight = FontWeight.SemiBold)
-                            }
-                            Button(
-                                onClick = { showBooking = true },
-                                modifier = Modifier.weight(1.2f).height(50.dp), shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Teal),
-                            ) {
-                                Icon(Icons.Outlined.CalendarMonth, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(6.dp)); Text("Book a visit", color = Color.White, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
                 }
         }
     }

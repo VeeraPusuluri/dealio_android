@@ -6,6 +6,21 @@
     <!-- Requested at the point a CP taps "Import from phone" on Contacts, never at launch. -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
+    <!--
+      Package visibility (Android 11+). Without this the app cannot see that
+      WhatsApp is installed, so a send intent aimed straight at it fails to
+      resolve and sharing silently falls back to the generic chooser even when
+      WhatsApp is right there.
+    -->
+    <queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="text/plain" />
+        </intent>
+    </queries>
+
     <application
         android:name=".DealioApp"
         android:allowBackup="true"

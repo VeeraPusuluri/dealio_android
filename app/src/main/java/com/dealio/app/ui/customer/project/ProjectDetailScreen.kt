@@ -375,7 +375,10 @@ internal fun LazyListScope.projectDetailSections(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        p.configurations!!.forEach { cfg -> SpecTile(cfg) }
+                        // Smallest first. Builders enter sizes in whatever order they
+                        // think of them, and "300 100 200 400" set as a row of figures
+                        // reads as a mistake rather than a range.
+                        orderedConfigurations(p.configurations!!).forEach { cfg -> SpecTile(cfg) }
                     }
                 }
             }
@@ -398,11 +401,12 @@ internal fun LazyListScope.projectDetailSections(
                                 .border(1.dp, CardBorder, RoundedCornerShape(11.dp))
                                 .padding(start = 7.dp, end = 13.dp, top = 7.dp, bottom = 7.dp),
                         ) {
+                            val tint = amenityTint(a)
                             Box(
-                                Modifier.size(24.dp).clip(CircleShape).background(Teal.copy(alpha = 0.12f)),
+                                Modifier.size(24.dp).clip(CircleShape).background(tint.copy(alpha = 0.13f)),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Icon(amenityIcon(a), null, tint = Teal, modifier = Modifier.size(14.dp))
+                                Icon(amenityIcon(a), null, tint = tint, modifier = Modifier.size(14.dp))
                             }
                             Spacer(Modifier.width(9.dp))
                             Text(a, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
@@ -591,6 +595,15 @@ private fun PlateStat(label: String, value: String) {
         Spacer(Modifier.height(3.dp))
         Text(value, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
     }
+}
+
+/**
+ * Sizes smallest-first when every one of them leads with a number; otherwise the
+ * builder's own order, since there is no sound way to rank "Penthouse".
+ */
+private fun orderedConfigurations(configs: List<String>): List<String> {
+    val keyed = configs.map { it to Regex("^\\s*(\\d+(?:\\.\\d+)?)").find(it.trim())?.groupValues?.get(1)?.toDoubleOrNull() }
+    return if (keyed.any { it.second == null }) configs else keyed.sortedBy { it.second }.map { it.first }
 }
 
 /**
@@ -858,6 +871,38 @@ private fun LinkButton(label: String, icon: androidx.compose.ui.graphics.vector.
         Icon(icon, null, tint = Teal, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
         Text(label, color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+/**
+ * The colour an amenity's icon carries.
+ *
+ * Grouped, not per-amenity: a distinct hue for every entry would be a dozen
+ * colours on one screen and would read as decoration. Five families — water,
+ * greenery, energy, active, safety — mean the colour says something ("that one
+ * is about water") and repeats often enough to be learnable. Everything else
+ * stays brand teal.
+ *
+ * Deliberately no orange: on this page orange means money, and an amenity is
+ * not money.
+ */
+private val AmenityWater  = Color(0xFF2E86C1)
+private val AmenityGreen  = Color(0xFF2E9E5B)
+private val AmenityEnergy = Color(0xFFC98A16)
+private val AmenityActive = Color(0xFF5B62C4)
+private val AmenitySafety = Color(0xFF4A6B8A)
+
+private fun amenityTint(name: String): Color {
+    val n = name.lowercase()
+    return when {
+        "pool" in n || "swim" in n || "water" in n || "rain" in n -> AmenityWater
+        "park" in n || "garden" in n || "landscap" in n || "green" in n || "jogging" in n -> AmenityGreen
+        "power" in n || "backup" in n || "electric" in n || "solar" in n || "ev" in n || "charg" in n -> AmenityEnergy
+        "gym" in n || "fitness" in n || "tennis" in n || "basket" in n || "court" in n ||
+            "sport" in n || "child" in n || "kid" in n || "play" in n -> AmenityActive
+        "security" in n || "guard" in n || "gated" in n || "cctv" in n || "camera" in n ||
+            "intercom" in n || "fire" in n -> AmenitySafety
+        else -> Teal
     }
 }
 
