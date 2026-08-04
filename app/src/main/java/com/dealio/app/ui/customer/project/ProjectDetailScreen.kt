@@ -39,6 +39,7 @@ import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ChildFriendly
 import androidx.compose.material.icons.outlined.Deck
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Elevator
 import androidx.compose.material.icons.outlined.EvStation
 import androidx.compose.material.icons.outlined.FitnessCenter
@@ -82,6 +83,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -90,6 +92,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import org.json.JSONArray
 import androidx.compose.ui.layout.ContentScale
@@ -130,6 +133,11 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.pow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+
+/** How long each hero image holds before the carousel moves on. */
+private const val HERO_ADVANCE_MS = 4_000L
 
 private val timeSlots = listOf("10:00 AM", "11:00 AM", "12:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM")
 private val visitTypes = listOf("Site Visit", "Virtual Tour", "Office Meeting")
@@ -269,7 +277,7 @@ internal fun LazyListScope.projectDetailSections(
 
     // Plans. Land has a layout, not floor plans — same uploaded documents, named
     // for what they actually are.
-    val floorPlans = floorPlanUrls(documents)
+    val floorPlans = floorPlanDocs(documents)
     item {
         Section(if (isPlot) "Layout plan" else "Floor plans") {
             if (floorPlans.isEmpty()) {
@@ -464,6 +472,27 @@ internal fun ProjectImagePager(
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val pagerState = rememberPagerState { images.size }
+
+    // Advance on its own, so the rest of the builder's photographs are seen
+    // rather than waiting behind a swipe nobody makes.
+    //
+    // Keyed on settledPage, not on the current page or scroll flag: those change
+    // *during* the animation this effect starts, which would cancel it midway and
+    // strand the pager between two images. Settling — whether from the timer or
+    // from the partner's own swipe — is also exactly when the wait should restart,
+    // so a photo someone just swiped to gets a full turn on screen.
+    if (images.size > 1) {
+        LaunchedEffect(images.size) {
+            snapshotFlow { pagerState.settledPage }.collectLatest { page ->
+                delay(HERO_ADVANCE_MS)
+                // Checked here rather than as a key: a finger on the carousel wins.
+                if (!pagerState.isScrollInProgress) {
+                    pagerState.animateScrollToPage((page + 1) % images.size)
+                }
+            }
+        }
+    }
+
     Column(modifier.fillMaxWidth()) {
         Box(Modifier.fillMaxWidth().height(height).background(Color.White)) {
             when {
@@ -858,31 +887,69 @@ internal fun galleryUrls(p: Project, docs: List<ProjectDocument>): List<String> 
         .forEach { d -> resolveUrl(d.url)?.let { urls.add(it) } }
     return urls.toList()
 }
-/** "Floor Plan - 3 BHK - East" → "3 BHK · East"; plain "Floor Plan" → "General". */
+/** "Floor Plan - 3 BHK - East" → "3 BHK · East"; a plan with no qualifier → its file name. */
 private fun floorPlanLabel(d: ProjectDocument): String {
-    val rest = d.docType.replace(Regex("(?i)floor\\s*plan"), "").trim(' ', '-', '–', '·')
-    return if (rest.isEmpty()) d.name.ifBlank { "General" } else rest.replace(" - ", " · ")
+    val rest = d.docType
+        .replace(Regex("(?i)(floor|layout|master|site)\\s*plan"), "")
+        .trim(' ', '-', '–', '·')
+    if (rest.isNotEmpty()) return rest.replace(" - ", " · ")
+    // Nothing distinguishing in the type, so name it by the file — minus the
+    // extension, which the tile already states.
+    return d.name.substringBeforeLast('.').ifBlank { "General" }
 }
-private fun floorPlanUrls(docs: List<ProjectDocument>): List<Pair<String, String>> =
-    docs.filter { isFloorPlanDoc(it) && isImageDoc(it) }
-        .mapNotNull { d -> resolveUrl(d.url)?.let { it to floorPlanLabel(d) } }
+
+/** A plan the builder uploaded, and whether it can be shown as a picture. */
+private data class PlanDoc(val url: String, val label: String, val isImage: Boolean)
+
+/**
+ * Every floor/layout plan on the project.
+ *
+ * Plans used to be filtered to images only, because the row draws each one as a
+ * thumbnail. Builders upload plans as PDFs at least as often, and those were
+ * dropped silently — the page then told the partner the builder had not provided
+ * a plan while the plan sat in the project. A PDF is now kept and drawn as a
+ * document tile; both open the same way on tap.
+ */
+private fun floorPlanDocs(docs: List<ProjectDocument>): List<PlanDoc> =
+    docs.filter { isFloorPlanDoc(it) }
+        .mapNotNull { d -> resolveUrl(d.url)?.let { PlanDoc(it, floorPlanLabel(d), isImageDoc(d)) } }
 
 @Composable
-private fun FloorPlansRow(plans: List<Pair<String, String>>) {
+private fun FloorPlansRow(plans: List<PlanDoc>) {
     val ctx = LocalContext.current
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        plans.forEach { (url, name) ->
+        plans.forEach { plan ->
             Column(
-                Modifier.width(220.dp).clickable { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
+                Modifier.width(220.dp).clickable {
+                    runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, plan.url.toUri())) }
+                },
             ) {
-                AsyncImage(
-                    model = url, contentDescription = name, contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(14.dp)).background(Mist),
-                )
+                if (plan.isImage) {
+                    AsyncImage(
+                        model = plan.url, contentDescription = plan.label, contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth().height(160.dp).clip(RoundedCornerShape(14.dp)).background(Mist),
+                    )
+                } else {
+                    PdfPlanTile(Modifier.fillMaxWidth().height(160.dp))
+                }
                 Spacer(Modifier.height(6.dp))
-                Text(name, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text(plan.label, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
+    }
+}
+
+/** Stand-in for a plan that is a document rather than a picture. */
+@Composable
+private fun PdfPlanTile(modifier: Modifier = Modifier) {
+    Column(
+        modifier.clip(RoundedCornerShape(14.dp)).background(Mist).border(1.dp, CardBorder, RoundedCornerShape(14.dp)),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(Icons.Outlined.Description, null, tint = Teal, modifier = Modifier.size(34.dp))
+        Spacer(Modifier.height(8.dp))
+        Text("Open PDF", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -904,7 +971,9 @@ private fun PlanNotProvided(icon: ImageVector, message: String) {
 @Composable
 private fun TowerPlansSection(p: Project, docs: List<ProjectDocument>) {
     val ctx = LocalContext.current
-    val towerDocs = remember(docs) { docs.filter { isTowerPlanDoc(it) && isImageDoc(it) } }
+    // A tower plan uploaded as a PDF counts too — filtering to images told the
+    // partner the builder had provided nothing while the plan sat in the project.
+    val towerDocs = remember(docs) { docs.filter { isTowerPlanDoc(it) } }
     val towerCount = maxOf(p.towers ?: towerDocs.size, 1)
     var selected by remember { mutableStateOf(0) }
     // Strict "Tower Plan - {n}" match first, then a digit-boundary fallback —
@@ -946,18 +1015,24 @@ private fun TowerPlansSection(p: Project, docs: List<ProjectDocument>) {
             }
         }
         Spacer(Modifier.height(12.dp))
-        val url = planFor(selected)?.let { resolveUrl(it.url) }
+        val plan = planFor(selected)
+        val url = plan?.let { resolveUrl(it.url) }
         if (url != null) {
-            AsyncImage(
-                model = url,
-                contentDescription = "Tower ${selected + 1} plan",
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Mist)
-                    .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
-                    .clickable { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } },
-            )
+            val open = Modifier.clickable { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } }
+            if (isImageDoc(plan)) {
+                AsyncImage(
+                    model = url,
+                    contentDescription = "Tower ${selected + 1} plan",
+                    contentScale = ContentScale.FillWidth,
+                    modifier = Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Mist)
+                        .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
+                        .then(open),
+                )
+            } else {
+                PdfPlanTile(Modifier.fillMaxWidth().height(160.dp).then(open))
+            }
         } else {
             PlanNotProvided(Icons.Outlined.Apartment, "Tower ${selected + 1} plan not provided by the builder yet.")
         }

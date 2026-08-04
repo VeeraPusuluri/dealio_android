@@ -212,12 +212,22 @@ private fun AgendaRow(m: CalMeeting) {
     }
 }
 
+/**
+ * Times reach this screen in two shapes: the booking sheet stores a 12-hour slot
+ * it took from a picker ("03:00 PM"), while other paths store 24-hour ("15:00").
+ *
+ * Reading the leading number as an hour-of-day regardless turned every afternoon
+ * slot into a morning one — a 3 PM site visit read as 3 AM — so an AM/PM already
+ * present in the string is now believed rather than recomputed.
+ */
 private fun prettyTime(t: String): String {
-    val parts = t.split(":")
-    if (parts.size < 2) return t
-    val h = parts[0].toIntOrNull() ?: return t
-    val min = parts[1].take(2)
-    val ampm = if (h >= 12) "PM" else "AM"
+    val raw = t.trim()
+    val parts = raw.split(":")
+    if (parts.size < 2) return raw
+    val h = parts[0].trim().toIntOrNull() ?: return raw
+    val min = parts[1].trim().take(2)
+    val stated = Regex("(?i)(am|pm)").find(raw)?.value?.uppercase()
+    val ampm = stated ?: if (h >= 12) "PM" else "AM"
     val h12 = if (h % 12 == 0) 12 else h % 12
     return "$h12:$min $ampm"
 }
