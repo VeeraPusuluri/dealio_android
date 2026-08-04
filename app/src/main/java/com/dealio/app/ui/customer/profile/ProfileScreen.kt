@@ -69,8 +69,15 @@ import androidx.navigation.NavController
 import com.dealio.app.data.ApiResult
 import com.dealio.app.ui.builder.DealioCard
 import com.dealio.app.ui.builder.SectionLabel
+import com.dealio.app.ui.components.ActionGroup
+import com.dealio.app.ui.components.ActionItem
 import com.dealio.app.ui.components.AppLockToggleRow
 import com.dealio.app.ui.builder.initialsOf
+import com.dealio.app.ui.components.IconBlue
+import com.dealio.app.ui.components.IconGreen
+import com.dealio.app.ui.components.IconOrange
+import com.dealio.app.ui.components.IconPurple
+import com.dealio.app.ui.components.IconRed
 import com.dealio.app.ui.components.dealioFieldColors
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.customer.CustomerViewModel
@@ -139,12 +146,6 @@ class ProfileViewModel(app: Application) : CustomerViewModel(app) {
 
     fun clearMessage() = _state.update { it.copy(message = null) }
 }
-
-private val IconBlue = Color(0xFF2D7FF9)
-private val IconGreen = Color(0xFF24A148)
-private val IconOrange = Color(0xFFFF8930)
-private val IconPurple = Color(0xFF7B61FF)
-private val IconRed = Color(0xFFE5484D)
 
 @Composable
 fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel = viewModel()) {
@@ -376,58 +377,3 @@ private fun CityChip(city: String, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
-/**
- * Grouped rows share one rounded container with hairline dividers, rather than
- * each row being its own floating card — six separate outlined boxes in a column
- * read as noise.
- */
-private data class ActionItem(
-    val label: String,
-    val icon: ImageVector,
-    val tint: Color,
-    val onClick: () -> Unit,
-)
-
-@Composable
-private fun ActionGroup(title: String, items: List<ActionItem>) {
-    Column {
-        SectionLabel(title, Modifier.padding(start = 4.dp, bottom = 8.dp))
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .background(Color.White, RoundedCornerShape(16.dp))
-                .border(1.dp, CardBorder, RoundedCornerShape(16.dp)),
-        ) {
-            items.forEachIndexed { index, item ->
-                if (index > 0) {
-                    HorizontalDivider(
-                        color = CardBorder.copy(alpha = 0.7f),
-                        modifier = Modifier.padding(start = 58.dp),
-                    )
-                }
-                ActionRow(item.label, item.icon, item.tint, item.onClick)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActionRow(label: String, icon: ImageVector, tint: Color, onClick: () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // Tinted tile rather than a solid block of colour — six saturated squares
-        // stacked down the screen fought with the content.
-        Box(
-            Modifier.size(34.dp).background(tint.copy(alpha = 0.13f), RoundedCornerShape(10.dp)),
-            contentAlignment = Alignment.Center,
-        ) { Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp)) }
-        Spacer(Modifier.width(12.dp))
-        Text(label, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-        Icon(Icons.Outlined.ChevronRight, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
-    }
-}

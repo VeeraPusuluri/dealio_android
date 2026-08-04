@@ -43,21 +43,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.dealio.app.ui.builder.SectionLabel
+import com.dealio.app.BuildConfig
+import com.dealio.app.ui.components.ActionGroup
+import com.dealio.app.ui.components.ActionItem
+import com.dealio.app.ui.components.IconBlue
+import com.dealio.app.ui.components.IconGreen
+import com.dealio.app.ui.components.IconOrange
+import com.dealio.app.ui.components.IconPurple
+import com.dealio.app.ui.components.IconRed
 import com.dealio.app.ui.components.PortalHeader
 import com.dealio.app.ui.cp.CpRoutes
-import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.ErrorRed
 import com.dealio.app.ui.theme.Teal
-import com.dealio.app.ui.theme.TextPrimary
+import com.dealio.app.ui.theme.TextSecondary
 
 @Composable
 fun CpMoreScreen(nav: NavController, onLogout: () -> Unit) {
@@ -67,31 +71,37 @@ fun CpMoreScreen(nav: NavController, onLogout: () -> Unit) {
     ) { inner ->
         Column(
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            SectionLabel("Workspace")
-            Row("Conversations", Icons.Outlined.ChatBubbleOutline) { nav.navigate(CpRoutes.CONVERSATIONS) }
-            Row("Contacts", Icons.Outlined.Contacts) { nav.navigate(CpRoutes.CONTACTS) }
-            Row("Follow-ups", Icons.Outlined.EventRepeat) { nav.navigate(CpRoutes.FOLLOWUPS) }
-            Row("Call logs", Icons.Outlined.Phone) { nav.navigate(CpRoutes.CALLLOGS) }
-            Row("Meetings", Icons.Outlined.CalendarMonth) { nav.navigate(CpRoutes.MEETINGS) }
-            Row("Profile & verification", Icons.Outlined.Person) { nav.navigate(CpRoutes.PROFILE) }
-            Row("Notifications", Icons.Outlined.Notifications) { nav.navigate(CpRoutes.NOTIFICATIONS) }
+            ActionGroup(
+                "Workspace",
+                listOf(
+                    ActionItem("Conversations", Icons.Outlined.ChatBubbleOutline, Teal) { nav.navigate(CpRoutes.CONVERSATIONS) },
+                    ActionItem("Contacts", Icons.Outlined.Contacts, IconBlue) { nav.navigate(CpRoutes.CONTACTS) },
+                    ActionItem("Follow-ups", Icons.Outlined.EventRepeat, IconOrange) { nav.navigate(CpRoutes.FOLLOWUPS) },
+                    ActionItem("Call logs", Icons.Outlined.Phone, IconGreen) { nav.navigate(CpRoutes.CALLLOGS) },
+                    ActionItem("Meetings", Icons.Outlined.CalendarMonth, IconPurple) { nav.navigate(CpRoutes.MEETINGS) },
+                    ActionItem("Profile & verification", Icons.Outlined.Person, IconBlue) { nav.navigate(CpRoutes.PROFILE) },
+                    ActionItem("Notifications", Icons.Outlined.Notifications, IconRed) { nav.navigate(CpRoutes.NOTIFICATIONS) },
+                ),
+            )
 
-            Spacer(Modifier.height(4.dp))
-            SectionLabel("Grow your business")
-            Row("Leaderboard", Icons.Outlined.EmojiEvents) { nav.navigate(CpRoutes.LEADERBOARD) }
-            Row("AI Lead Intelligence", Icons.Outlined.Psychology) { nav.navigate(CpRoutes.AI_INSIGHTS) }
-            Row("Content Studio", Icons.Outlined.AutoAwesome) { nav.navigate(CpRoutes.CONTENT_STUDIO) }
-            Row("Brochure Generator", Icons.Outlined.Description) { nav.navigate(CpRoutes.BROCHURE) }
-            Row("WhatsApp Broadcast", Icons.Outlined.Campaign) { nav.navigate(CpRoutes.WHATSAPP_BROADCAST) }
-            Row("Social Analytics", Icons.Outlined.InsertChart) { nav.navigate(CpRoutes.SOCIAL_ANALYTICS) }
-            Row("Referrals", Icons.Outlined.CardGiftcard) { nav.navigate(CpRoutes.REFERRAL) }
-            Row("Loan Assist", Icons.Outlined.AccountBalance) { nav.navigate(CpRoutes.LOAN_ASSIST) }
-            Row("Community", Icons.Outlined.Groups) { nav.navigate(CpRoutes.COMMUNITY) }
-            Row("JV Opportunities", Icons.Outlined.Handshake) { nav.navigate(CpRoutes.JV) }
+            ActionGroup(
+                "Grow your business",
+                listOf(
+                    ActionItem("Leaderboard", Icons.Outlined.EmojiEvents, IconOrange) { nav.navigate(CpRoutes.LEADERBOARD) },
+                    ActionItem("AI Lead Intelligence", Icons.Outlined.Psychology, IconPurple) { nav.navigate(CpRoutes.AI_INSIGHTS) },
+                    ActionItem("Content Studio", Icons.Outlined.AutoAwesome, IconPurple) { nav.navigate(CpRoutes.CONTENT_STUDIO) },
+                    ActionItem("Brochure Generator", Icons.Outlined.Description, IconBlue) { nav.navigate(CpRoutes.BROCHURE) },
+                    ActionItem("WhatsApp Broadcast", Icons.Outlined.Campaign, IconGreen) { nav.navigate(CpRoutes.WHATSAPP_BROADCAST) },
+                    ActionItem("Social Analytics", Icons.Outlined.InsertChart, IconBlue) { nav.navigate(CpRoutes.SOCIAL_ANALYTICS) },
+                    ActionItem("Referrals", Icons.Outlined.CardGiftcard, IconRed) { nav.navigate(CpRoutes.REFERRAL) },
+                    ActionItem("Loan Assist", Icons.Outlined.AccountBalance, IconGreen) { nav.navigate(CpRoutes.LOAN_ASSIST) },
+                    ActionItem("Community", Icons.Outlined.Groups, Teal) { nav.navigate(CpRoutes.COMMUNITY) },
+                    ActionItem("JV Opportunities", Icons.Outlined.Handshake, IconOrange) { nav.navigate(CpRoutes.JV) },
+                ),
+            )
 
-            Spacer(Modifier.height(6.dp))
             Button(
                 onClick = onLogout,
                 modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(14.dp),
@@ -101,23 +111,14 @@ fun CpMoreScreen(nav: NavController, onLogout: () -> Unit) {
                 Spacer(Modifier.width(8.dp))
                 Text("Log out", fontWeight = FontWeight.SemiBold)
             }
-        }
-    }
-}
 
-@Composable
-private fun Row(label: String, icon: ImageVector, onClick: () -> Unit) {
-    androidx.compose.foundation.layout.Row(
-        Modifier.fillMaxWidth()
-            .background(Color.White, RoundedCornerShape(14.dp))
-            .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
-            .clickable { onClick() }
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, null, tint = Teal, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(12.dp))
-        Text(label, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-        Icon(Icons.Outlined.ChevronRight, null, tint = com.dealio.app.ui.theme.TextSecondary, modifier = Modifier.size(20.dp))
+            Text(
+                "Dealio v${BuildConfig.VERSION_NAME}",
+                color = TextSecondary,
+                fontSize = 11.sp,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
