@@ -195,8 +195,17 @@ fun CpProjectDetailScreen(nav: NavController, projectId: Long, vm: CpProjectDeta
             TopAppBar(
                 title = { Text(p?.name ?: "Project", fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 1) },
                 navigationIcon = { IconButton(onClick = { nav.navigateUp() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Navy) } },
+                // All three project actions live here as icons. Adding a lead sits
+                // rightmost, under the thumb and last in the row, because it is the
+                // one that changes something — the other two only pass the project on.
                 actions = {
                     if (p != null) {
+                        IconButton(onClick = { vm.share() }, enabled = !state.working) {
+                            Icon(Icons.Outlined.Share, "Share link", tint = Navy)
+                        }
+                        IconButton(onClick = { showBooking = true }) {
+                            Icon(Icons.Outlined.CalendarMonth, "Book a visit", tint = Navy)
+                        }
                         IconButton(onClick = { showAddLead = true }) {
                             Icon(Icons.Outlined.PersonAdd, "Add lead", tint = Navy)
                         }
@@ -233,27 +242,6 @@ fun CpProjectDetailScreen(nav: NavController, projectId: Long, vm: CpProjectDeta
                                 )
                             }
 
-                            // Both actions sit under the project's identity, where a
-                            // partner can reach them without reading to the end and
-                            // without a bar covering the page the whole way down.
-                            Spacer(Modifier.height(14.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                OutlinedButton(
-                                    onClick = { vm.share() }, enabled = !state.working,
-                                    modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(13.dp),
-                                ) {
-                                    Icon(Icons.Outlined.Share, null, tint = Navy, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(6.dp)); Text("Share link", color = Navy, fontWeight = FontWeight.SemiBold)
-                                }
-                                Button(
-                                    onClick = { showBooking = true },
-                                    modifier = Modifier.weight(1.2f).height(46.dp), shape = RoundedCornerShape(13.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Teal),
-                                ) {
-                                    Icon(Icons.Outlined.CalendarMonth, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(6.dp)); Text("Book a visit", color = Color.White, fontWeight = FontWeight.Bold)
-                                }
-                            }
                         }
                     }
 
