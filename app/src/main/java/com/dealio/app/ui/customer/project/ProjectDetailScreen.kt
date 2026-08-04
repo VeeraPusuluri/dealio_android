@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -151,8 +152,10 @@ fun ProjectDetailScreen(nav: NavController, projectId: Long, vm: ProjectDetailVi
         bottomBar = {
             if (p != null) {
                 Row(
+                    // Inset after the border so the white runs to the bottom edge
+                    // while the buttons clear the system navigation bar.
                     Modifier.fillMaxWidth().background(Color.White).border(1.dp, CardBorder, RoundedCornerShape(0.dp))
-                        .padding(16.dp),
+                        .navigationBarsPadding().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     OutlinedButton(

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -207,7 +208,10 @@ fun CpProjectDetailScreen(nav: NavController, projectId: Long, vm: CpProjectDeta
         bottomBar = {
             if (p != null) {
                 Row(
-                    Modifier.fillMaxWidth().background(Color.White).padding(16.dp),
+                    // Background first, inset second: the white runs to the bottom
+                    // edge while the buttons sit above the system navigation bar,
+                    // which they were previously drawn underneath.
+                    Modifier.fillMaxWidth().background(Color.White).navigationBarsPadding().padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     OutlinedButton(

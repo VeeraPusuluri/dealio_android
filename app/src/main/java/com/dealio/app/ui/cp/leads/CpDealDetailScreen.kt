@@ -11,6 +11,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -92,7 +97,12 @@ fun CpDealDetailScreen(nav: NavController, dealId: Long, vm: CpDealDetailViewMod
         bottomBar = {
             if (d != null) {
                 Row(
-                    Modifier.fillMaxWidth().background(Color.White).padding(horizontal = 12.dp, vertical = 8.dp).imePadding(),
+                    // Whichever is taller — the keyboard when open, the navigation
+                    // bar otherwise. imePadding() alone left the composer sitting
+                    // under the nav bar with the keyboard down.
+                    Modifier.fillMaxWidth().background(Color.White)
+                        .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedTextField(
