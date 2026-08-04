@@ -20,6 +20,36 @@ val NavyHeroGradient: Brush
 val NavyTealGradient: Brush
     get() = Brush.linearGradient(listOf(NavyDeep, NavyPrimary, TealDeep))
 
+// ─── Portal hero ─────────────────────────────────────────────────────────────
+//
+// The hero used to run navy → bright teal across a wide span of hue, with a cyan
+// glow on top of that. Two strong colours and a spotlight is the gradient every
+// app ships with, and next to the credential card — deep navy, one restrained
+// sheen — it looked like a different product.
+//
+// So the hero is cut from the same material: it stays inside the navy family and
+// lifts only slightly toward slate at the far corner. Depth comes from value
+// rather than from a second hue.
+
+private val HeroBase = Color(0xFF0A1A2B)
+private val HeroMid = Color(0xFF14304A)
+private val HeroLift = Color(0xFF17414F)
+
+/** The surface every portal tab opens on. */
+val PortalHeroGradient: Brush
+    get() = Brush.linearGradient(listOf(HeroBase, HeroMid, HeroLift))
+
+/**
+ * Eyebrow text on the hero — "Welcome back", tab subtitles.
+ *
+ * A muted aqua rather than [TealBright]: neon cyan on deep navy is legible but
+ * reads as a demo, and it competed with the tier foil on the credential.
+ */
+val HeroAccent = Color(0xFF8FBFD0)
+
+/** Corner highlight on the hero — a wash, not a spotlight. */
+val HeroHighlight = Color(0xFF5E9AB0)
+
 /** Bright teal call-to-action gradient. */
 val TealGradient: Brush
     get() = Brush.linearGradient(listOf(Teal, TealBright))

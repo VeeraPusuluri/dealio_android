@@ -31,7 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dealio.app.ui.theme.NavyTealGradient
+import com.dealio.app.ui.theme.HeroAccent
+import com.dealio.app.ui.theme.HeroHighlight
+import com.dealio.app.ui.theme.PortalHeroGradient
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TealBright
 import com.dealio.app.ui.theme.TextPrimary
@@ -56,19 +58,23 @@ fun PortalHeaderSurface(
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
-            .background(NavyTealGradient),
+            .background(PortalHeroGradient),
     ) {
         // Soft highlight so the flat gradient reads with a bit of depth. Drawn against
         // the parent's own size rather than as a 220.dp child — as a sized child it set
         // a 220.dp floor on the hero, so a short tab (a title with no stat pills) got
         // the same tall bar as a full one, padded out with dead navy.
+        //
+        // Wider and fainter than it was: at a tight radius and a fifth opacity the
+        // cyan read as a spotlight aimed at the corner rather than light falling
+        // across the surface.
         Box(
             Modifier.matchParentSize().drawBehind {
                 val r = GLOW_RADIUS.toPx()
-                val centre = Offset(size.width - r, r)
+                val centre = Offset(size.width - r * 0.55f, r * 0.15f)
                 drawCircle(
                     brush = Brush.radialGradient(
-                        listOf(TealBright.copy(alpha = 0.20f), Color.Transparent),
+                        listOf(HeroHighlight.copy(alpha = 0.16f), Color.Transparent),
                         center = centre,
                         radius = r,
                     ),
@@ -109,7 +115,7 @@ fun PortalHeader(
                 Text(title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 if (subtitle != null) {
                     Spacer(Modifier.height(2.dp))
-                    Text(subtitle, color = TealBright, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(subtitle, color = HeroAccent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
             trailing?.invoke()
