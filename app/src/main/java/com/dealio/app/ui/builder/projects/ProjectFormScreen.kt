@@ -82,6 +82,9 @@ fun ProjectFormScreen(nav: NavController, projectId: Long?, vm: ProjectFormViewM
 
     val form = vm.form
     val isEdit = projectId != null
+    // A plot has no BHK configuration and no towers — it is sold by yardage,
+    // so those inputs give way to the plot-size rows below.
+    val isPlot = form.projectType == "Plot"
 
     SubScreenScaffold(
         title = if (isEdit) "Edit project" else "New project",
@@ -132,14 +135,20 @@ fun ProjectFormScreen(nav: NavController, projectId: Long?, vm: ProjectFormViewM
                 FieldLabel("Project type")
                 ChipSingleSelect(projectTypes, form.projectType) { v -> vm.update { copy(projectType = v) } }
                 Spacer(Modifier.height(12.dp))
-                FieldLabel("Configurations", required = true)
-                ChipMultiSelect(bhkOptions, form.configurations) { opt -> vm.update { copy(configurations = configurations.toggle(opt)) } }
-                Spacer(Modifier.height(12.dp))
-                FieldRow(
-                    { LabeledField("Total units", form.totalUnits, { v -> vm.update { copy(totalUnits = v.digits()) } }, required = true, keyboardType = KeyboardType.Number) },
-                    { LabeledField("Towers", form.towers, { v -> vm.update { copy(towers = v.digits()) } }, keyboardType = KeyboardType.Number) },
-                )
-                LabeledField("Floors per tower", form.floorsPerTower, { v -> vm.update { copy(floorsPerTower = v.digits()) } }, keyboardType = KeyboardType.Number)
+                if (!isPlot) {
+                    FieldLabel("Configurations", required = true)
+                    ChipMultiSelect(bhkOptions, form.configurations) { opt -> vm.update { copy(configurations = configurations.toggle(opt)) } }
+                    Spacer(Modifier.height(12.dp))
+                }
+                if (isPlot) {
+                    LabeledField("Total plots", form.totalUnits, { v -> vm.update { copy(totalUnits = v.digits()) } }, required = true, keyboardType = KeyboardType.Number)
+                } else {
+                    FieldRow(
+                        { LabeledField("Total units", form.totalUnits, { v -> vm.update { copy(totalUnits = v.digits()) } }, required = true, keyboardType = KeyboardType.Number) },
+                        { LabeledField("Towers", form.towers, { v -> vm.update { copy(towers = v.digits()) } }, keyboardType = KeyboardType.Number) },
+                    )
+                    LabeledField("Floors per tower", form.floorsPerTower, { v -> vm.update { copy(floorsPerTower = v.digits()) } }, keyboardType = KeyboardType.Number)
+                }
                 FieldLabel("Status")
                 ChipSingleSelect(statusOptions, form.status) { v -> vm.update { copy(status = v) } }
                 Spacer(Modifier.height(12.dp))
@@ -151,6 +160,45 @@ fun ProjectFormScreen(nav: NavController, projectId: Long?, vm: ProjectFormViewM
                 )
                 LabeledField("Building permit no.", form.buildingPermitNumber, { v -> vm.update { copy(buildingPermitNumber = v) } })
                 LabeledField("Description", form.description, { v -> vm.update { copy(description = v) } }, singleLine = false, minLines = 3)
+            }
+
+            // 1b — Plot sizes. Free-form yardages, because no two layouts carve
+            // their land the same way. Each row is one size on sale.
+            if (isPlot) {
+                FormSectionCard("Plot sizes", "One row per yardage this layout sells") {
+                    form.plotSizes.forEachIndexed { i, plot ->
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    plot.yards.toIntOrNull()?.takeIf { it > 0 }?.let { plotLabel(it) }
+                                        ?: "Plot size ${i + 1}",
+                                    color = Navy, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                if (form.plotSizes.size > 1) {
+                                    Icon(Icons.Outlined.Close, "Remove", tint = ErrorRed, modifier = Modifier.size(18.dp)
+                                        .clickable { vm.update { copy(plotSizes = plotSizes.removeIndex(i)) } })
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            LabeledField(
+                                "Plot area (sq yd)", plot.yards,
+                                { v -> vm.update { copy(plotSizes = plotSizes.replace(i) { it.copy(yards = v.digits()) }) } },
+                                required = true, placeholder = "e.g. 200", keyboardType = KeyboardType.Number,
+                            )
+                            FieldRow(
+                                { LabeledField("No. of plots", plot.count, { v -> vm.update { copy(plotSizes = plotSizes.replace(i) { it.copy(count = v.digits()) }) } }, keyboardType = KeyboardType.Number) },
+                                { LabeledField("Base price (₹)", plot.price, { v -> vm.update { copy(plotSizes = plotSizes.replace(i) { it.copy(price = v.digits()) }) } }, keyboardType = KeyboardType.Number) },
+                            )
+                        }
+                    }
+                    AddRowButton("Add plot size") { vm.update { copy(plotSizes = plotSizes + PlotSizeInput()) } }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Enter each plot size in square yards — e.g. 167, 200, 267.",
+                        color = TextSecondary, fontSize = 12.sp,
+                    )
+                }
             }
 
             // 2 — Location
@@ -176,8 +224,12 @@ fun ProjectFormScreen(nav: NavController, projectId: Long?, vm: ProjectFormViewM
                     { LabeledField("Price to (₹)", form.priceTo, { v -> vm.update { copy(priceTo = v.digits()) } }, required = true, keyboardType = KeyboardType.Number) },
                 )
                 FieldRow(
-                    { LabeledField("₹/sq.ft from", form.pricePerSqftFrom, { v -> vm.update { copy(pricePerSqftFrom = v.digits()) } }, keyboardType = KeyboardType.Number) },
-                    { LabeledField("₹/sq.ft to", form.pricePerSqftTo, { v -> vm.update { copy(pricePerSqftTo = v.digits()) } }, keyboardType = KeyboardType.Number) },
+                    // Land is quoted by the yard. Asking for a foot rate on a plot
+                    // and printing it back as a yard rate — or the reverse — makes
+                    // the number wrong wherever it is read, so the label follows
+                    // the type the same way the detail page does.
+                    { LabeledField(if (isPlot) "₹/sq.yd from" else "₹/sq.ft from", form.pricePerSqftFrom, { v -> vm.update { copy(pricePerSqftFrom = v.digits()) } }, keyboardType = KeyboardType.Number) },
+                    { LabeledField(if (isPlot) "₹/sq.yd to" else "₹/sq.ft to", form.pricePerSqftTo, { v -> vm.update { copy(pricePerSqftTo = v.digits()) } }, keyboardType = KeyboardType.Number) },
                 )
                 FieldRow(
                     { LabeledField("Maintenance (₹)", form.maintenance, { v -> vm.update { copy(maintenance = v.digits()) } }, keyboardType = KeyboardType.Number) },

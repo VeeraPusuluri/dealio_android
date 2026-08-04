@@ -376,7 +376,7 @@ private fun CpProjectCard(p: Project, onClick: () -> Unit) {
             }
         }
 
-        val configs = p.configurations?.takeIf { it.isNotEmpty() }?.joinToString("  ·  ")
+        val configs = configSummary(p.configurations)
         if (configs != null) {
             Box(Modifier.fillMaxWidth().height(1.dp).background(CardBorder.copy(alpha = 0.7f)))
             Text(
@@ -407,6 +407,35 @@ private fun MicroLabel(text: String) {
         text.uppercase(),
         color = TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp,
     )
+}
+
+/**
+ * What's on sale, in one line.
+ *
+ * Listing every size spelled it out four times over — "200 sq yd · 300 sq yd ·
+ * 400 sq yd · 500 sq yd" — which runs past the card and says little more than
+ * its own span. When the sizes share a unit and all carry a number, the span is
+ * the useful fact, so they collapse to "200 – 500 sq yd".
+ *
+ * A list with anything unparseable in it ("Penthouse") has no span to state and
+ * is left as written, rather than quietly dropping the odd one out.
+ */
+private fun configSummary(configs: List<String>?): String? {
+    val list = configs?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() } ?: return null
+
+    val parsed = list.map { Regex("^\\s*(\\d+(?:\\.\\d+)?)\\s*(.+)$").find(it.trim()) }
+    if (parsed.any { it == null }) return list.joinToString("  ·  ")
+
+    val units = parsed.map { it!!.groupValues[2].trim() }.distinct()
+    if (units.size != 1) return list.joinToString("  ·  ")
+
+    val numbers = parsed.mapNotNull { it!!.groupValues[1].toDoubleOrNull() }
+    if (numbers.size != list.size) return list.joinToString("  ·  ")
+
+    val lo = numbers.min()
+    val hi = numbers.max()
+    fun trim(v: Double) = if (v % 1.0 == 0.0) v.toInt().toString() else v.toString()
+    return if (lo == hi) "${trim(lo)} ${units[0]}" else "${trim(lo)} – ${trim(hi)} ${units[0]}"
 }
 
 private fun cpPriceRange(p: Project): String {

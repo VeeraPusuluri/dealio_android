@@ -48,6 +48,8 @@ import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.LocalParking
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Landscape
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Park
 import androidx.compose.material.icons.outlined.Place
@@ -143,6 +145,9 @@ import kotlinx.coroutines.flow.collectLatest
 
 /** How long each hero image holds before the carousel moves on. */
 private const val HERO_ADVANCE_MS = 4_000L
+
+/** Location advantages shown before the section asks to be expanded. */
+private const val LOCATION_ADV_PREVIEW = 4
 
 private val timeSlots = listOf("10:00 AM", "11:00 AM", "12:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM")
 private val visitTypes = listOf("Site Visit", "Virtual Tour", "Office Meeting")
@@ -258,7 +263,11 @@ internal fun LazyListScope.projectDetailSections(
             Spacer(Modifier.height(2.dp))
             Text(priceText(p), color = Teal, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             if ((p.pricePerSqftFrom ?: 0.0) > 0) {
-                Text("₹${p.pricePerSqftFrom!!.toLong()}/sq.ft onwards", color = TextSecondary, fontSize = 12.sp)
+                // Land is quoted by the yard, not the foot. The builder form asks
+                // for the rate in the same unit it is shown in here, so a plot's
+                // rate is entered and read as ₹/sq.yd throughout.
+                val unit = if (isPlot) "sq.yd" else "sq.ft"
+                Text("₹${p.pricePerSqftFrom!!.toLong()}/$unit onwards", color = TextSecondary, fontSize = 12.sp)
             }
         }
     }
@@ -457,9 +466,36 @@ internal fun LazyListScope.projectDetailSections(
                         }
                     }
                 }
-                points.forEachIndexed { i, (point, detail) ->
+                // Builders paste long lists here — a dozen entries is normal and
+                // buries everything below the section. Show enough to judge the
+                // location, and let the rest be asked for.
+                var expanded by remember { mutableStateOf(false) }
+                val shown = if (expanded) points else points.take(LOCATION_ADV_PREVIEW)
+                shown.forEachIndexed { i, (point, detail) ->
                     if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(CardBorder.copy(alpha = 0.5f)))
                     LocationAdvRow(point, detail)
+                }
+                if (points.size > LOCATION_ADV_PREVIEW) {
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(CardBorder.copy(alpha = 0.5f)))
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { expanded = !expanded }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            // Naming the count is the point: "show more" hides how
+                            // much more there is to read.
+                            if (expanded) "Show less" else "Show all ${points.size} advantages",
+                            color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                            null, tint = Teal, modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
             }
         }
