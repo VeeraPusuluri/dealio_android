@@ -105,6 +105,9 @@ data class CpContact(
     val notes: String? = null,
     val tags: String? = null,
     val bhkPreference: String? = null,
+    val designation: String? = null,
+    val salary: Double? = null,
+    val address: String? = null,
     val createdAt: String = "",
 )
 
@@ -115,6 +118,9 @@ data class CpContactPayload(
     val notes: String? = null,
     val tags: String? = null,
     val bhkPreference: String? = null,
+    val designation: String? = null,
+    val salary: Double? = null,
+    val address: String? = null,
 )
 
 // ─── Follow-ups / call logs / due today ─────────────────────────────────────

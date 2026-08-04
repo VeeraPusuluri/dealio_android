@@ -15,7 +15,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Contacts
@@ -36,8 +39,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -143,6 +148,15 @@ fun ContactsScreen(nav: NavController, vm: ContactsViewModel = viewModel()) {
                             Column(Modifier.weight(1f)) {
                                 Text(c.name, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                                 Text(c.phone, color = TextSecondary, fontSize = 12.sp)
+                                // What they do and earn is how a CP decides who to call first.
+                                val qualifiers = listOfNotNull(
+                                    c.designation?.takeIf { it.isNotBlank() },
+                                    c.salary?.takeIf { it > 0 }?.let { formatSalaryShort(it) },
+                                    c.address?.takeIf { it.isNotBlank() },
+                                )
+                                if (qualifiers.isNotEmpty()) {
+                                    Text(qualifiers.joinToString(" · "), color = TextSecondary, fontSize = 11.sp, maxLines = 2)
+                                }
                                 if (!c.bhkPreference.isNullOrBlank() || !c.tags.isNullOrBlank()) {
                                     Text(listOfNotNull(c.bhkPreference, c.tags).joinToString(" · "), color = Teal, fontSize = 11.sp)
                                 }
@@ -177,13 +191,28 @@ private fun ContactDialog(existing: CpContact?, onDismiss: () -> Unit, onSave: (
     var bhk by remember { mutableStateOf(existing?.bhkPreference ?: "") }
     var tags by remember { mutableStateOf(existing?.tags ?: "") }
     var notes by remember { mutableStateOf(existing?.notes ?: "") }
+    var designation by remember { mutableStateOf(existing?.designation ?: "") }
+    var salary by remember { mutableStateOf(existing?.salary?.let { formatSalaryInput(it) } ?: "") }
+    var address by remember { mutableStateOf(existing?.address ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(
                 onClick = {
-                    onSave(CpContactPayload(name.trim(), phone.trim(), email.ifBlank { null }, notes.ifBlank { null }, tags.ifBlank { null }, bhk.ifBlank { null }))
+                    onSave(
+                        CpContactPayload(
+                            name = name.trim(),
+                            phone = phone.trim(),
+                            email = email.ifBlank { null },
+                            notes = notes.ifBlank { null },
+                            tags = tags.ifBlank { null },
+                            bhkPreference = bhk.ifBlank { null },
+                            designation = designation.ifBlank { null },
+                            salary = salary.toDoubleOrNull(),
+                            address = address.ifBlank { null },
+                        ),
+                    )
                 },
                 enabled = name.isNotBlank() && phone.length >= 6,
             ) { Text(if (existing == null) "Add" else "Save", color = Teal, fontWeight = FontWeight.SemiBold) }
@@ -191,10 +220,14 @@ private fun ContactDialog(existing: CpContact?, onDismiss: () -> Unit, onSave: (
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary) } },
         title = { Text(if (existing == null) "New contact" else "Edit contact", fontWeight = FontWeight.Bold, color = TextPrimary) },
         text = {
-            Column {
+            // Nine fields overflow the dialog on a short screen, so let it scroll.
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Field("Name", name) { name = it }
                 Field("Phone", phone) { phone = it.filter(Char::isDigit) }
                 Field("Email", email) { email = it }
+                Field("Designation", designation) { designation = it }
+                Field("Annual salary (₹)", salary, KeyboardType.Number) { salary = it.filter { c -> c.isDigit() } }
+                Field("Address / location", address) { address = it }
                 Field("BHK preference", bhk) { bhk = it }
                 Field("Tags (comma separated)", tags) { tags = it }
                 Field("Notes", notes) { notes = it }
@@ -203,10 +236,30 @@ private fun ContactDialog(existing: CpContact?, onDismiss: () -> Unit, onSave: (
     )
 }
 
+/** The stored value is a Double; show it back as the plain integer the CP typed. */
+private fun formatSalaryInput(v: Double): String =
+    if (v % 1.0 == 0.0) v.toLong().toString() else v.toString()
+
+/** 1200000 -> "₹12 L", 25000000 -> "₹2.5 Cr" — read at a glance, not audited. */
+internal fun formatSalaryShort(v: Double): String = when {
+    v >= 1_00_00_000 -> "₹${trimZero(v / 1_00_00_000)} Cr"
+    v >= 1_00_000 -> "₹${trimZero(v / 1_00_000)} L"
+    else -> "₹${v.toLong()}"
+}
+
+private fun trimZero(v: Double): String =
+    if (v % 1.0 == 0.0) v.toLong().toString() else String.format(Locale.US, "%.1f", v)
+
 @Composable
-private fun Field(label: String, value: String, onChange: (String) -> Unit) {
+private fun Field(
+    label: String,
+    value: String,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    onChange: (String) -> Unit,
+) {
     OutlinedTextField(
         value = value, onValueChange = onChange, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         label = { Text(label) }, singleLine = true, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors(),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
     )
 }
