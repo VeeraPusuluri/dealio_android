@@ -52,7 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.dealio.app.ui.builder.SectionLabel
-import com.dealio.app.ui.builder.TabHeader
+import com.dealio.app.ui.components.PortalHeader
 import com.dealio.app.ui.cp.CpRoutes
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.ErrorRed
@@ -63,7 +63,7 @@ import com.dealio.app.ui.theme.TextPrimary
 fun CpMoreScreen(nav: NavController, onLogout: () -> Unit) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        topBar = { TabHeader("More") },
+        topBar = { PortalHeader(title = "More", subtitle = "Your workspace and growth tools") },
     ) { inner ->
         Column(
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),

@@ -43,8 +43,8 @@ import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.pipeline.stageLabel
-import com.dealio.app.ui.customer.CustomerEmptyState
-import com.dealio.app.ui.customer.CustomerHeader
+import com.dealio.app.ui.components.PortalEmptyState
+import com.dealio.app.ui.components.PortalHeader
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
@@ -61,7 +61,7 @@ fun JourneyScreen(nav: NavController, vm: JourneyViewModel = viewModel()) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            CustomerHeader(
+            PortalHeader(
                 title = "My journey",
                 subtitle = "Every home you're in the running for",
                 stats = buildList {
@@ -76,7 +76,7 @@ fun JourneyScreen(nav: NavController, vm: JourneyViewModel = viewModel()) {
             state.loading -> LoadingState(Modifier.padding(inner))
             state.error != null -> ErrorState(state.error!!, onRetry = { vm.load() }, modifier = Modifier.padding(inner))
             state.deals.isEmpty() -> Box(Modifier.padding(inner)) {
-                CustomerEmptyState(
+                PortalEmptyState(
                     icon = Icons.Outlined.Timeline,
                     title = "Your journey starts here",
                     subtitle = "Book a visit or shortlist a home and you'll be able to track every step of it from this tab.",

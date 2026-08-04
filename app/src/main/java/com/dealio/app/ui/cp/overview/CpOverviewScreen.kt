@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,9 +50,10 @@ import com.dealio.app.ui.builder.initialsOf
 import com.dealio.app.ui.cp.CpLeadCard
 import com.dealio.app.ui.cp.CpRoutes
 import com.dealio.app.ui.cp.QuickActionTile
-import com.dealio.app.ui.theme.NavyTealGradient
+import com.dealio.app.ui.components.PortalHeaderSurface
 import com.dealio.app.ui.theme.Orange
 import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.TealBright
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 
@@ -64,37 +63,30 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
     RefreshOnResume { vm.load(silent = true) }
 
     Column(Modifier.fillMaxSize()) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp))
-                .background(NavyTealGradient),
-        ) {
-            Column(Modifier.systemBarsPadding().padding(horizontal = 20.dp, vertical = 18.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(46.dp).background(Teal, RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-                        androidx.compose.material3.Text(initialsOf(state.name), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        androidx.compose.material3.Text("Welcome back", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        androidx.compose.material3.Text(state.name.substringBefore(' '), color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Box(
-                        Modifier.size(40.dp).background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                            .clickable { nav.navigate(CpRoutes.NOTIFICATIONS) },
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Outlined.Notifications, "Notifications", tint = Color.White, modifier = Modifier.size(20.dp)) }
+        PortalHeaderSurface {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(46.dp).background(Teal, RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
+                    androidx.compose.material3.Text(initialsOf(state.name), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 }
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    Modifier.background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Icons.Outlined.WorkspacePremium, null, tint = Orange, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    androidx.compose.material3.Text("${state.tier} Partner", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    androidx.compose.material3.Text("Welcome back", color = TealBright, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    androidx.compose.material3.Text(state.name.substringBefore(' '), color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                 }
+                Box(
+                    Modifier.size(40.dp).background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                        .clickable { nav.navigate(CpRoutes.NOTIFICATIONS) },
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Outlined.Notifications, "Notifications", tint = Color.White, modifier = Modifier.size(20.dp)) }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(
+                Modifier.background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Outlined.WorkspacePremium, null, tint = Orange, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                androidx.compose.material3.Text("${state.tier} Partner", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
         }
 

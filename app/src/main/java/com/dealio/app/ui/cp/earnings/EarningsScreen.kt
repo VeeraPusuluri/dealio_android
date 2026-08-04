@@ -32,18 +32,16 @@ import androidx.navigation.NavController
 import com.dealio.app.data.ApiResult
 import com.dealio.app.data.api.CpCommission
 import com.dealio.app.ui.builder.DealioCard
-import com.dealio.app.ui.builder.EmptyState
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.RefreshOnResume
 import com.dealio.app.ui.builder.StatusChip
-import com.dealio.app.ui.builder.TabHeader
 import com.dealio.app.ui.builder.formatINR
 import com.dealio.app.ui.builder.formatINRShort
+import com.dealio.app.ui.components.PortalEmptyState
+import com.dealio.app.ui.components.PortalHeader
+import com.dealio.app.ui.cp.CpRoutes
 import com.dealio.app.ui.cp.CpViewModel
-import com.dealio.app.ui.theme.NavyDeep
-import com.dealio.app.ui.theme.NavyMid
-import com.dealio.app.ui.theme.Orange
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
@@ -85,30 +83,31 @@ fun EarningsScreen(nav: NavController, vm: EarningsViewModel = viewModel()) {
     RefreshOnResume { vm.load(silent = true) }
 
     Column(Modifier.fillMaxSize()) {
-        TabHeader("Earnings")
+        // Released/pending live in the hero pills — the body used to repeat them in a
+        // second navy card directly under the navy bar, which just read as banding.
+        PortalHeader(
+            title = "Earnings",
+            subtitle = "Commission on the deals you referred",
+            stats = buildList {
+                add(formatINRShort(state.released) to "released")
+                if (state.pending > 0) add(formatINRShort(state.pending) to "pending")
+                if (state.items.isNotEmpty()) {
+                    add("${state.items.size}" to if (state.items.size == 1) "deal" else "deals")
+                }
+            },
+        )
         when {
             state.loading -> LoadingState()
             state.error != null -> ErrorState(state.error!!, onRetry = { vm.load() })
+            state.items.isEmpty() -> PortalEmptyState(
+                icon = Icons.Outlined.Payments,
+                title = "No commission yet",
+                subtitle = "When a deal you referred closes, the commission shows up here — pending first, then released.",
+                actionLabel = "Browse projects",
+                onAction = { nav.navigate(CpRoutes.PROJECTS) },
+            )
             else -> LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                item {
-                    Row(
-                        Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(NavyDeep, NavyMid)), RoundedCornerShape(18.dp)).padding(18.dp),
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text("Released", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
-                            Text(formatINRShort(state.released), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Column(Modifier.weight(1f)) {
-                            Text("Pending", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
-                            Text(formatINRShort(state.pending), color = Orange, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-                if (state.items.isEmpty()) {
-                    item { EmptyState(Icons.Outlined.Payments, "No commissions yet", "Earn when your referred deals close.") }
-                } else {
-                    items(state.items.size) { i -> CommissionCard(state.items[i]) }
-                }
+                items(state.items.size) { i -> CommissionCard(state.items[i]) }
             }
         }
     }

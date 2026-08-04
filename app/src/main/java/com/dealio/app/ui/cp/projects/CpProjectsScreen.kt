@@ -26,10 +26,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.dealio.app.data.ApiResult
 import com.dealio.app.data.api.Project
-import com.dealio.app.ui.builder.EmptyState
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
-import com.dealio.app.ui.builder.TabHeader
+import com.dealio.app.ui.components.PortalEmptyState
+import com.dealio.app.ui.components.PortalHeader
 import com.dealio.app.ui.components.dealioFieldColors
 import com.dealio.app.ui.cp.CpRoutes
 import com.dealio.app.ui.cp.CpViewModel
@@ -76,7 +76,17 @@ fun CpProjectsScreen(nav: NavController, vm: CpProjectsViewModel = viewModel()) 
     val state by vm.state.collectAsStateWithLifecycle()
 
     Column(Modifier.fillMaxSize()) {
-        TabHeader("Projects", subtitle = "Share & refer to earn")
+        PortalHeader(
+            title = "Projects",
+            subtitle = "Share & refer to earn",
+            stats = buildList {
+                if (state.all.isNotEmpty()) {
+                    add("${state.all.size}" to "live")
+                    val cities = state.all.mapNotNull { it.city?.takeIf(String::isNotBlank) }.distinct().size
+                    if (cities > 0) add("$cities" to if (cities == 1) "city" else "cities")
+                }
+            },
+        )
         OutlinedTextField(
             value = state.query, onValueChange = vm::setQuery,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -87,7 +97,20 @@ fun CpProjectsScreen(nav: NavController, vm: CpProjectsViewModel = viewModel()) 
         when {
             state.loading -> LoadingState()
             state.error != null -> ErrorState(state.error!!, onRetry = vm::load)
-            state.filtered.isEmpty() -> EmptyState(Icons.Outlined.Apartment, "No projects", "Try a different search.")
+            // Nothing to show splits two ways: a search that missed, or no inventory at
+            // all. They need different words and different ways out.
+            state.filtered.isEmpty() && state.query.isNotBlank() -> PortalEmptyState(
+                icon = Icons.Outlined.Search,
+                title = "No match for “${state.query}”",
+                subtitle = "Try a locality or city instead of the full project name.",
+                actionLabel = "Clear search",
+                onAction = { vm.setQuery("") },
+            )
+            state.filtered.isEmpty() -> PortalEmptyState(
+                icon = Icons.Outlined.Apartment,
+                title = "No projects yet",
+                subtitle = "Once builders publish inventory you can refer, it shows up here.",
+            )
             else -> LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 items(state.filtered.size) { i ->
                     CustomerProjectCard(state.filtered[i]) { nav.navigate(CpRoutes.projectDetail(state.filtered[i].id)) }

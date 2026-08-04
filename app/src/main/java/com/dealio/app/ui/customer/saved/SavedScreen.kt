@@ -45,8 +45,8 @@ import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.RefreshOnResume
 import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.titleCase
-import com.dealio.app.ui.customer.CustomerEmptyState
-import com.dealio.app.ui.customer.CustomerHeader
+import com.dealio.app.ui.components.PortalEmptyState
+import com.dealio.app.ui.components.PortalHeader
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.TextPrimary
@@ -63,7 +63,7 @@ fun SavedScreen(nav: NavController, vm: SavedViewModel = viewModel()) {
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            CustomerHeader(
+            PortalHeader(
                 title = "Saved homes",
                 subtitle = "Your shortlist, side by side",
                 stats = buildList {
@@ -78,7 +78,7 @@ fun SavedScreen(nav: NavController, vm: SavedViewModel = viewModel()) {
             state.loading -> LoadingState(Modifier.padding(inner))
             state.error != null -> ErrorState(state.error!!, onRetry = { vm.load() }, modifier = Modifier.padding(inner))
             state.items.isEmpty() -> Box(Modifier.padding(inner)) {
-                CustomerEmptyState(
+                PortalEmptyState(
                     icon = Icons.Outlined.Bookmark,
                     title = "Nothing shortlisted yet",
                     subtitle = "Save a configuration from any project and it lands here, ready to compare and ask pricing on.",

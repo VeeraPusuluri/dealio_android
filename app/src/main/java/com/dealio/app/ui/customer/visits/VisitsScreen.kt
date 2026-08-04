@@ -42,8 +42,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.dealio.app.data.api.Meeting
 import com.dealio.app.ui.builder.DealioCard
-import com.dealio.app.ui.customer.CustomerEmptyState
-import com.dealio.app.ui.customer.CustomerHeader
+import com.dealio.app.ui.components.PortalEmptyState
+import com.dealio.app.ui.components.PortalHeader
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
@@ -84,7 +84,7 @@ fun VisitsScreen(nav: NavController, vm: VisitsViewModel = viewModel()) {
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             val completed = state.meetings.count { it.status.equals("Completed", true) }
-            CustomerHeader(
+            PortalHeader(
                 title = "Site visits",
                 subtitle = "See homes before you commit",
                 stats = buildList {
@@ -107,7 +107,7 @@ fun VisitsScreen(nav: NavController, vm: VisitsViewModel = viewModel()) {
                         MeetingsCalendar(calMeetings)
                     }
                 } else if (state.meetings.isEmpty()) {
-                    CustomerEmptyState(
+                    PortalEmptyState(
                         icon = Icons.Outlined.CalendarMonth,
                         title = "No visits booked",
                         subtitle = "Walking the site is the fastest way to tell a shortlist apart. Book one from any project page.",

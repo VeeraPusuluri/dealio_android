@@ -57,12 +57,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.dealio.app.data.api.CpContact
 import com.dealio.app.data.api.Project
-import com.dealio.app.ui.builder.EmptyState
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.RefreshOnResume
 import com.dealio.app.ui.builder.SectionLabel
-import com.dealio.app.ui.builder.TabHeader
+import com.dealio.app.ui.builder.formatINRShort
+import com.dealio.app.ui.components.PortalEmptyState
+import com.dealio.app.ui.components.PortalHeader
 import com.dealio.app.ui.components.dealioFieldColors
 import com.dealio.app.ui.cp.CpLeadCard
 import com.dealio.app.ui.cp.CpRoutes
@@ -84,7 +85,18 @@ fun LeadsScreen(nav: NavController, vm: LeadsViewModel = viewModel()) {
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            TabHeader("My leads", subtitle = "${state.all.size} total", trailing = { AddLeadButton { showAddLead = true } })
+            PortalHeader(
+                title = "My leads",
+                subtitle = "Everyone you introduced to a project",
+                stats = buildList {
+                    if (state.all.isNotEmpty()) {
+                        add("${state.all.size}" to if (state.all.size == 1) "lead" else "leads")
+                        val inPlay = state.all.sumOf { it.estimatedCommission ?: 0.0 }
+                        if (inPlay > 0) add(formatINRShort(inPlay) to "in play")
+                    }
+                },
+                trailing = { AddLeadButton { showAddLead = true } },
+            )
 
             Row(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
@@ -109,7 +121,20 @@ fun LeadsScreen(nav: NavController, vm: LeadsViewModel = viewModel()) {
             when {
                 state.loading -> LoadingState()
                 state.error != null -> ErrorState(state.error!!, onRetry = { vm.load() })
-                state.filtered.isEmpty() -> EmptyState(Icons.Outlined.Groups, "No leads here", "Tap Add to log a lead, or add one from a project.")
+                state.filtered.isEmpty() && state.statusFilter != "All" -> PortalEmptyState(
+                    icon = Icons.Outlined.Groups,
+                    title = "Nothing at ${state.statusFilter}",
+                    subtitle = "No lead is sitting at this stage right now.",
+                    actionLabel = "Show all leads",
+                    onAction = { vm.setFilter("All") },
+                )
+                state.filtered.isEmpty() -> PortalEmptyState(
+                    icon = Icons.Outlined.Groups,
+                    title = "No leads yet",
+                    subtitle = "Log the buyers you introduce and Dealio tracks the deal — and your commission — through to close.",
+                    actionLabel = "Add your first lead",
+                    onAction = { showAddLead = true },
+                )
                 else -> LazyColumn(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -139,7 +164,8 @@ fun LeadsScreen(nav: NavController, vm: LeadsViewModel = viewModel()) {
 private fun AddLeadButton(onClick: () -> Unit) {
     Row(
         Modifier
-            .background(NavyMid, RoundedCornerShape(10.dp))
+            // Navy on the navy hero was invisible; teal is the portal's action colour.
+            .background(Teal, RoundedCornerShape(10.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
