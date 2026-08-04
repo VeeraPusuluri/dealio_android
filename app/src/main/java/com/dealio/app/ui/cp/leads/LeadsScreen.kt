@@ -73,6 +73,8 @@ import com.dealio.app.ui.theme.NavyMid
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 
 @Composable
 fun LeadsScreen(nav: NavController, vm: LeadsViewModel = viewModel()) {
@@ -82,6 +84,11 @@ fun LeadsScreen(nav: NavController, vm: LeadsViewModel = viewModel()) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
     var showAddLead by remember { mutableStateOf(false) }
+    var showChooser by remember { mutableStateOf(false) }
+
+    val pickSheet = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { vm.stageFromSheet(it) }
+    }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -95,7 +102,7 @@ fun LeadsScreen(nav: NavController, vm: LeadsViewModel = viewModel()) {
                         if (inPlay > 0) add(formatINRShort(inPlay) to "in play")
                     }
                 },
-                trailing = { AddLeadButton { showAddLead = true } },
+                trailing = { AddLeadButton { showChooser = true } },
             )
 
             Row(
@@ -147,6 +154,41 @@ fun LeadsScreen(nav: NavController, vm: LeadsViewModel = viewModel()) {
         }
 
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(16.dp))
+    }
+
+    if (showChooser) {
+        AddLeadChooser(
+            onManual = { showChooser = false; showAddLead = true },
+            onFromFile = {
+                showChooser = false
+                pickSheet.launch(
+                    arrayOf(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        "application/vnd.ms-excel",
+                        "text/csv",
+                        "text/comma-separated-values",
+                        "text/plain",
+                        "*/*",
+                    ),
+                )
+            },
+            onDismiss = { showChooser = false },
+        )
+    }
+
+    state.staged?.let { staged ->
+        LeadImportSheet(
+            items = staged,
+            projects = state.projects,
+            selectedProjectId = state.importProjectId,
+            working = state.importing,
+            progress = state.importProgress,
+            onPickProject = vm::setImportProject,
+            onToggle = vm::toggleStaged,
+            onSelectAll = vm::selectAllStaged,
+            onConfirm = vm::importStaged,
+            onDismiss = vm::clearStaged,
+        )
     }
 
     if (showAddLead) {
