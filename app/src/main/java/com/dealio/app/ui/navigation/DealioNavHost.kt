@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -12,7 +11,6 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
@@ -23,14 +21,12 @@ import com.dealio.app.data.AppLockStore
 import com.dealio.app.data.BuilderStore
 import com.dealio.app.data.TokenStore
 import com.dealio.app.data.promptAppLock
-import com.dealio.app.ui.ServerStatusViewModel
 import com.dealio.app.ui.builder.BuilderRoot
 import com.dealio.app.ui.cp.CpRoot
 import com.dealio.app.ui.customer.CustomerRoot
 import com.dealio.app.ui.screens.AppLockScreen
 import com.dealio.app.ui.screens.HomeScreen
 import com.dealio.app.ui.screens.LoginScreen
-import com.dealio.app.ui.screens.ServerDownScreen
 import com.dealio.app.ui.screens.SignupScreen
 import com.dealio.app.ui.screens.SplashScreen
 
@@ -48,10 +44,6 @@ fun DealioNavHost() {
     val tokenStore = remember { TokenStore(context) }
     val appLockStore = remember { AppLockStore(context) }
     val activity = context as? FragmentActivity
-
-    val serverStatus: ServerStatusViewModel = viewModel()
-    val isDown by serverStatus.isDown.collectAsState()
-    val checking by serverStatus.checking.collectAsState()
 
     // Biometric app-lock: engaged on cold launch and whenever the app returns from
     // the background; a successful prompt clears it.
@@ -76,11 +68,6 @@ fun DealioNavHost() {
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    if (isDown) {
-        ServerDownScreen(checking = checking, onRetry = { serverStatus.retry() })
-        return
     }
 
     Box(Modifier.fillMaxSize()) {
