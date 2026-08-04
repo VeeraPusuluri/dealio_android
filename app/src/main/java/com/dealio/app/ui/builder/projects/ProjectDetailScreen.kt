@@ -56,38 +56,187 @@ import com.dealio.app.ui.theme.NavyMid
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
+import android.content.Intent
+import androidx.core.net.toUri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.outlined.Upload
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import com.dealio.app.data.api.ProjectDocument
 
 @Composable
 fun ProjectDetailScreen(nav: NavController, projectId: Long, vm: ProjectDetailViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(projectId) { vm.load(projectId) }
 
-    com.dealio.app.ui.builder.SubScreenScaffold(
-        title = state.project?.name ?: "Project",
-        nav = nav,
-        actions = {
-            if (state.project != null) {
-                Icon(
-                    Icons.Outlined.Edit, "Edit", tint = Teal,
-                    modifier = Modifier
-                        .padding(end = 12.dp)
-                        .size(22.dp)
-                        .clickable { nav.navigate(BuilderRoutes.projectForm(projectId)) },
+    val snackbar = remember { SnackbarHostState() }
+    LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
+
+    var pendingType by remember { mutableStateOf<String?>(null) }
+    val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val type = pendingType
+        if (uri != null && type != null) vm.uploadDocument(uri, type)
+        pendingType = null
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        com.dealio.app.ui.builder.SubScreenScaffold(
+            title = state.project?.name ?: "Project",
+            nav = nav,
+            actions = {
+                if (state.project != null) {
+                    Icon(
+                        Icons.Outlined.Edit, "Edit", tint = Teal,
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .size(22.dp)
+                            .clickable { nav.navigate(BuilderRoutes.projectForm(projectId)) },
+                    )
+                }
+            },
+        ) { pad ->
+            when {
+                state.loading -> LoadingState(Modifier.padding(pad))
+                state.error != null -> ErrorState(state.error!!, { vm.load(projectId) }, Modifier.padding(pad))
+                state.project != null -> ProjectDetailBody(
+                    p = state.project!!,
+                    documents = state.documents,
+                    uploading = state.uploading,
+                    modifier = Modifier.padding(pad),
+                    onUpload = { docType ->
+                        pendingType = docType
+                        pickFile.launch(arrayOf("image/*", "application/pdf", "video/*", "*/*"))
+                    },
                 )
             }
-        },
-    ) { pad ->
-        when {
-            state.loading -> LoadingState(Modifier.padding(pad))
-            state.error != null -> ErrorState(state.error!!, { vm.load(projectId) }, Modifier.padding(pad))
-            state.project != null -> ProjectDetailBody(state.project!!, state.documents.size, Modifier.padding(pad))
+        }
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(16.dp))
+    }
+}
+
+/**
+ * The document types the viewer screens classify on. "Floor Plan" and
+ * "Tower Plan - n" are matched by substring in the customer/CP project pages,
+ * so uploading under the wrong label puts the file in the wrong section — hence
+ * a fixed list rather than a free-text field.
+ */
+private val DOC_TYPES = listOf(
+    "Floor Plan",
+    "Tower Plan - 1",
+    "Tower Plan - 2",
+    "Tower Plan - 3",
+    "Project Image",
+    "Brochure",
+    "RERA Certificate",
+    "Price List",
+    "Other",
+)
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun DocumentsCard(
+    documents: List<ProjectDocument>,
+    uploading: Boolean,
+    onUpload: (String) -> Unit,
+) {
+    var picking by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    DealioCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SectionLabel("Documents")
+            Spacer(Modifier.weight(1f))
+            if (uploading) {
+                CircularProgressIndicator(Modifier.size(18.dp), color = Teal, strokeWidth = 2.dp)
+            } else {
+                Row(
+                    Modifier
+                        .background(Teal.copy(alpha = 0.12f), RoundedCornerShape(9.dp))
+                        .clickable { picking = true }
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Outlined.Upload, null, tint = Teal, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Upload", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        if (documents.isEmpty()) {
+            Text(
+                "No floor plans, brochures or certificates yet. Buyers see these on the project page.",
+                color = TextSecondary, fontSize = 12.sp,
+            )
+        } else {
+            documents.forEach { d ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            resolveUrl(d.url)?.let { u ->
+                                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, u.toUri())) }
+                            }
+                        }
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Outlined.Description, null, tint = TextSecondary, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(d.docType.ifBlank { "Document" }, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text(d.name, color = TextSecondary, fontSize = 11.sp, maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+
+    if (picking) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(onDismissRequest = { picking = false }, sheetState = sheetState, containerColor = Color.White) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 20.dp)) {
+                Text("What is this file?", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "The type decides where buyers see it — floor plans in the plans row, tower plans against their tower.",
+                    color = TextSecondary, fontSize = 12.sp,
+                )
+                Spacer(Modifier.height(12.dp))
+                DOC_TYPES.forEach { t ->
+                    Text(
+                        t,
+                        color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { picking = false; onUpload(t) }
+                            .padding(vertical = 12.dp),
+                    )
+                    HorizontalDivider(color = CardBorder.copy(alpha = 0.7f))
+                }
+            }
         }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ProjectDetailBody(p: Project, docCount: Int, modifier: Modifier) {
+private fun ProjectDetailBody(
+    p: Project,
+    documents: List<ProjectDocument>,
+    uploading: Boolean,
+    modifier: Modifier,
+    onUpload: (String) -> Unit,
+) {
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         // Hero
         Box(Modifier.fillMaxWidth().height(190.dp).background(Brush.linearGradient(listOf(NavyMid, Teal)))) {
@@ -218,8 +367,9 @@ private fun ProjectDetailBody(p: Project, docCount: Int, modifier: Modifier) {
                 InfoRow("Building permit", p.buildingPermitNumber)
                 InfoRow("Commission", p.commissionValue?.let { "$it%" })
                 InfoRow("CP incentive", p.cpIncentive)
-                InfoRow("Documents", "$docCount file(s)")
             }
+
+            DocumentsCard(documents, uploading, onUpload)
 
             // Builder profile
             if (!p.builderName.isNullOrBlank() || !p.builderAbout.isNullOrBlank()) {

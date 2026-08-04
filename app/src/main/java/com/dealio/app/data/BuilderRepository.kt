@@ -25,6 +25,7 @@ import com.dealio.app.data.api.StageRequest
 import com.dealio.app.data.api.StatusRequest
 import com.google.gson.Gson
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Response
 import java.io.IOException
@@ -74,6 +75,23 @@ class BuilderRepository(context: Context) {
 
     suspend fun getDocuments(projectId: Long): ApiResult<List<ProjectDocument>> =
         withBuilder { bid -> call { api.getDocuments(bid, projectId) } }
+
+    /**
+     * Uploads a project document. [docType] is not a label — it's what the
+     * customer and CP screens classify on, so "Floor Plan - 3 BHK" lands in the
+     * floor-plans row and "Tower Plan - 2" against tower 2.
+     */
+    suspend fun uploadProjectDocument(
+        projectId: Long,
+        docType: String,
+        bytes: ByteArray,
+        fileName: String,
+        mime: String,
+    ): ApiResult<ProjectDocument> =
+        withBuilder { bid ->
+            val part = MultipartBody.Part.createFormData("file", fileName, bytes.toRequestBody(mime.toMediaTypeOrNull()))
+            call { api.uploadProjectDocument(bid, projectId, part, docType.toRequestBody("text/plain".toMediaTypeOrNull())) }
+        }
 
     /** Uploads a hero image and persists it on the project (returns the stored URL). */
     suspend fun uploadProjectImage(projectId: Long, bytes: ByteArray, fileName: String, mime: String): ApiResult<String> =

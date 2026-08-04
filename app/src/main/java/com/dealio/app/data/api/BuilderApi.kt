@@ -1,6 +1,7 @@
 package com.dealio.app.data.api
 
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -63,6 +64,17 @@ interface BuilderApi {
         @Path("projectId") projectId: Long,
         @Part file: MultipartBody.Part,
     ): Response<ApiEnvelope<String>>
+
+    // Floor plans, tower plans, brochures, walkthroughs — the docType string is
+    // what the viewer screens classify on ("Floor Plan - 3 BHK", "Tower Plan - 2").
+    @Multipart
+    @POST("builder/{builderId}/projects/{projectId}/documents")
+    suspend fun uploadProjectDocument(
+        @Path("builderId") builderId: Long,
+        @Path("projectId") projectId: Long,
+        @Part file: MultipartBody.Part,
+        @Part("docType") docType: RequestBody,
+    ): Response<ApiEnvelope<ProjectDocument>>
 
     // ── Leads ─────────────────────────────────────────────────────────────────
     @GET("builder/{builderId}/leads")
