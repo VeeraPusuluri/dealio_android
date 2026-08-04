@@ -19,26 +19,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material.icons.outlined.MailOutline
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,16 +52,19 @@ import com.dealio.app.data.api.Project
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.RefreshOnResume
-import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.formatINRShort
+import com.dealio.app.ui.components.FormSheet
 import com.dealio.app.ui.components.PortalEmptyState
 import com.dealio.app.ui.components.PortalHeader
-import com.dealio.app.ui.components.dealioFieldColors
+import com.dealio.app.ui.components.SheetField
+import com.dealio.app.ui.components.SheetSection
+import com.dealio.app.ui.components.SheetSubmitButton
 import com.dealio.app.ui.cp.CpLeadCard
 import com.dealio.app.ui.cp.CpRoutes
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.NavyMid
+import com.dealio.app.ui.theme.SurfaceTintTeal
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
@@ -218,7 +213,6 @@ private fun AddLeadButton(onClick: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddLeadSheet(
     projects: List<Project>,
@@ -227,102 +221,163 @@ private fun AddLeadSheet(
     onDismiss: () -> Unit,
     onSubmit: (projectId: Long, name: String, phone: String, email: String) -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedProject by remember { mutableStateOf<Project?>(null) }
-    var projectMenuOpen by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, containerColor = Color.White) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp)) {
-            Text("Add a lead", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(16.dp))
+    val project = selectedProject
+    val canSubmit = project != null && name.isNotBlank() && phone.length >= 6
 
-            // ── Project selector ──
-            SectionLabel("Project")
-            Spacer(Modifier.height(8.dp))
-            ExposedDropdownMenuBox(expanded = projectMenuOpen, onExpandedChange = { projectMenuOpen = it }) {
-                OutlinedTextField(
-                    value = selectedProject?.let { p -> listOfNotNull(p.name, p.city).joinToString(" · ") } ?: "",
-                    onValueChange = {},
-                    readOnly = true,
-                    placeholder = { Text(if (projects.isEmpty()) "No projects available" else "Select a project") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(projectMenuOpen) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = dealioFieldColors(),
+    FormSheet(
+        title = "Add a lead",
+        subtitle = "Tag a buyer to the project you're taking them to.",
+        icon = Icons.Outlined.PersonAdd,
+        onDismiss = onDismiss,
+        footer = {
+            // What is still missing, said plainly — a greyed-out button with no
+            // reason attached is the most common dead end in a form like this.
+            if (!canSubmit) {
+                val missing = listOfNotNull(
+                    "a project".takeIf { project == null },
+                    "a name".takeIf { name.isBlank() },
+                    "a phone number".takeIf { phone.length < 6 },
                 )
-                DropdownMenu(expanded = projectMenuOpen, onDismissRequest = { projectMenuOpen = false }) {
-                    projects.forEach { p ->
-                        DropdownMenuItem(
-                            text = { Text(listOfNotNull(p.name, p.city).joinToString(" · ")) },
-                            onClick = { selectedProject = p; projectMenuOpen = false },
-                        )
-                    }
+                Text(
+                    "Still needed: ${missing.joinToString(", ")}",
+                    color = TextSecondary, fontSize = 11.5.sp,
+                )
+                Spacer(Modifier.height(10.dp))
+            }
+            SheetSubmitButton(
+                text = "Add lead",
+                enabled = canSubmit,
+                working = working,
+                onClick = { if (project != null) onSubmit(project.id, name.trim(), phone, email) },
+            )
+        },
+    ) {
+        SheetSection("Project") {
+            if (projects.isEmpty()) {
+                Text(
+                    "You aren't empanelled on any project yet.",
+                    color = TextSecondary, fontSize = 12.5.sp,
+                )
+            } else {
+                // A phone-height list of cards beats a dropdown here: the CP
+                // picks by commission as much as by name, and a menu row cannot
+                // show that without truncating.
+                projects.forEach { p ->
+                    ProjectPickRow(
+                        project = p,
+                        selected = selectedProject?.id == p.id,
+                        onClick = { selectedProject = if (selectedProject?.id == p.id) null else p },
+                    )
                 }
             }
-            Spacer(Modifier.height(16.dp))
+        }
+        Spacer(Modifier.height(20.dp))
 
-            // ── Customer ──
-            SectionLabel("Customer")
-            Spacer(Modifier.height(8.dp))
+        SheetSection("Customer") {
             if (contacts.isNotEmpty()) {
-                Text("Pick from contacts", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(6.dp))
+                Text("From your contacts", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     contacts.forEach { c ->
-                        val sel = name == c.name && phone == c.phone
-                        Text(
-                            c.name,
-                            color = if (sel) Color.White else TextSecondary,
-                            fontSize = 12.sp,
-                            fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal,
-                            modifier = Modifier
-                                .background(if (sel) Teal else Color.White, RoundedCornerShape(10.dp))
-                                .border(1.dp, if (sel) Teal else CardBorder, RoundedCornerShape(10.dp))
-                                .clickable { name = c.name; phone = c.phone; email = c.email ?: "" }
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                        ContactPickChip(
+                            contact = c,
+                            selected = name == c.name && phone == c.phone,
+                            onClick = { name = c.name; phone = c.phone; email = c.email ?: "" },
                         )
                     }
                 }
-                Spacer(Modifier.height(10.dp))
             }
-            OutlinedTextField(
-                value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(),
-                label = { Text("Customer name") }, singleLine = true, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors(),
+            SheetField(
+                value = name, onValueChange = { name = it },
+                label = "Full name", icon = Icons.Outlined.Person, placeholder = "e.g. Ramesh Kumar",
             )
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = phone, onValueChange = { phone = it.filter(Char::isDigit) }, modifier = Modifier.fillMaxWidth(),
-                label = { Text("Phone") }, singleLine = true, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            SheetField(
+                value = phone, onValueChange = { phone = it.filter(Char::isDigit) },
+                label = "Phone", icon = Icons.Outlined.Phone, keyboardType = KeyboardType.Phone,
+                placeholder = "10-digit mobile",
             )
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(),
-                label = { Text("Email (optional)") }, singleLine = true, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            SheetField(
+                value = email, onValueChange = { email = it },
+                label = "Email (optional)", icon = Icons.Outlined.MailOutline, keyboardType = KeyboardType.Email,
             )
-            Spacer(Modifier.height(20.dp))
+        }
+    }
+}
 
-            val project = selectedProject
-            val canSubmit = !working && project != null && name.isNotBlank() && phone.length >= 6
-            Button(
-                onClick = { if (project != null) onSubmit(project.id, name.trim(), phone, email) },
-                enabled = canSubmit,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Navy),
-            ) {
-                if (working) CircularProgressIndicator(Modifier.size(22.dp), color = Color.White, strokeWidth = 2.5.dp)
-                else Text("Add lead", color = Color.White, fontWeight = FontWeight.Bold)
+/** One selectable project, with the number the CP actually decides on. */
+@Composable
+private fun ProjectPickRow(project: Project, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(if (selected) SurfaceTintTeal else Color.White, RoundedCornerShape(14.dp))
+            .border(1.dp, if (selected) Teal else CardBorder, RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                project.name, color = TextPrimary, fontSize = 13.5.sp,
+                fontWeight = FontWeight.SemiBold, maxLines = 1,
+            )
+            val sub = listOfNotNull(
+                project.city,
+                project.commissionValue?.takeIf { it > 0 }?.let { pct ->
+                    val shown = if (pct % 1.0 == 0.0) pct.toLong().toString() else pct.toString()
+                    "$shown% commission"
+                },
+            )
+            if (sub.isNotEmpty()) {
+                Text(sub.joinToString(" · "), color = TextSecondary, fontSize = 11.5.sp, maxLines = 1)
             }
-            Spacer(Modifier.height(8.dp))
+        }
+        if (selected) {
+            Icon(Icons.Filled.CheckCircle, "Selected", tint = Teal, modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+/** Contact shortcut: initials avatar plus name, so two Rameshes stay apart. */
+@Composable
+private fun ContactPickChip(contact: CpContact, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .background(if (selected) Teal else Color.White, RoundedCornerShape(12.dp))
+            .border(1.dp, if (selected) Teal else CardBorder, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(start = 6.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(26.dp)
+                .background(if (selected) Color.White.copy(alpha = 0.22f) else SurfaceTintTeal, RoundedCornerShape(9.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                contact.name.trim().take(1).uppercase().ifBlank { "?" },
+                color = if (selected) Color.White else Teal, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Column {
+            Text(
+                contact.name, color = if (selected) Color.White else TextPrimary,
+                fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+            )
+            Text(
+                contact.phone,
+                color = if (selected) Color.White.copy(alpha = 0.8f) else TextSecondary,
+                fontSize = 10.sp, maxLines = 1,
+            )
         }
     }
 }

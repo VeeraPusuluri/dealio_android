@@ -21,21 +21,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Contacts
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.MailOutline
+import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.Sell
+import androidx.compose.material.icons.outlined.Work
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,7 +69,12 @@ import com.dealio.app.ui.builder.EmptyState
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SubScreenScaffold
-import com.dealio.app.ui.components.dealioFieldColors
+import com.dealio.app.ui.components.FormSheet
+import com.dealio.app.ui.components.SheetChip
+import com.dealio.app.ui.components.SheetField
+import com.dealio.app.ui.components.SheetGhostButton
+import com.dealio.app.ui.components.SheetSection
+import com.dealio.app.ui.components.SheetSubmitButton
 import com.dealio.app.ui.cp.CpViewModel
 import com.dealio.app.ui.theme.ErrorRed
 import com.dealio.app.ui.theme.Teal
@@ -321,15 +330,22 @@ fun ContactsScreen(nav: NavController, vm: ContactsViewModel = viewModel()) {
     }
 
     if (showDialog) {
-        ContactDialog(editing, onDismiss = { showDialog = false }) { p ->
+        ContactSheet(editing, onDismiss = { showDialog = false }) { p ->
             vm.save(editing, p); showDialog = false
         }
     }
     LaunchedEffect(state.message) { state.message?.let { vm.clearMessage() } }
 }
 
+private val BHK_CHOICES = listOf("1 BHK", "2 BHK", "3 BHK", "4 BHK", "Villa", "Plot")
+
+/**
+ * Nine fields in an AlertDialog left the form scrolling inside a box a third of
+ * the screen tall, with the Save button hidden behind the keyboard. A sheet
+ * gives them room and groups them by the question each one answers.
+ */
 @Composable
-private fun ContactDialog(existing: CpContact?, onDismiss: () -> Unit, onSave: (CpContactPayload) -> Unit) {
+private fun ContactSheet(existing: CpContact?, onDismiss: () -> Unit, onSave: (CpContactPayload) -> Unit) {
     var name by remember { mutableStateOf(existing?.name ?: "") }
     var phone by remember { mutableStateOf(existing?.phone ?: "") }
     var email by remember { mutableStateOf(existing?.email ?: "") }
@@ -340,45 +356,113 @@ private fun ContactDialog(existing: CpContact?, onDismiss: () -> Unit, onSave: (
     var salary by remember { mutableStateOf(existing?.salary?.let { formatSalaryInput(it) } ?: "") }
     var address by remember { mutableStateOf(existing?.address ?: "") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onSave(
-                        CpContactPayload(
-                            name = name.trim(),
-                            phone = phone.trim(),
-                            email = email.ifBlank { null },
-                            notes = notes.ifBlank { null },
-                            tags = tags.ifBlank { null },
-                            bhkPreference = bhk.ifBlank { null },
-                            designation = designation.ifBlank { null },
-                            salary = salary.toDoubleOrNull(),
-                            address = address.ifBlank { null },
-                        ),
-                    )
-                },
-                enabled = name.isNotBlank() && phone.length >= 6,
-            ) { Text(if (existing == null) "Add" else "Save", color = Teal, fontWeight = FontWeight.SemiBold) }
+    val canSave = name.isNotBlank() && phone.length >= 6
+
+    FormSheet(
+        title = if (existing == null) "New contact" else "Edit contact",
+        subtitle = if (existing == null) {
+            "Name and phone are enough — the rest sharpens your follow-up."
+        } else {
+            "Changes save to your contact book only."
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary) } },
-        title = { Text(if (existing == null) "New contact" else "Edit contact", fontWeight = FontWeight.Bold, color = TextPrimary) },
-        text = {
-            // Nine fields overflow the dialog on a short screen, so let it scroll.
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                Field("Name", name) { name = it }
-                Field("Phone", phone) { phone = it.filter(Char::isDigit) }
-                Field("Email", email) { email = it }
-                Field("Designation", designation) { designation = it }
-                Field("Annual salary (₹)", salary, KeyboardType.Number) { salary = it.filter { c -> c.isDigit() } }
-                Field("Address / location", address) { address = it }
-                Field("BHK preference", bhk) { bhk = it }
-                Field("Tags (comma separated)", tags) { tags = it }
-                Field("Notes", notes) { notes = it }
+        icon = if (existing == null) Icons.Outlined.PersonAdd else Icons.Outlined.Edit,
+        onDismiss = onDismiss,
+        footer = {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SheetGhostButton("Cancel", onDismiss)
+                Box(Modifier.weight(1.6f)) {
+                    SheetSubmitButton(
+                        text = if (existing == null) "Add contact" else "Save changes",
+                        enabled = canSave,
+                        working = false,
+                        onClick = {
+                            onSave(
+                                CpContactPayload(
+                                    name = name.trim(),
+                                    phone = phone.trim(),
+                                    email = email.ifBlank { null },
+                                    notes = notes.ifBlank { null },
+                                    tags = tags.ifBlank { null },
+                                    bhkPreference = bhk.ifBlank { null },
+                                    designation = designation.ifBlank { null },
+                                    salary = salary.toDoubleOrNull(),
+                                    address = address.ifBlank { null },
+                                ),
+                            )
+                        },
+                    )
+                }
             }
         },
-    )
+    ) {
+        SheetSection("Who they are") {
+            SheetField(
+                value = name, onValueChange = { name = it },
+                label = "Full name", icon = Icons.Outlined.Person, placeholder = "e.g. Ramesh Kumar",
+            )
+            SheetField(
+                value = phone, onValueChange = { phone = it.filter(Char::isDigit) },
+                label = "Phone", icon = Icons.Outlined.Phone, keyboardType = KeyboardType.Phone,
+                placeholder = "10-digit mobile",
+            )
+            SheetField(
+                value = email, onValueChange = { email = it },
+                label = "Email (optional)", icon = Icons.Outlined.MailOutline, keyboardType = KeyboardType.Email,
+            )
+        }
+        Spacer(Modifier.height(20.dp))
+
+        SheetSection("What they earn") {
+            SheetField(
+                value = designation, onValueChange = { designation = it },
+                label = "Designation", icon = Icons.Outlined.Work, placeholder = "e.g. Senior Engineer",
+            )
+            SheetField(
+                value = salary, onValueChange = { salary = it.filter(Char::isDigit) },
+                label = "Annual salary (₹)", icon = Icons.Outlined.Payments,
+                keyboardType = KeyboardType.Number, placeholder = "1200000",
+                // Seven digits are hard to read back; echo them as the CP thinks.
+                supporting = salary.toDoubleOrNull()?.takeIf { it > 0 }?.let { "That's ${formatSalaryShort(it)} a year" },
+            )
+        }
+        Spacer(Modifier.height(20.dp))
+
+        SheetSection("What they're looking for") {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                BHK_CHOICES.forEach { choice ->
+                    SheetChip(
+                        text = choice,
+                        selected = bhk.equals(choice, ignoreCase = true),
+                        onClick = { bhk = if (bhk.equals(choice, ignoreCase = true)) "" else choice },
+                    )
+                }
+            }
+            SheetField(
+                value = bhk, onValueChange = { bhk = it },
+                label = "Configuration", placeholder = "Tap a chip above, or type your own",
+            )
+            SheetField(
+                value = address, onValueChange = { address = it },
+                label = "Preferred area", icon = Icons.Outlined.LocationOn, placeholder = "e.g. Gachibowli",
+            )
+            SheetField(
+                value = tags, onValueChange = { tags = it },
+                label = "Tags", icon = Icons.Outlined.Sell, placeholder = "hot, nri, referral",
+                supporting = "Separate with commas",
+            )
+        }
+        Spacer(Modifier.height(20.dp))
+
+        SheetSection("Notes") {
+            SheetField(
+                value = notes, onValueChange = { notes = it },
+                label = "Anything worth remembering", singleLine = false, minLines = 3,
+            )
+        }
+    }
 }
 
 /** The stored value is a Double; show it back as the plain integer the CP typed. */
@@ -394,17 +478,3 @@ internal fun formatSalaryShort(v: Double): String = when {
 
 private fun trimZero(v: Double): String =
     if (v % 1.0 == 0.0) v.toLong().toString() else String.format(Locale.US, "%.1f", v)
-
-@Composable
-private fun Field(
-    label: String,
-    value: String,
-    keyboardType: KeyboardType = KeyboardType.Text,
-    onChange: (String) -> Unit,
-) {
-    OutlinedTextField(
-        value = value, onValueChange = onChange, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        label = { Text(label) }, singleLine = true, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors(),
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-    )
-}
