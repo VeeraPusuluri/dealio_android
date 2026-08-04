@@ -62,12 +62,21 @@ data class CpProfile(
     val email: String? = null,
     val phone: String? = null,
     val cp: CpInfo? = null,
+    /** Builders that have formally authorised this CP to represent them. */
+    val authorizedBuilders: List<CpAuthorizedBuilder> = emptyList(),
+)
+
+data class CpAuthorizedBuilder(
+    val builderId: Long = 0,
+    val companyName: String = "",
+    val authorizedAt: String? = null,
 )
 
 data class CpInfo(
     val city: String? = null,
     val bio: String? = null,
     val reraNumber: String? = null,
+    val photoUrl: String? = null,
     val tier: String = "Silver",
     val totalDeals: Int = 0,
     val dealsThisMonth: Int = 0,

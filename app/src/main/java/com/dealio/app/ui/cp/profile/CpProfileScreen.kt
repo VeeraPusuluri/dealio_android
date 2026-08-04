@@ -42,7 +42,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.dealio.app.data.ApiResult
 import com.dealio.app.data.api.CpInfo
 import com.dealio.app.data.api.CpProfile
@@ -197,8 +200,21 @@ fun CpProfileScreen(nav: NavController, vm: CpProfileViewModel = viewModel()) {
                 ) {
                     DealioCard {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(52.dp).background(Teal, RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
-                                Text(initialsOf(p?.fullName), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Box(
+                                Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(Teal),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                val photo = cp?.photoUrl
+                                if (!photo.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = photo,
+                                        contentDescription = p?.fullName,
+                                        modifier = Modifier.size(52.dp),
+                                        contentScale = ContentScale.Crop,
+                                    )
+                                } else {
+                                    Text(initialsOf(p?.fullName), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                }
                             }
                             Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f)) {

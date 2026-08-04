@@ -1,8 +1,10 @@
 package com.dealio.app.ui.cp.overview
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.viewModelScope
 import com.dealio.app.data.ApiResult
+import com.dealio.app.data.api.CpAuthorizedBuilder
 import com.dealio.app.data.api.CpDueToday
 import com.dealio.app.data.api.CpLead
 import com.dealio.app.ui.cp.CpViewModel
@@ -17,6 +19,12 @@ data class CpOverviewState(
     val error: String? = null,
     val name: String = "Partner",
     val tier: String = "Silver",
+    val photoUrl: String? = null,
+    val phone: String? = null,
+    val city: String? = null,
+    val authorizedBuilders: List<CpAuthorizedBuilder> = emptyList(),
+    val uploadingPhoto: Boolean = false,
+    val message: String? = null,
     val totalEarnings: Double = 0.0,
     val pendingCommission: Double = 0.0,
     val totalDeals: Int = 0,
@@ -43,13 +51,18 @@ class CpOverviewViewModel(app: Application) : CpViewModel(app) {
                 _state.update { it.copy(loading = false, error = leads.message) }
                 return@launch
             }
-            val cp = (profile as? ApiResult.Success)?.data?.cp
+            val profileData = (profile as? ApiResult.Success)?.data
+            val cp = profileData?.cp
             val leadList = (leads as? ApiResult.Success)?.data ?: emptyList()
             _state.update {
                 it.copy(
                     loading = false, error = null,
-                    name = (profile as? ApiResult.Success)?.data?.fullName ?: repo.name,
+                    name = profileData?.fullName ?: repo.name,
                     tier = cp?.tier ?: "Silver",
+                    photoUrl = cp?.photoUrl,
+                    phone = profileData?.phone,
+                    city = cp?.city,
+                    authorizedBuilders = profileData?.authorizedBuilders ?: emptyList(),
                     totalEarnings = cp?.totalEarnings ?: 0.0,
                     pendingCommission = cp?.pendingCommission ?: 0.0,
                     totalDeals = cp?.totalDeals ?: leadList.size,
@@ -60,4 +73,24 @@ class CpOverviewViewModel(app: Application) : CpViewModel(app) {
             }
         }
     }
+
+    fun uploadPhoto(uri: Uri) {
+        val context = getApplication<Application>()
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return
+        val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
+        val ext = if (mime.contains("png")) "png" else if (mime.contains("webp")) "webp" else "jpg"
+        _state.update { it.copy(uploadingPhoto = true) }
+        viewModelScope.launch {
+            val r = repo.uploadDocument("photo", bytes, "photo.$ext", mime)
+            _state.update {
+                it.copy(
+                    uploadingPhoto = false,
+                    message = (r as? ApiResult.Error)?.message ?: "Profile photo updated",
+                )
+            }
+            if (r is ApiResult.Success) load(silent = true)
+        }
+    }
+
+    fun clearMessage() = _state.update { it.copy(message = null) }
 }

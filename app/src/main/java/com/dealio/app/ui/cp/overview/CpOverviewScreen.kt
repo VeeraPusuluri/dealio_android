@@ -15,9 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Contacts
@@ -27,14 +29,23 @@ import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.Icon
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -60,13 +71,41 @@ import com.dealio.app.ui.theme.TextSecondary
 @Composable
 fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
+    var showIdentity by remember { mutableStateOf(false) }
+    val snackbar = remember { SnackbarHostState() }
     RefreshOnResume { vm.load(silent = true) }
+    LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
 
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize()) {
         PortalHeaderSurface {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(46.dp).background(Teal, RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-                    androidx.compose.material3.Text(initialsOf(state.name), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Box(
+                    Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(Teal)
+                        .clickable { showIdentity = true },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val photo = state.photoUrl
+                    if (!photo.isNullOrBlank()) {
+                        AsyncImage(
+                            model = photo,
+                            contentDescription = state.name,
+                            modifier = Modifier.size(46.dp),
+                            contentScale = ContentScale.Crop,
+                        )
+                    } else {
+                        androidx.compose.material3.Text(initialsOf(state.name), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                    }
+                    // Corner tick marks the CP as builder-authorised without needing the
+                    // dialog open — the credential is the thing worth advertising.
+                    if (state.authorizedBuilders.isNotEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
+                            Icon(
+                                Icons.Filled.Verified, null, tint = StatusColors.Green,
+                                modifier = Modifier.size(15.dp).clip(CircleShape).background(Color.White),
+                            )
+                        }
+                    }
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
@@ -170,6 +209,24 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
                 }
             }
         }
+    }
+
+    SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+    }
+
+    if (showIdentity) {
+        CpIdentityDialog(
+            name = state.name,
+            tier = state.tier,
+            photoUrl = state.photoUrl,
+            phone = state.phone,
+            city = state.city,
+            authorizedBuilders = state.authorizedBuilders,
+            uploadingPhoto = state.uploadingPhoto,
+            onPickPhoto = { vm.uploadPhoto(it) },
+            onViewProfile = { showIdentity = false; nav.navigate(CpRoutes.PROFILE) },
+            onDismiss = { showIdentity = false },
+        )
     }
 }
 
