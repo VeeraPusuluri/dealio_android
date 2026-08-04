@@ -252,6 +252,10 @@ internal fun LazyListScope.projectDetailSections(
     onShortlist: (cfg: String) -> Unit = {},
     onPricing: (cfg: String) -> Unit = {},
 ) {
+    // Every section below reads from this rather than the raw list, so a file
+    // uploaded twice is one entry wherever it appears.
+    val docs = dedupeDocuments(documents)
+
     // A plotted layout is sold by the yard, not by the bedroom. The builder form
     // already drops BHK configurations, towers and floors for this type and asks
     // for plot sizes and a plot count instead — so the detail view has to read
@@ -293,7 +297,7 @@ internal fun LazyListScope.projectDetailSections(
 
     // Plans. Land has a layout, not floor plans — same uploaded documents, named
     // for what they actually are.
-    val floorPlans = floorPlanDocs(documents)
+    val floorPlans = floorPlanDocs(docs)
     item {
         Section(if (isPlot) "Layout plan" else "Floor plans") {
             if (floorPlans.isEmpty()) {
@@ -311,7 +315,7 @@ internal fun LazyListScope.projectDetailSections(
     // Tower plans — per-tower selector, strict per-tower matching. A plotted
     // layout has no towers, so the section would only ever be empty.
     if (!isPlot) {
-        item { Section("Tower plans") { TowerPlansSection(p, documents) } }
+        item { Section("Tower plans") { TowerPlansSection(p, docs) } }
     }
 
     // Everything else the builder uploaded.
@@ -320,7 +324,7 @@ internal fun LazyListScope.projectDetailSections(
     // nothing took the rest, so a brochure or a RERA certificate was stored,
     // listed in the builder's own portal, and then simply absent here. Sorted
     // brochure-first because that is the file a partner sends a customer.
-    val extraDocs = otherDocs(documents)
+    val extraDocs = otherDocs(docs)
     if (extraDocs.isNotEmpty()) {
         item {
             Section("Documents") {
@@ -1156,11 +1160,30 @@ private fun isFloorPlanDoc(d: ProjectDocument): Boolean {
     val t = d.docType.lowercase()
     return (t.contains("floor") || t.contains("layout")) && !isTowerPlanDoc(d)
 }
+/**
+ * Collapses the same file uploaded more than once.
+ *
+ * Re-uploading is how builders replace a document — there is no edit — so a
+ * project accumulates two rows with the same type and file name pointing at two
+ * copies of the same thing. Rendered straight, that is the brochure listed twice.
+ *
+ * Keyed on type *and* name, not type alone: a builder with a Phase I and a Phase
+ * II brochure has two real documents and must keep both. The newest survives,
+ * since a re-upload is a replacement.
+ */
+internal fun dedupeDocuments(docs: List<ProjectDocument>): List<ProjectDocument> =
+    docs.groupBy { "${it.docType.trim().lowercase()}|${it.name.trim().lowercase()}" }
+        .values
+        .map { group -> group.maxByOrNull { it.createdAt } ?: group.first() }
+        // groupBy preserves first-seen order of keys; restore the original order
+        // so sections that care about sequence are unaffected.
+        .sortedBy { kept -> docs.indexOfFirst { it.id == kept.id } }
+
 /** Cover image followed by project photos (deduped) for the hero gallery. */
 internal fun galleryUrls(p: Project, docs: List<ProjectDocument>): List<String> {
     val urls = LinkedHashSet<String>()
     resolveUrl(p.imageUrl ?: p.coverUrl)?.let { urls.add(it) }
-    docs.filter { isImageDoc(it) && !isFloorPlanDoc(it) && !isTowerPlanDoc(it) }
+    dedupeDocuments(docs).filter { isImageDoc(it) && !isFloorPlanDoc(it) && !isTowerPlanDoc(it) }
         .forEach { d -> resolveUrl(d.url)?.let { urls.add(it) } }
     return urls.toList()
 }

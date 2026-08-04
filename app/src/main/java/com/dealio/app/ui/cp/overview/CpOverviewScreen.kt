@@ -60,6 +60,7 @@ import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.initialsOf
 import com.dealio.app.ui.cp.CpLeadCard
 import com.dealio.app.ui.cp.CpRoutes
+import com.dealio.app.ui.cp.navigateToCpTab
 import com.dealio.app.ui.cp.QuickActionTile
 import com.dealio.app.ui.components.PortalHeaderSurface
 import com.dealio.app.ui.theme.Orange
@@ -136,14 +137,14 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
             else -> LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        StatTile("Earned", formatINRShort(state.totalEarnings), Icons.Outlined.CurrencyRupee, StatusColors.Green, Modifier.weight(1f), onClick = { nav.navigate(CpRoutes.EARNINGS) })
-                        StatTile("Pending", formatINRShort(state.pendingCommission), Icons.Outlined.CurrencyRupee, Orange, Modifier.weight(1f), onClick = { nav.navigate(CpRoutes.EARNINGS) })
+                        StatTile("Earned", formatINRShort(state.totalEarnings), Icons.Outlined.CurrencyRupee, StatusColors.Green, Modifier.weight(1f), onClick = { nav.navigateToCpTab(CpRoutes.EARNINGS) })
+                        StatTile("Pending", formatINRShort(state.pendingCommission), Icons.Outlined.CurrencyRupee, Orange, Modifier.weight(1f), onClick = { nav.navigateToCpTab(CpRoutes.EARNINGS) })
                     }
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        StatTile("Deals", state.totalDeals.toString(), Icons.Outlined.Apartment, Teal, Modifier.weight(1f), onClick = { nav.navigate(CpRoutes.LEADS) })
-                        StatTile("Leads", state.leadsCount.toString(), Icons.Outlined.Groups, Teal, Modifier.weight(1f), onClick = { nav.navigate(CpRoutes.LEADS) })
+                        StatTile("Deals", state.totalDeals.toString(), Icons.Outlined.Apartment, Teal, Modifier.weight(1f), onClick = { nav.navigateToCpTab(CpRoutes.LEADS) })
+                        StatTile("Leads", state.leadsCount.toString(), Icons.Outlined.Groups, Teal, Modifier.weight(1f), onClick = { nav.navigateToCpTab(CpRoutes.LEADS) })
                     }
                 }
 
@@ -180,7 +181,7 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
                 item { SectionLabel("Quick actions", Modifier.padding(top = 4.dp)) }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        QuickActionTile("Browse projects", Icons.Outlined.Apartment, Modifier.weight(1f)) { nav.navigate(CpRoutes.PROJECTS) }
+                        QuickActionTile("Browse projects", Icons.Outlined.Apartment, Modifier.weight(1f)) { nav.navigateToCpTab(CpRoutes.PROJECTS) }
                         QuickActionTile("Contacts", Icons.Outlined.Contacts, Modifier.weight(1f)) { nav.navigate(CpRoutes.CONTACTS) }
                     }
                 }
@@ -198,7 +199,7 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
                     ) {
                         SectionLabel("Recent leads")
                         androidx.compose.material3.Text("View all", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clickable { nav.navigate(CpRoutes.LEADS) })
+                            modifier = Modifier.clickable { nav.navigateToCpTab(CpRoutes.LEADS) })
                     }
                 }
                 if (state.recentLeads.isEmpty()) {

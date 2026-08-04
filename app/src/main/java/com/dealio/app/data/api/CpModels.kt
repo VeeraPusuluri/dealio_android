@@ -206,3 +206,42 @@ data class CpProfileUpdateRequest(
     val bio: String? = null,
     val reraNumber: String? = null,
 )
+
+// ─── Meetups ─────────────────────────────────────────────────────────────────
+// A gathering the CP arranges themselves — several invitees, one place. Distinct
+// from CpMeeting, which is a builder appointment about one project.
+
+data class CpMeetup(
+    val id: Long = 0,
+    val title: String = "",
+    val location: String = "",
+    val mapsLink: String? = null,
+    val date: String = "",
+    val time: String = "",
+    val notes: String? = null,
+    val invitees: List<CpMeetupInvitee> = emptyList(),
+    val createdAt: String = "",
+)
+
+data class CpMeetupInvitee(
+    val id: Long = 0,
+    val contactId: Long? = null,
+    val name: String = "",
+    val phone: String = "",
+)
+
+data class CreateCpMeetupRequest(
+    val title: String,
+    val location: String,
+    val date: String,
+    val time: String,
+    val mapsLink: String? = null,
+    val notes: String? = null,
+    val invitees: List<CpMeetupInviteePayload> = emptyList(),
+)
+
+data class CpMeetupInviteePayload(
+    val contactId: Long? = null,
+    val name: String,
+    val phone: String,
+)

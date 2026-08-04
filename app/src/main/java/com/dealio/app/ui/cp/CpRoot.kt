@@ -20,6 +20,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
@@ -43,6 +44,7 @@ import com.dealio.app.ui.cp.growth.WhatsAppBroadcastScreen
 import com.dealio.app.ui.cp.leads.CpDealDetailScreen
 import com.dealio.app.ui.cp.leads.LeadsScreen
 import com.dealio.app.ui.cp.meetings.CpMeetingsScreen
+import com.dealio.app.ui.cp.meetups.CpMeetupsScreen
 import com.dealio.app.ui.cp.more.CpMoreScreen
 import com.dealio.app.ui.cp.notifications.CpNotificationsScreen
 import com.dealio.app.ui.cp.overview.CpOverviewScreen
@@ -63,6 +65,7 @@ object CpRoutes {
     const val FOLLOWUPS = "cp_followups"
     const val CALLLOGS = "cp_calllogs"
     const val MEETINGS = "cp_meetings"
+    const val MEETUPS = "cp_meetups"
     const val PROFILE = "cp_profile"
     const val NOTIFICATIONS = "cp_notifications"
 
@@ -90,6 +93,22 @@ private val tabs = listOf(
     PillTab(CpRoutes.EARNINGS, "Earnings", Icons.Outlined.Payments, Icons.Outlined.Payments),
     PillTab(CpRoutes.MORE, "More", Icons.Filled.GridView, Icons.Outlined.GridView),
 )
+
+/**
+ * Switches to a bottom-nav tab from anywhere in the portal.
+ *
+ * A plain navigate() pushes the tab on top of wherever you were, outside the
+ * save/restore bookkeeping the bar relies on — so a tab opened from a stat tile
+ * left the bar unable to switch back, and only Back worked. Anything pointing at
+ * a tab has to move the same way the bar does.
+ */
+fun NavController.navigateToCpTab(route: String) {
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
 
 /** The channel-partner app shell: floating pill navigation + nested route host. */
 @Composable
@@ -141,8 +160,12 @@ fun CpRoot(onLogout: () -> Unit) {
 
             composable(CpRoutes.CONTACTS) { ContactsScreen(nav) }
             composable(CpRoutes.FOLLOWUPS) { FollowUpsScreen(nav) }
+            // Call logs and the leaderboard are off the More menu for now. Their
+            // routes stay registered so restoring either is one line in CpMoreScreen
+            // rather than rebuilding a screen that still works.
             composable(CpRoutes.CALLLOGS) { CallLogsScreen(nav) }
             composable(CpRoutes.MEETINGS) { CpMeetingsScreen(nav) }
+            composable(CpRoutes.MEETUPS) { CpMeetupsScreen(nav) }
             composable(CpRoutes.PROFILE) { CpProfileScreen(nav) }
             composable(CpRoutes.NOTIFICATIONS) { CpNotificationsScreen(nav) }
 

@@ -39,6 +39,21 @@ interface CpApi {
     ): Response<ApiEnvelope<ShareLinkResponse>>
 
     // ── Leads ─────────────────────────────────────────────────────────────────
+    @GET("cp/{cpUserId}/meetups")
+    suspend fun getMeetups(@Path("cpUserId") cpUserId: Long): Response<ApiEnvelope<List<CpMeetup>>>
+
+    @POST("cp/{cpUserId}/meetups")
+    suspend fun createMeetup(
+        @Path("cpUserId") cpUserId: Long,
+        @Body body: CreateCpMeetupRequest,
+    ): Response<ApiEnvelope<CpMeetup>>
+
+    @DELETE("cp/{cpUserId}/meetups/{meetupId}")
+    suspend fun deleteMeetup(
+        @Path("cpUserId") cpUserId: Long,
+        @Path("meetupId") meetupId: Long,
+    ): Response<ApiEnvelope<Any>>
+
     @GET("cp/{cpUserId}/leads")
     suspend fun getLeads(@Path("cpUserId") cpUserId: Long): Response<ApiEnvelope<List<CpLead>>>
 

@@ -8,6 +8,8 @@ import com.dealio.app.data.api.BuilderNotification
 import com.dealio.app.data.api.CpApi
 import com.dealio.app.data.api.CpCommission
 import com.dealio.app.data.api.CpContact
+import com.dealio.app.data.api.CreateCpMeetupRequest
+import com.dealio.app.data.api.CpMeetup
 import com.dealio.app.data.api.CpContactPayload
 import com.dealio.app.data.api.CpDealDetail
 import com.dealio.app.data.api.CpDocumentUploadResponse
@@ -75,6 +77,11 @@ class CpRepository(context: Context) {
     suspend fun addContact(p: CpContactPayload): ApiResult<Any> = call { api.addContact(cpUserId, p) }
     suspend fun updateContact(id: Long, p: CpContactPayload): ApiResult<Any> = call { api.updateContact(cpUserId, id, p) }
     suspend fun deleteContact(id: Long): ApiResult<Any> = call { api.deleteContact(cpUserId, id) }
+
+    // ── Meetups ────────────────────────────────────────────────────────────────
+    suspend fun getMeetups(): ApiResult<List<CpMeetup>> = call { api.getMeetups(cpUserId) }
+    suspend fun createMeetup(body: CreateCpMeetupRequest): ApiResult<CpMeetup> = call { api.createMeetup(cpUserId, body) }
+    suspend fun deleteMeetup(id: Long): ApiResult<Any> = call { api.deleteMeetup(cpUserId, id) }
 
     // ── Meetings ──────────────────────────────────────────────────────────────
     suspend fun getMeetings(): ApiResult<List<Meeting>> = call { api.getMeetings(cpUserId) }

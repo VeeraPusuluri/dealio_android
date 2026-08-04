@@ -79,8 +79,8 @@ fun CpMoreScreen(nav: NavController, onLogout: () -> Unit) {
                     ActionItem("Conversations", Icons.Outlined.ChatBubbleOutline, Teal) { nav.navigate(CpRoutes.CONVERSATIONS) },
                     ActionItem("Contacts", Icons.Outlined.Contacts, IconBlue) { nav.navigate(CpRoutes.CONTACTS) },
                     ActionItem("Follow-ups", Icons.Outlined.EventRepeat, IconOrange) { nav.navigate(CpRoutes.FOLLOWUPS) },
-                    ActionItem("Call logs", Icons.Outlined.Phone, IconGreen) { nav.navigate(CpRoutes.CALLLOGS) },
                     ActionItem("Meetings", Icons.Outlined.CalendarMonth, IconPurple) { nav.navigate(CpRoutes.MEETINGS) },
+                    ActionItem("Meetups", Icons.Outlined.Groups, Teal) { nav.navigate(CpRoutes.MEETUPS) },
                     ActionItem("Profile & verification", Icons.Outlined.Person, IconBlue) { nav.navigate(CpRoutes.PROFILE) },
                     ActionItem("Notifications", Icons.Outlined.Notifications, IconRed) { nav.navigate(CpRoutes.NOTIFICATIONS) },
                 ),
@@ -89,7 +89,6 @@ fun CpMoreScreen(nav: NavController, onLogout: () -> Unit) {
             ActionGroup(
                 "Grow your business",
                 listOf(
-                    ActionItem("Leaderboard", Icons.Outlined.EmojiEvents, IconOrange) { nav.navigate(CpRoutes.LEADERBOARD) },
                     ActionItem("AI Lead Intelligence", Icons.Outlined.Psychology, IconPurple) { nav.navigate(CpRoutes.AI_INSIGHTS) },
                     ActionItem("Content Studio", Icons.Outlined.AutoAwesome, IconPurple) { nav.navigate(CpRoutes.CONTENT_STUDIO) },
                     ActionItem("Brochure Generator", Icons.Outlined.Description, IconBlue) { nav.navigate(CpRoutes.BROCHURE) },
