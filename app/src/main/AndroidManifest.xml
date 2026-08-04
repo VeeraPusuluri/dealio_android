@@ -3,6 +3,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Requested at the point a CP taps "Import from phone" on Contacts, never at launch. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
 
     <application
         android:name=".DealioApp"

@@ -1,6 +1,13 @@
 package com.dealio.app.ui.cp.contacts
 
+import android.Manifest
 import android.app.Application
+import android.content.Context
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,16 +45,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.dealio.app.data.ApiResult
+import com.dealio.app.data.Spreadsheet
 import com.dealio.app.data.api.CpContact
 import com.dealio.app.data.api.CpContactPayload
 import com.dealio.app.ui.builder.DealioCard
@@ -61,17 +71,25 @@ import com.dealio.app.ui.theme.ErrorRed
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class ContactsState(
     val loading: Boolean = true,
     val error: String? = null,
     val items: List<CpContact> = emptyList(),
     val message: String? = null,
+    // Rows waiting to be reviewed before import. Held here rather than in the
+    // composable so a rotation mid-review doesn't discard a parsed sheet.
+    val staged: List<ImportContact>? = null,
+    val stagedTitle: String = "",
+    val importing: Boolean = false,
+    val importProgress: Int = 0,
 )
 
 class ContactsViewModel(app: Application) : CpViewModel(app) {
@@ -107,6 +125,82 @@ class ContactsViewModel(app: Application) : CpViewModel(app) {
     }
 
     fun clearMessage() = _state.update { it.copy(message = null) }
+
+    // ── Bulk import ──────────────────────────────────────────────────────────
+
+    /** Parse a picked .xlsx/.csv off the main thread and stage what it yielded. */
+    fun stageFromSheet(uri: Uri) {
+        viewModelScope.launch {
+            val ctx = getApplication<Application>()
+            val staged = withContext(Dispatchers.IO) {
+                runCatching {
+                    val name = displayName(ctx, uri)
+                    val bytes = ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: ByteArray(0)
+                    rowsToContacts(Spreadsheet.read(bytes, name))
+                }.getOrDefault(emptyList())
+            }
+            _state.update { it.copy(staged = staged, stagedTitle = "Import from Excel") }
+        }
+    }
+
+    fun stageFromPhone() {
+        viewModelScope.launch {
+            val ctx = getApplication<Application>()
+            val staged = withContext(Dispatchers.IO) {
+                runCatching { readDeviceContacts(ctx) }.getOrDefault(emptyList())
+            }
+            // Everyone starts unticked — a 500-contact address book should not
+            // default to importing all of it.
+            _state.update { it.copy(staged = staged, stagedTitle = "Import from phone") }
+        }
+    }
+
+    fun toggleStaged(index: Int) = _state.update { s ->
+        s.copy(staged = s.staged?.mapIndexed { i, c -> if (i == index) c.copy(selected = !c.selected) else c })
+    }
+
+    fun selectAllStaged(select: Boolean) = _state.update { s ->
+        s.copy(staged = s.staged?.map { it.copy(selected = select) })
+    }
+
+    fun clearStaged() = _state.update { it.copy(staged = null, importProgress = 0) }
+
+    /**
+     * There is no bulk endpoint, so this is one POST per row. Failures are
+     * counted rather than aborting — one bad number shouldn't strand the rest.
+     */
+    fun importStaged() {
+        val chosen = _state.value.staged?.filter { it.selected }.orEmpty()
+        if (chosen.isEmpty()) return
+        _state.update { it.copy(importing = true, importProgress = 0) }
+        viewModelScope.launch {
+            var ok = 0
+            chosen.forEachIndexed { i, c ->
+                if (repo.addContact(c.toPayload()) is ApiResult.Success) ok++
+                _state.update { it.copy(importProgress = i + 1) }
+            }
+            val failed = chosen.size - ok
+            _state.update {
+                it.copy(
+                    importing = false, staged = null, importProgress = 0,
+                    message = if (failed == 0) "Imported $ok contact${if (ok == 1) "" else "s"}."
+                    else "Imported $ok of ${chosen.size} — $failed could not be saved.",
+                )
+            }
+            load(silent = true)
+        }
+    }
+}
+
+/** Best-effort file name for the picked document, used to pick the parser. */
+private fun displayName(ctx: Context, uri: Uri): String {
+    ctx.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+        if (c.moveToFirst()) {
+            val i = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (i >= 0) c.getString(i)?.let { return it }
+        }
+    }
+    return uri.lastPathSegment.orEmpty()
 }
 
 @Composable
@@ -114,13 +208,27 @@ fun ContactsScreen(nav: NavController, vm: ContactsViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf<CpContact?>(null) }
     var showDialog by remember { mutableStateOf(false) }
+    var showChooser by remember { mutableStateOf(false) }
+
+    val pickSheet = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { vm.stageFromSheet(it) }
+    }
+    val askContacts = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) vm.stageFromPhone()
+    }
+    val context = LocalContext.current
+    fun importFromPhone() {
+        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) vm.stageFromPhone() else askContacts.launch(Manifest.permission.READ_CONTACTS)
+    }
 
     SubScreenScaffold(
         "Contacts", nav,
         actions = {
             Row(
                 Modifier.padding(end = 8.dp).background(Teal, RoundedCornerShape(10.dp))
-                    .clickable { editing = null; showDialog = true }
+                    .clickable { showChooser = true }
                     .padding(horizontal = 12.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -134,7 +242,7 @@ fun ContactsScreen(nav: NavController, vm: ContactsViewModel = viewModel()) {
             state.loading -> LoadingState(Modifier.padding(inner))
             state.error != null -> ErrorState(state.error!!, onRetry = { vm.load() }, modifier = Modifier.padding(inner))
             state.items.isEmpty() -> Box(Modifier.padding(inner)) {
-                EmptyState(Icons.Outlined.Contacts, "No contacts yet", "Build your client book — tap Add.")
+                EmptyState(Icons.Outlined.Contacts, "No contacts yet", "Tap Add to enter one, or import your phone book or a spreadsheet.")
             }
             else -> LazyColumn(
                 modifier = Modifier.padding(inner),
@@ -173,6 +281,43 @@ fun ContactsScreen(nav: NavController, vm: ContactsViewModel = viewModel()) {
                 }
             }
         }
+    }
+
+    if (showChooser) {
+        AddContactChooser(
+            onManual = { showChooser = false; editing = null; showDialog = true },
+            onFromPhone = { showChooser = false; importFromPhone() },
+            onFromFile = {
+                showChooser = false
+                // Some providers report .xlsx/.csv under generic types, so accept
+                // the specific ones plus a catch-all rather than showing a picker
+                // where the user's own file is greyed out.
+                pickSheet.launch(
+                    arrayOf(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        "application/vnd.ms-excel",
+                        "text/csv",
+                        "text/comma-separated-values",
+                        "text/plain",
+                        "*/*",
+                    ),
+                )
+            },
+            onDismiss = { showChooser = false },
+        )
+    }
+
+    state.staged?.let { staged ->
+        ImportPreviewSheet(
+            title = state.stagedTitle,
+            items = staged,
+            working = state.importing,
+            progress = state.importProgress,
+            onToggle = vm::toggleStaged,
+            onSelectAll = vm::selectAllStaged,
+            onConfirm = vm::importStaged,
+            onDismiss = vm::clearStaged,
+        )
     }
 
     if (showDialog) {
