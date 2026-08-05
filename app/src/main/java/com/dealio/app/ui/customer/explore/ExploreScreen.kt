@@ -66,7 +66,6 @@ import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.customer.CustomerProjectCard
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.customer.FeaturedCard
-import com.dealio.app.ui.customer.meetups.MeetupsStrip
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.ErrorRed
 import com.dealio.app.ui.theme.NavyTealGradient
@@ -108,9 +107,10 @@ fun ExploreScreen(nav: NavController, vm: ExploreViewModel = viewModel()) {
                     }
                 }
 
-                // Meetups on in this customer's city. Renders nothing when there
-                // are none, so the section never sits here empty.
-                item { MeetupsStrip(nav) }
+                // Meetups used to sit here, between the featured homes and the
+                // list. They have their own page now (profile → Around you), and
+                // this screen is for property: someone scrolling homes is not
+                // shopping for an event, and the strip pushed the listings down.
 
                 item {
                     Row(
