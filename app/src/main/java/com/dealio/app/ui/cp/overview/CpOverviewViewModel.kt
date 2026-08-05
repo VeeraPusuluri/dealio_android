@@ -24,6 +24,8 @@ data class CpOverviewState(
     val city: String? = null,
     val reraNumber: String? = null,
     val authorizedBuilders: List<CpAuthorizedBuilder> = emptyList(),
+    /** The CP's own user id, shown on the credential. Null until the profile loads. */
+    val partnerId: Long? = null,
     val uploadingPhoto: Boolean = false,
     val message: String? = null,
     val totalEarnings: Double = 0.0,
@@ -65,6 +67,7 @@ class CpOverviewViewModel(app: Application) : CpViewModel(app) {
                     city = cp?.city,
                     reraNumber = cp?.reraNumber,
                     authorizedBuilders = profileData?.authorizedBuilders ?: emptyList(),
+                    partnerId = profileData?.id?.takeIf { it > 0 },
                     totalEarnings = cp?.totalEarnings ?: 0.0,
                     pendingCommission = cp?.pendingCommission ?: 0.0,
                     totalDeals = cp?.totalDeals ?: leadList.size,

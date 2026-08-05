@@ -232,6 +232,7 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
             city = state.city,
             reraNumber = state.reraNumber,
             authorizedBuilders = state.authorizedBuilders,
+            partnerId = state.partnerId,
             uploadingPhoto = state.uploadingPhoto,
             onPickPhoto = { vm.uploadPhoto(it) },
             onViewProfile = { showIdentity = false; nav.navigate(CpRoutes.PROFILE) },

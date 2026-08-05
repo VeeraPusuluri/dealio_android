@@ -232,6 +232,7 @@ fun CpProfileScreen(nav: NavController, vm: CpProfileViewModel = viewModel()) {
                         city = cp?.city,
                         reraNumber = cp?.reraNumber,
                         authorizedBuilders = p?.authorizedBuilders ?: emptyList(),
+                        partnerId = p?.id?.takeIf { it > 0 },
                         uploadingPhoto = state.uploadingDoc == "photo",
                         onChangePhoto = { photoPicker.launch("image/*") },
                     )

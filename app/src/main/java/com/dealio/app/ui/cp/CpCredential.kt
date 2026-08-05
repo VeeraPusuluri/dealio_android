@@ -104,6 +104,7 @@ fun CpCredentialCard(
     city: String?,
     reraNumber: String? = null,
     authorizedBuilders: List<CpAuthorizedBuilder> = emptyList(),
+    partnerId: Long? = null,
     uploadingPhoto: Boolean = false,
     onChangePhoto: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -214,6 +215,8 @@ fun CpCredentialCard(
             name = name,
             photoUrl = resolvedPhoto,
             metal = metal,
+            authorizedBuilders = authorizedBuilders,
+            partnerId = partnerId,
             onChangePhoto = onChangePhoto?.let { change -> { viewingPhoto = false; change() } },
             onDismiss = { viewingPhoto = false },
         )
@@ -277,12 +280,19 @@ private fun CredentialPortrait(
  * one place you can look at the picture is the obvious place to decide you want
  * a different one — and it closes the viewer first, so the picker doesn't come
  * back to a stale image sitting underneath it.
+ *
+ * The plate under the photo carries the two claims a face alone cannot make:
+ * who authorised this partner, and the ID that identifies them. Opened on its
+ * own the photo proves nothing; with those beneath it, this screen is something
+ * a partner can hold up to a customer as-is.
  */
 @Composable
 private fun CredentialPhotoDialog(
     name: String,
     photoUrl: String,
     metal: TierMetal,
+    authorizedBuilders: List<CpAuthorizedBuilder>,
+    partnerId: Long?,
     onChangePhoto: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
@@ -315,6 +325,54 @@ private fun CredentialPhotoDialog(
                     modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(frame),
                     contentScale = ContentScale.Crop,
                 )
+            }
+
+            if (authorizedBuilders.isNotEmpty() || partnerId != null) {
+                Spacer(Modifier.height(12.dp))
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(NavyDeep.copy(alpha = 0.92f))
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                ) {
+                    if (authorizedBuilders.isNotEmpty()) {
+                        EngravedLabel("Authorised CP for", metal.face.copy(alpha = 0.75f))
+                        authorizedBuilders.forEach { builder ->
+                            Spacer(Modifier.height(6.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Verified, null, tint = metal.face, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    builder.companyName,
+                                    color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
+                    if (partnerId != null) {
+                        // Same hairline the card uses to divide who they are from
+                        // who vouches for them.
+                        if (authorizedBuilders.isNotEmpty()) {
+                            Spacer(Modifier.height(12.dp))
+                            Box(Modifier.fillMaxWidth().height(1.dp).background(metal.edge.copy(alpha = 0.35f)))
+                            Spacer(Modifier.height(12.dp))
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            EngravedLabel("Partner ID", Color.White.copy(alpha = 0.40f), Modifier.weight(1f))
+                            Text(
+                                partnerId.toString(),
+                                color = Color.White.copy(alpha = 0.80f),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(Modifier.height(12.dp))

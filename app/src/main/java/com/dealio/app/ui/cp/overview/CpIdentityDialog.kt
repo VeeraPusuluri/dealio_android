@@ -48,6 +48,7 @@ fun CpIdentityDialog(
     city: String?,
     reraNumber: String?,
     authorizedBuilders: List<CpAuthorizedBuilder>,
+    partnerId: Long?,
     uploadingPhoto: Boolean,
     onPickPhoto: (Uri) -> Unit,
     onViewProfile: () -> Unit,
@@ -72,6 +73,7 @@ fun CpIdentityDialog(
                 city = city,
                 reraNumber = reraNumber,
                 authorizedBuilders = authorizedBuilders,
+                partnerId = partnerId,
                 uploadingPhoto = uploadingPhoto,
                 onChangePhoto = { photoPicker.launch("image/*") },
             )
