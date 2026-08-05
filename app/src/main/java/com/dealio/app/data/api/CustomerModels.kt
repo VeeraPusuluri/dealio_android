@@ -99,6 +99,12 @@ data class CustomerMeetup(
     val title: String = "",
     val description: String? = null,
     val category: String = "SITE_VISIT",
+    /** The event photograph. null falls back to the category wash. */
+    val coverImage: String? = null,
+    /** Venue photographs, shown under the location. */
+    val photos: List<String> = emptyList(),
+    /** What the gathering is about, as the organiser described it. */
+    val topics: List<String> = emptyList(),
     val location: String = "",
     val city: String? = null,
     val mapsLink: String? = null,
@@ -117,6 +123,13 @@ data class CustomerMeetup(
     val hostPhoto: String? = null,
     val hostTier: String? = null,
     val goingCount: Int = 0,
+    /**
+     * First names of a few people who are going, for the row of faces.
+     *
+     * First names only — this reaches any stranger browsing a public meetup —
+     * and shorter than [goingCount], which counts guests they are bringing too.
+     */
+    val goingNames: List<String> = emptyList(),
     /** True when a partner asked this customer by name, rather than them finding it. */
     val invited: Boolean = false,
     /** null until they answer. INVITED means asked but still silent. */

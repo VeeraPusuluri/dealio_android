@@ -303,6 +303,9 @@ data class CreateCpMeetupRequest(
     val time: String,
     val description: String? = null,
     val category: String = "SITE_VISIT",
+    val coverImage: String? = null,
+    val photos: List<String> = emptyList(),
+    val topics: List<String> = emptyList(),
     val city: String? = null,
     val mapsLink: String? = null,
     val mode: String = "IN_PERSON",
@@ -321,6 +324,10 @@ data class UpdateCpMeetupRequest(
     val title: String? = null,
     val description: String? = null,
     val category: String? = null,
+    /** "" clears the cover; null leaves whatever is stored alone. */
+    val coverImage: String? = null,
+    val photos: List<String>? = null,
+    val topics: List<String>? = null,
     val location: String? = null,
     val city: String? = null,
     val mapsLink: String? = null,
@@ -339,6 +346,15 @@ data class CpMeetupInviteePayload(
     val phone: String,
     val email: String? = null,
 )
+
+/**
+ * What the photo endpoint hands back.
+ *
+ * Just a URL, and deliberately not attached to a meetup: the cover is picked
+ * while the form is still open, before there is a row to attach it to, so the
+ * form holds the URL and sends it with the create that follows.
+ */
+data class MeetupPhotoUpload(val url: String = "")
 
 data class AddInviteesRequest(val invitees: List<CpMeetupInviteePayload>)
 

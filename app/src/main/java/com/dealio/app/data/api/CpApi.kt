@@ -83,6 +83,19 @@ interface CpApi {
     @GET("cp/{cpUserId}/meetups/invitable")
     suspend fun getInvitable(@Path("cpUserId") cpUserId: Long): Response<ApiEnvelope<InvitableResponse>>
 
+    /**
+     * Stores one image and returns its URL.
+     *
+     * No `{meetupId}` on purpose — a cover is chosen mid-form, before the meetup
+     * exists. The URL comes back and rides along in the create or update.
+     */
+    @Multipart
+    @POST("cp/{cpUserId}/meetups/photo")
+    suspend fun uploadMeetupPhoto(
+        @Path("cpUserId") cpUserId: Long,
+        @Part file: MultipartBody.Part,
+    ): Response<ApiEnvelope<MeetupPhotoUpload>>
+
     @POST("cp/{cpUserId}/meetups/{meetupId}/invitees")
     suspend fun addInvitees(
         @Path("cpUserId") cpUserId: Long,

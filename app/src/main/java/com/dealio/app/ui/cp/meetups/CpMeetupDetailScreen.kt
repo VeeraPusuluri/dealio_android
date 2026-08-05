@@ -85,6 +85,9 @@ import com.dealio.app.ui.meetups.MeetupCategory
 import com.dealio.app.ui.meetups.MeetupDetailLine
 import com.dealio.app.ui.meetups.MeetupHero
 import com.dealio.app.ui.meetups.MeetupMode
+import com.dealio.app.ui.meetups.MeetupPhotoGrid
+import com.dealio.app.ui.meetups.MeetupPhotoViewer
+import com.dealio.app.ui.meetups.TopicChips
 import com.dealio.app.ui.meetups.Rsvp
 import com.dealio.app.ui.meetups.RsvpPill
 import com.dealio.app.ui.meetups.RsvpSummary
@@ -203,6 +206,7 @@ fun CpMeetupDetailScreen(
     var inviting by remember { mutableStateOf(false) }
     var cancelling by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var photoAt by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(meetupId) { vm.load(meetupId) }
     // Picks up an edit made on the form screen, which pops straight back here.
@@ -223,7 +227,9 @@ fun CpMeetupDetailScreen(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
             ) {
                 val category = MeetupCategory.from(m.category)
-                MeetupHero(category)
+                // The organiser sees the same cover the customer will, so the
+                // event page doubles as a check on what was uploaded.
+                MeetupHero(category, height = 150, coverImage = m.coverImage)
 
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -268,12 +274,29 @@ fun CpMeetupDetailScreen(
                         }
                     }
 
-                    if (!m.description.isNullOrBlank()) {
+                    if (!m.description.isNullOrBlank() || m.topics.isNotEmpty()) {
                         Spacer(Modifier.height(12.dp))
                         DealioCard {
                             SectionLabel("About")
-                            Spacer(Modifier.height(8.dp))
-                            Text(m.description!!, color = TextSecondary, fontSize = 13.sp, lineHeight = 20.sp)
+                            if (!m.description.isNullOrBlank()) {
+                                Spacer(Modifier.height(8.dp))
+                                Text(m.description!!, color = TextSecondary, fontSize = 13.sp, lineHeight = 20.sp)
+                            }
+                            if (m.topics.isNotEmpty()) {
+                                Spacer(Modifier.height(12.dp))
+                                TopicChips(m.topics)
+                            }
+                        }
+                    }
+
+                    // The pictures as the invitee will see them — this page is
+                    // also where an organiser checks what they actually uploaded.
+                    if (m.photos.isNotEmpty()) {
+                        Spacer(Modifier.height(12.dp))
+                        DealioCard {
+                            SectionLabel("Photos")
+                            Spacer(Modifier.height(10.dp))
+                            MeetupPhotoGrid(m.photos, onOpen = { photoAt = it })
                         }
                     }
 
@@ -366,6 +389,12 @@ fun CpMeetupDetailScreen(
             onDismiss = { inviting = false },
             onInvite = { picked -> vm.invite(picked); inviting = false },
         )
+    }
+
+    photoAt?.let { at ->
+        state.meetup?.photos?.takeIf { it.isNotEmpty() }?.let { photos ->
+            MeetupPhotoViewer(photos, at) { photoAt = null }
+        }
     }
 
     if (cancelling) {

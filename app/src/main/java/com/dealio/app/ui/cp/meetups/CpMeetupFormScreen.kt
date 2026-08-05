@@ -1,12 +1,18 @@
 package com.dealio.app.ui.cp.meetups
 
 import android.app.Application
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,10 +22,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AddAPhoto
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -30,16 +42,21 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.dealio.app.data.ApiResult
 import com.dealio.app.data.api.CpMeetup
 import com.dealio.app.data.api.CreateCpMeetupRequest
@@ -48,6 +65,7 @@ import com.dealio.app.ui.builder.DealioCard
 import com.dealio.app.ui.builder.GradientButton
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SubScreenScaffold
+import com.dealio.app.ui.builder.resolveUrl
 import com.dealio.app.ui.components.dealioFieldColors
 import com.dealio.app.ui.cp.CpViewModel
 import com.dealio.app.ui.meetups.ChoiceChips
@@ -60,11 +78,13 @@ import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
 data class MeetupFormState(
@@ -74,6 +94,8 @@ data class MeetupFormState(
     val editing: CpMeetup? = null,
     val message: String? = null,
     val savedId: Long? = null,
+    /** A photograph is on its way up. Blocks Save so a half-uploaded cover is never stored. */
+    val uploading: Boolean = false,
 )
 
 class CpMeetupFormViewModel(app: Application) : CpViewModel(app) {
@@ -130,6 +152,45 @@ class CpMeetupFormViewModel(app: Application) : CpViewModel(app) {
         }
     }
 
+    /**
+     * Sends one picked image up and hands back its URL.
+     *
+     * The upload happens now rather than on Save so the partner can see what
+     * they chose before committing to it — a cover is the one field on this form
+     * whose value you cannot judge from its text. The URL is held by the form
+     * and travels with the create; abandoning the form leaves a stray file on
+     * the server, which is the cheaper of the two mistakes available here.
+     */
+    fun uploadPhoto(uri: Uri, onDone: (String) -> Unit) {
+        _state.update { it.copy(uploading = true) }
+        viewModelScope.launch {
+            val picked = withContext(Dispatchers.IO) {
+                runCatching {
+                    val ctx = getApplication<Application>()
+                    val bytes = ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    bytes?.let { it to (ctx.contentResolver.getType(uri) ?: "image/jpeg") }
+                }.getOrNull()
+            }
+            if (picked == null) {
+                _state.update { it.copy(uploading = false, message = "Could not read that image.") }
+                return@launch
+            }
+            val (bytes, mime) = picked
+            val ext = when {
+                mime.contains("png") -> "png"
+                mime.contains("webp") -> "webp"
+                else -> "jpg"
+            }
+            when (val r = repo.uploadMeetupPhoto(bytes, "meetup.$ext", mime)) {
+                is ApiResult.Success -> {
+                    _state.update { it.copy(uploading = false) }
+                    onDone(r.data.url)
+                }
+                is ApiResult.Error -> _state.update { it.copy(uploading = false, message = r.message) }
+            }
+        }
+    }
+
     fun clearMessage() = _state.update { it.copy(message = null) }
 }
 
@@ -170,8 +231,10 @@ fun CpMeetupFormScreen(
                 editing = editing,
                 people = state.people,
                 saving = state.saving,
+                uploading = state.uploading,
                 message = state.message,
                 onDismissMessage = vm::clearMessage,
+                onPickPhoto = vm::uploadPhoto,
                 onSubmit = { create, update, invitees ->
                     if (isEdit && editing != null) vm.update(editing.id, update)
                     else vm.create(create.copy(invitees = invitees.map { it.toPayload() }))
@@ -187,12 +250,17 @@ private fun MeetupFormBody(
     editing: CpMeetup?,
     people: List<Invitee>,
     saving: Boolean,
+    uploading: Boolean,
     message: String?,
     onDismissMessage: () -> Unit,
+    onPickPhoto: (Uri, (String) -> Unit) -> Unit,
     onSubmit: (CreateCpMeetupRequest, UpdateCpMeetupRequest, List<Invitee>) -> Unit,
 ) {
     var title by remember { mutableStateOf(editing?.title ?: "") }
     var description by remember { mutableStateOf(editing?.description ?: "") }
+    var coverImage by remember { mutableStateOf(editing?.coverImage) }
+    var photos by remember { mutableStateOf(editing?.photos.orEmpty()) }
+    var topics by remember { mutableStateOf(editing?.topics.orEmpty()) }
     // A new meetup starts on the commonest kind, not on OTHER — `from(null)`
     // falls through to OTHER, which is the right answer for an unknown value off
     // the wire and the wrong one for a blank form.
@@ -214,12 +282,37 @@ private fun MeetupFormBody(
     LaunchedEffect(message) { if (message != null) onDismissMessage() }
 
     val needsPlace = mode != MeetupMode.ONLINE
-    val canSave = title.isNotBlank() && (location.isNotBlank() || !needsPlace) && !saving
+    val canSave = title.isNotBlank() && (location.isNotBlank() || !needsPlace) && !saving && !uploading
+
+    val pickCover = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { u -> onPickPhoto(u) { coverImage = it } }
+    }
+    val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { u -> onPickPhoto(u) { url -> photos = (photos + url).take(MAX_PHOTOS) } }
+    }
 
     Column(
         Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
+        // ── Cover ───────────────────────────────────────────────────────────
+        // First, because it is the first thing a customer sees. A meetup with a
+        // photograph of the site reads as a real event; the category wash below
+        // is the fallback, shown here so the partner knows what they are
+        // choosing between rather than discovering it on the customer's screen.
+        DealioCard {
+            FormLabel("Cover photo")
+            CoverPicker(
+                coverImage = coverImage,
+                category = category,
+                uploading = uploading,
+                onPick = { pickCover.launch("image/*") },
+                onRemove = { coverImage = "" },
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
         // ── What ────────────────────────────────────────────────────────────
         DealioCard {
             FormLabel("What is it")
@@ -245,6 +338,13 @@ private fun MeetupFormBody(
                 modifier = Modifier.fillMaxWidth(), minLines = 3,
                 placeholder = { Text("What will happen, and why someone should come", color = TextSecondary.copy(alpha = 0.6f), fontSize = 13.sp) },
                 shape = RoundedCornerShape(14.dp), colors = dealioFieldColors(),
+            )
+            Spacer(Modifier.height(14.dp))
+            FormLabel("Topics (optional)")
+            TopicEditor(
+                topics = topics,
+                onAdd = { topics = (topics + it).take(MAX_TOPICS) },
+                onRemove = { topics = topics - it },
             )
         }
 
@@ -292,6 +392,16 @@ private fun MeetupFormBody(
                 Text(
                     "Only people who say they're going will see this link.",
                     color = TextSecondary, fontSize = 11.sp,
+                )
+            }
+            if (needsPlace) {
+                Spacer(Modifier.height(14.dp))
+                FormLabel("Photos of the place (optional)")
+                PhotoStrip(
+                    photos = photos,
+                    uploading = uploading,
+                    onAdd = { pickPhoto.launch("image/*") },
+                    onRemove = { photos = photos - it },
                 )
             }
         }
@@ -371,6 +481,7 @@ private fun MeetupFormBody(
         Spacer(Modifier.height(20.dp))
         GradientButton(
             text = when {
+                uploading -> "Uploading photo…"
                 saving -> "Saving…"
                 editing != null -> "Save changes"
                 picked.isEmpty() -> "Create meetup"
@@ -388,6 +499,9 @@ private fun MeetupFormBody(
                         time = time,
                         description = description.trim().ifBlank { null },
                         category = category.wire,
+                        coverImage = coverImage?.trim()?.ifBlank { null },
+                        photos = photos,
+                        topics = topics,
                         city = cityValue,
                         mapsLink = mapsLink.trim().ifBlank { null },
                         mode = mode.wire,
@@ -400,6 +514,11 @@ private fun MeetupFormBody(
                         title = title.trim(),
                         description = description.trim().ifBlank { null },
                         category = category.wire,
+                        // "" is how the server is told to clear the cover, which
+                        // is what Remove leaves behind; null would mean "leave it".
+                        coverImage = coverImage ?: "",
+                        photos = photos,
+                        topics = topics,
                         location = location.trim().ifBlank { if (needsPlace) "" else "Online" },
                         city = cityValue,
                         mapsLink = mapsLink.trim().ifBlank { null },
@@ -470,6 +589,215 @@ private fun VisibilityOption(
         )
         Spacer(Modifier.height(3.dp))
         Text(body, color = TextSecondary, fontSize = 11.sp, lineHeight = 15.sp)
+    }
+}
+
+// ─── Photographs ─────────────────────────────────────────────────────────────
+
+/** Two more than anyone uploads, and few enough that the strip stays scannable. */
+private const val MAX_PHOTOS = 8
+/** Enough to say what a meetup is about; past this it reads as tag soup. */
+private const val MAX_TOPICS = 6
+
+/**
+ * Pick, preview and clear the cover.
+ *
+ * The frame is always the full-width shape the customer will see, empty or not,
+ * so a partner is choosing a photograph rather than filling in a field. When
+ * there is none it shows the category wash that will stand in for it — which
+ * makes leaving it blank a decision with a visible outcome instead of an
+ * omission.
+ */
+@Composable
+private fun CoverPicker(
+    coverImage: String?,
+    category: MeetupCategory,
+    uploading: Boolean,
+    onPick: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    val shape = RoundedCornerShape(16.dp)
+    val url = coverImage?.takeIf { it.isNotBlank() }
+
+    Box(
+        Modifier.fillMaxWidth().height(160.dp).clip(shape)
+            .background(category.gradient)
+            .clickable(enabled = !uploading) { onPick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (url != null) {
+            AsyncImage(
+                model = resolveUrl(url),
+                contentDescription = "Cover photo",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Outlined.AddAPhoto, null,
+                    tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(28.dp),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Add a photo of the place",
+                    color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    "Without one, customers see this colour",
+                    color = Color.White.copy(alpha = 0.85f), fontSize = 11.sp,
+                )
+            }
+        }
+
+        if (uploading) {
+            Box(
+                Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)),
+                contentAlignment = Alignment.Center,
+            ) { CircularProgressIndicator(color = Color.White, strokeWidth = 2.5.dp, modifier = Modifier.size(26.dp)) }
+        }
+    }
+
+    if (url != null && !uploading) {
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SoftButton("Replace", Icons.Outlined.AddAPhoto, Teal, onPick)
+            SoftButton("Remove", Icons.Outlined.Close, com.dealio.app.ui.theme.ErrorRed, onRemove)
+        }
+    }
+}
+
+/**
+ * Venue photographs, as a row of thumbnails with an add tile on the end.
+ *
+ * Horizontal rather than a grid: this sits inside a form that is already long,
+ * and the pictures are supporting evidence for the address above them, not the
+ * thing being edited.
+ */
+@Composable
+private fun PhotoStrip(
+    photos: List<String>,
+    uploading: Boolean,
+    onAdd: () -> Unit,
+    onRemove: (String) -> Unit,
+) {
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        photos.forEach { url ->
+            Box(Modifier.size(84.dp)) {
+                AsyncImage(
+                    model = resolveUrl(url),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(shape).background(CardBorder),
+                )
+                Icon(
+                    Icons.Outlined.Close, "Remove photo", tint = Color.White,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
+                        .size(20.dp).clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.55f))
+                        .clickable { onRemove(url) }
+                        .padding(4.dp),
+                )
+            }
+        }
+        if (photos.size < MAX_PHOTOS) {
+            Box(
+                Modifier.size(84.dp).clip(shape)
+                    .background(Teal.copy(alpha = 0.07f))
+                    .border(1.dp, CardBorder, shape)
+                    .clickable(enabled = !uploading) { onAdd() },
+                contentAlignment = Alignment.Center,
+            ) {
+                if (uploading) {
+                    CircularProgressIndicator(color = Teal, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                } else {
+                    Icon(Icons.Outlined.AddAPhoto, "Add photo", tint = Teal, modifier = Modifier.size(22.dp))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Free-text topics, added one at a time.
+ *
+ * Not a fixed list. The category already says what kind of gathering this is;
+ * topics are where an organiser says it is for first-time buyers, or about
+ * rental yield — the specifics that make someone recognise their own situation,
+ * and the ones an enum would flatten back out.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TopicEditor(topics: List<String>, onAdd: (String) -> Unit, onRemove: (String) -> Unit) {
+    var draft by remember { mutableStateOf("") }
+    val commit = {
+        val t = draft.trim()
+        if (t.isNotEmpty() && !topics.contains(t)) onAdd(t)
+        draft = ""
+    }
+
+    if (topics.isNotEmpty()) {
+        FlowRow(
+            Modifier.fillMaxWidth().padding(bottom = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            topics.forEach { topic ->
+                Row(
+                    Modifier.clip(RoundedCornerShape(20.dp)).background(Teal.copy(alpha = 0.10f))
+                        .clickable { onRemove(topic) }
+                        .padding(start = 13.dp, end = 8.dp, top = 7.dp, bottom = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(topic, color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.width(5.dp))
+                    Icon(Icons.Outlined.Close, "Remove $topic", tint = Teal, modifier = Modifier.size(13.dp))
+                }
+            }
+        }
+    }
+
+    if (topics.size < MAX_TOPICS) {
+        OutlinedTextField(
+            value = draft,
+            onValueChange = { draft = it.take(40) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            placeholder = {
+                Text("e.g. First-time buyers", color = TextSecondary.copy(alpha = 0.6f), fontSize = 13.sp)
+            },
+            trailingIcon = {
+                if (draft.isNotBlank()) {
+                    Text(
+                        "Add",
+                        color = Teal, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { commit() }.padding(horizontal = 14.dp),
+                    )
+                }
+            },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { commit() }),
+            shape = RoundedCornerShape(14.dp),
+            colors = dealioFieldColors(),
+        )
+    }
+}
+
+@Composable
+private fun SoftButton(label: String, icon: ImageVector, tint: Color, onClick: () -> Unit) {
+    Row(
+        Modifier.clip(RoundedCornerShape(10.dp)).background(tint.copy(alpha = 0.10f))
+            .clickable { onClick() }.padding(horizontal = 13.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(7.dp))
+        Text(label, color = tint, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 

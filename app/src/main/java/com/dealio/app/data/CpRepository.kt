@@ -14,6 +14,7 @@ import com.dealio.app.data.api.CreateCpMeetupRequest
 import com.dealio.app.data.api.CpMeetup
 import com.dealio.app.data.api.CpMeetupInviteePayload
 import com.dealio.app.data.api.InvitableResponse
+import com.dealio.app.data.api.MeetupPhotoUpload
 import com.dealio.app.data.api.SetRsvpRequest
 import com.dealio.app.data.api.UpdateCpMeetupRequest
 import com.dealio.app.data.api.CpContactPayload
@@ -93,6 +94,11 @@ class CpRepository(context: Context) {
     suspend fun cancelMeetup(id: Long, reason: String?): ApiResult<CpMeetup> =
         call { api.cancelMeetup(cpUserId, id, CancelMeetupRequest(reason)) }
     suspend fun deleteMeetup(id: Long): ApiResult<Any> = call { api.deleteMeetup(cpUserId, id) }
+
+    suspend fun uploadMeetupPhoto(bytes: ByteArray, fileName: String, mime: String): ApiResult<MeetupPhotoUpload> {
+        val part = MultipartBody.Part.createFormData("file", fileName, bytes.toRequestBody(mime.toMediaTypeOrNull()))
+        return call { api.uploadMeetupPhoto(cpUserId, part) }
+    }
 
     suspend fun getInvitable(): ApiResult<InvitableResponse> = call { api.getInvitable(cpUserId) }
     suspend fun addInvitees(id: Long, invitees: List<CpMeetupInviteePayload>): ApiResult<CpMeetup> =

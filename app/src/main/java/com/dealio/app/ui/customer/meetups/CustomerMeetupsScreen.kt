@@ -54,6 +54,7 @@ import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.meetups.CategoryChip
 import com.dealio.app.ui.meetups.MeetupCategory
 import com.dealio.app.ui.meetups.MeetupDetailLine
+import com.dealio.app.ui.meetups.MeetupHero
 import com.dealio.app.ui.meetups.MeetupMode
 import com.dealio.app.ui.meetups.meetupWhen
 import com.dealio.app.ui.theme.CardBorder
@@ -161,9 +162,11 @@ private fun FilterPill(label: String, on: Boolean, tint: Color, onClick: () -> U
 /**
  * One meetup on a customer's list.
  *
- * Leads with what it is and when, and closes with how many are going — the
- * social proof Meetup puts on every card, and the thing that makes an unfamiliar
- * event feel worth turning up to.
+ * Leads with the photograph when there is one. A customer is browsing rather
+ * than working through a list, and the picture is what makes them stop — the
+ * text below it is what makes them tap. Where no cover was uploaded the strip
+ * falls back to the category wash, which keeps the list on one rhythm instead of
+ * alternating between tall cards and short ones.
  */
 @Composable
 fun CustomerMeetupCard(m: CustomerMeetup, onOpen: () -> Unit) {
@@ -173,18 +176,28 @@ fun CustomerMeetupCard(m: CustomerMeetup, onOpen: () -> Unit) {
     Column(
         Modifier.fillMaxWidth().subtleShadow(radius = 18.dp).clip(shape)
             .background(Color.White, shape).border(1.dp, CardBorder.copy(alpha = 0.6f), shape)
-            .clickable { onOpen() }
-            .padding(16.dp),
+            .clickable { onOpen() },
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            CategoryChip(category)
-            Spacer(Modifier.weight(1f))
-            when {
-                m.isCancelled -> Badge("Cancelled", ErrorRed)
-                m.isGoing -> Badge("You're going", com.dealio.app.ui.components.IconGreen)
-                m.awaitingReply -> Badge("Invited", Teal)
+        MeetupHero(
+            category = category,
+            height = 132,
+            coverImage = m.coverImage,
+            scrim = !m.coverImage.isNullOrBlank(),
+        ) {
+            Row(
+                Modifier.align(Alignment.TopEnd).padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                when {
+                    m.isCancelled -> Badge("Cancelled", ErrorRed, onImage = true)
+                    m.isGoing -> Badge("You're going", com.dealio.app.ui.components.IconGreen, onImage = true)
+                    m.awaitingReply -> Badge("Invited", Teal, onImage = true)
+                }
             }
         }
+
+        Column(Modifier.padding(16.dp)) {
+        CategoryChip(category)
 
         Spacer(Modifier.height(10.dp))
         Text(
@@ -211,14 +224,22 @@ fun CustomerMeetupCard(m: CustomerMeetup, onOpen: () -> Unit) {
             Spacer(Modifier.weight(1f))
             Text("by ${m.hostName}", color = TextSecondary, fontSize = 11.sp, maxLines = 1)
         }
+        }
     }
 }
 
+/**
+ * A status flag. [onImage] fills it solid — a tinted wash reads as mud over a
+ * photograph, and this is the one label that has to survive whatever is behind it.
+ */
 @Composable
-private fun Badge(label: String, tint: Color) {
+private fun Badge(label: String, tint: Color, onImage: Boolean = false) {
     Text(
-        label, color = tint, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+        label,
+        color = if (onImage) Color.White else tint,
+        fontSize = 10.sp, fontWeight = FontWeight.Bold,
         modifier = Modifier.clip(RoundedCornerShape(6.dp))
-            .background(tint.copy(alpha = 0.12f)).padding(horizontal = 7.dp, vertical = 3.dp),
+            .background(if (onImage) tint else tint.copy(alpha = 0.12f))
+            .padding(horizontal = 7.dp, vertical = 3.dp),
     )
 }
