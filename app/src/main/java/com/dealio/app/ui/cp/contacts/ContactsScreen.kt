@@ -440,7 +440,7 @@ private fun ContactSheet(existing: CpContact?, onDismiss: () -> Unit, onSave: (C
         mutableStateOf(existing?.investment != null && existing.investment != seedInvestment(existing.salary))
     }
 
-    val canSave = name.isNotBlank() && phone.length >= 6
+    val canSave = name.isNotBlank() && phone.count(Char::isDigit) >= 6
 
     FormSheet(
         title = if (existing == null) "New contact" else "Edit contact",
@@ -460,11 +460,14 @@ private fun ContactSheet(existing: CpContact?, onDismiss: () -> Unit, onSave: (C
                         enabled = canSave,
                         working = false,
                         onClick = {
+                            // The field can still hold a raw "+971…" if the CP
+                            // never typed enough digits to resolve it; settle it here.
+                            val (saveCode, savePhone) = splitDialCode(phone.trim(), fallback = countryCode)
                             onSave(
                                 CpContactPayload(
                                     name = name.trim(),
-                                    phone = phone.trim(),
-                                    countryCode = countryCode,
+                                    phone = savePhone,
+                                    countryCode = saveCode,
                                     email = email.ifBlank { null },
                                     notes = notes.ifBlank { null },
                                     tags = tags.ifBlank { null },
@@ -492,17 +495,21 @@ private fun ContactSheet(existing: CpContact?, onDismiss: () -> Unit, onSave: (C
             SheetField(
                 value = phone,
                 onValueChange = { typed ->
-                    if (typed.startsWith("+") || typed.startsWith("00")) {
-                        val (code, national) = splitDialCode(typed, fallback = countryCode)
-                        countryCode = code
-                        phone = national
+                    // The raw text may still be mid-way through a "+971…" the CP
+                    // is typing, so hold it until it resolves to a real code.
+                    val raw = typed.filter { it.isDigit() || it == '+' }
+                    val split = trySplitDialCode(raw, fallback = countryCode)
+                    if (split != null) {
+                        countryCode = split.first
+                        phone = split.second
                     } else {
-                        phone = typed.filter(Char::isDigit)
+                        phone = raw
                     }
                 },
                 label = "Phone", icon = Icons.Outlined.Phone, keyboardType = KeyboardType.Phone,
                 placeholder = if (countryCode == DEFAULT_DIAL_CODE) "10-digit mobile" else "Number without $countryCode",
-                supporting = phone.takeIf { it.length >= 6 }?.let { "Saves as ${formatPhone(countryCode, it)}" },
+                supporting = phone.takeIf { it.length >= 6 && it.all(Char::isDigit) }
+                    ?.let { "Saves as ${formatPhone(countryCode, it)}" },
             )
             SheetField(
                 value = email, onValueChange = { email = it },

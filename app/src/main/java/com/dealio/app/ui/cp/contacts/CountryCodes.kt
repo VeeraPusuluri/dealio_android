@@ -37,7 +37,7 @@ const val DEFAULT_DIAL_CODE = "+91"
 /** Longest first, so "+971" is never mistaken for "+97" and "+91" never for "+9". */
 private val BY_LENGTH = DIAL_CODES.map { it.code }.sortedByDescending { it.length }
 
-fun flagFor(code: String): String =
+fun flagFor(code: String?): String =
     DIAL_CODES.firstOrNull { it.code == normalizeDialCode(code) }?.flag ?: "🌐"
 
 /** "91" / " +91 " -> "+91"; anything unusable falls back to the default. */
@@ -77,6 +77,24 @@ fun splitDialCode(raw: String, fallback: String = DEFAULT_DIAL_CODE): Pair<Strin
         return cc to digits.drop(ccDigits.length)
     }
     return cc to digits
+}
+
+/**
+ * Split only once the code is unambiguous and a real number follows it.
+ *
+ * Typing happens one character at a time, so a field sees "+", "+9", "+97",
+ * "+971"… in turn. Splitting eagerly would eat the "+" on the first keystroke
+ * and leave every later digit looking like a local number — which is exactly
+ * how "+971 50 123 4567" ended up saved as an Indian number. Returning null
+ * until the number is plausible lets the field hold the raw text meanwhile.
+ */
+fun trySplitDialCode(raw: String, fallback: String = DEFAULT_DIAL_CODE): Pair<String, String>? {
+    val trimmed = raw.trim()
+    if (!trimmed.startsWith("+") && !Regex("^00\\d").containsMatchIn(trimmed)) return null
+    val (code, national) = splitDialCode(trimmed, fallback)
+    val digits = trimmed.filter(Char::isDigit).let { if (trimmed.startsWith("00")) it.drop(2) else it }
+    val matched = digits.startsWith(code.drop(1))
+    return if (matched && national.length >= 6) code to national else null
 }
 
 /** How the number reads on a card: "+91 98765 43210". */
