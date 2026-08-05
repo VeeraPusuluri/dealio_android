@@ -25,6 +25,7 @@ fun seedInvestment(salary: Double?): Double? =
 data class ImportContact(
     val name: String,
     val phone: String,
+    val countryCode: String = DEFAULT_DIAL_CODE,
     val email: String? = null,
     val designation: String? = null,
     val salary: Double? = null,
@@ -36,6 +37,7 @@ data class ImportContact(
     fun toPayload() = CpContactPayload(
         name = name,
         phone = phone,
+        countryCode = countryCode,
         email = email,
         tags = "Imported",
         bhkPreference = bhkPreference,
@@ -46,15 +48,13 @@ data class ImportContact(
     )
 }
 
-/** Digits only, and drop an Indian country code so imports dedupe against typed numbers. */
-internal fun normalizePhone(raw: String): String {
-    val digits = raw.filter(Char::isDigit)
-    return when {
-        digits.length > 10 && digits.startsWith("91") -> digits.takeLast(10)
-        digits.length > 10 -> digits.takeLast(10)
-        else -> digits
-    }
-}
+/**
+ * Digits only, with any country code the number carried split off rather than
+ * truncated away. See [splitDialCode] — this used to keep the last ten digits of
+ * everything, which turned "+971 50 123 4567" into a plausible-looking Indian
+ * number instead of a UAE one.
+ */
+internal fun normalizePhone(raw: String): String = splitDialCode(raw).second
 
 /**
  * Maps a sheet's header row onto contact fields.
@@ -79,6 +79,8 @@ fun rowsToContacts(rows: List<List<String>>): List<ImportContact> {
     val investIdx = find("investment", "budget", "corpus", "capacity")
     val addrIdx = find("address", "location", "city", "area")
     val bhkIdx = find("bhk", "preference", "config")
+    // An explicit column wins; otherwise the code is read off the number itself.
+    val ccIdx = find("country code", "countrycode", "dial", "isd")
 
     fun cell(row: List<String>, i: Int) = if (i >= 0) row.getOrNull(i)?.trim().orEmpty() else ""
     fun money(row: List<String>, i: Int) =
@@ -86,12 +88,17 @@ fun rowsToContacts(rows: List<List<String>>): List<ImportContact> {
 
     return rows.drop(1).mapNotNull { row ->
         val name = cell(row, nameIdx)
-        val phone = normalizePhone(cell(row, phoneIdx))
+        val declared = cell(row, ccIdx).ifBlank { null }
+        val (code, phone) = splitDialCode(
+            cell(row, phoneIdx),
+            fallback = declared?.let(::normalizeDialCode) ?: DEFAULT_DIAL_CODE,
+        )
         if (name.isBlank() || phone.length < 6) return@mapNotNull null
         val salary = money(row, salaryIdx)
         ImportContact(
             name = name,
             phone = phone,
+            countryCode = code,
             email = cell(row, emailIdx).ifBlank { null },
             designation = cell(row, desigIdx).ifBlank { null },
             salary = salary,
@@ -99,7 +106,7 @@ fun rowsToContacts(rows: List<List<String>>): List<ImportContact> {
             address = cell(row, addrIdx).ifBlank { null },
             bhkPreference = cell(row, bhkIdx).ifBlank { null },
         )
-    }.distinctBy { it.phone }
+    }.distinctBy { it.countryCode + it.phone }
 }
 
 /**
@@ -125,9 +132,11 @@ fun readDeviceContacts(context: Context): List<ImportContact> {
         val numCol = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
         while (c.moveToNext()) {
             val name = c.getString(nameCol)?.trim().orEmpty()
-            val phone = normalizePhone(c.getString(numCol).orEmpty())
+            // Address books usually store the code ("+971 50…"); keep it rather
+            // than assuming everyone in the book is Indian.
+            val (code, phone) = splitDialCode(c.getString(numCol).orEmpty())
             if (name.isBlank() || phone.length < 6) continue
-            out.putIfAbsent(phone, ImportContact(name = name, phone = phone, selected = false))
+            out.putIfAbsent(code + phone, ImportContact(name = name, phone = phone, countryCode = code, selected = false))
         }
     }
     return out.values.toList()

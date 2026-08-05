@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewModelScope
 import com.dealio.app.data.ApiResult
 import com.dealio.app.data.api.CpContact
+import com.dealio.app.ui.cp.contacts.DEFAULT_DIAL_CODE
+import com.dealio.app.ui.cp.contacts.dialable
 import com.dealio.app.data.api.CpLead
 import com.dealio.app.data.api.CpProfile
 import com.dealio.app.data.api.Project
@@ -66,10 +68,16 @@ class CpGrowthViewModel(app: Application) : CpViewModel(app) {
 
 // ─── Share / intent helpers ──────────────────────────────────────────────────
 
-/** Opens WhatsApp (or the chooser) pre-filled with [text], optionally to a 10-digit Indian [phone]. */
-fun openWhatsApp(ctx: Context, phone: String?, text: String) {
+/**
+ * Opens WhatsApp (or the chooser) pre-filled with [text], optionally to [phone].
+ *
+ * [countryCode] defaults to India because most callers pass a lead's bare
+ * national number; contacts carry their own code and should pass it, or a UAE
+ * number gets dialled as an Indian one.
+ */
+fun openWhatsApp(ctx: Context, phone: String?, text: String, countryCode: String = DEFAULT_DIAL_CODE) {
     val digits = phone?.filter { it.isDigit() }?.takeIf { it.isNotBlank() }
-    val to = if (digits != null) "91$digits" else ""
+    val to = if (digits != null) dialable(countryCode, digits) else ""
     val url = "https://wa.me/$to?text=${Uri.encode(text)}"
     runCatching {
         ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

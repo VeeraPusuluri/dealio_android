@@ -169,7 +169,11 @@ fun ImportPreviewSheet(
                             Column(Modifier.weight(1f)) {
                                 Text(c.name, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
                                 Text(
-                                    listOfNotNull(c.phone, c.designation, c.address).joinToString(" · "),
+                                    listOfNotNull(
+                                        "${flagFor(c.countryCode)} ${formatPhone(c.countryCode, c.phone)}",
+                                        c.designation,
+                                        c.address,
+                                    ).joinToString(" · "),
                                     color = TextSecondary, fontSize = 11.sp, maxLines = 1,
                                 )
                                 // The seeded figure is what makes the book sortable, so show

@@ -109,6 +109,8 @@ data class CpDocumentUploadResponse(
 data class CpContact(
     val id: Long = 0,
     val name: String = "",
+    /** Dial code, e.g. "+91". Kept apart from [phone] — see CountryCodes.kt. */
+    val countryCode: String = "+91",
     val phone: String = "",
     val email: String? = null,
     val notes: String? = null,
@@ -125,6 +127,7 @@ data class CpContact(
 data class CpContactPayload(
     val name: String,
     val phone: String,
+    val countryCode: String = "+91",
     val email: String? = null,
     val notes: String? = null,
     val tags: String? = null,

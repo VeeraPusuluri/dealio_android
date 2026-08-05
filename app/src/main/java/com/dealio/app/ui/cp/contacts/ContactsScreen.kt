@@ -281,7 +281,12 @@ fun ContactsScreen(nav: NavController, vm: ContactsViewModel = viewModel()) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(c.name, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                Text(c.phone, color = TextSecondary, fontSize = 12.sp)
+                                // The flag carries the country at a glance; the code
+                                // is still spelled out so it can be read off and dialled.
+                                Text(
+                                    "${flagFor(c.countryCode)} ${formatPhone(c.countryCode, c.phone)}",
+                                    color = TextSecondary, fontSize = 12.sp,
+                                )
                                 // What they do and earn is how a CP decides who to call first.
                                 val qualifiers = listOfNotNull(
                                     c.designation?.takeIf { it.isNotBlank() },
@@ -378,6 +383,37 @@ private fun SortRow(sort: ContactSort, onSort: (ContactSort) -> Unit) {
     }
 }
 
+/**
+ * Dial-code picker. A scrolling row of flags rather than a dropdown: India is
+ * the answer almost every time and stays first, so the common case is already
+ * selected and the rest are one tap away without opening a menu.
+ */
+@Composable
+private fun CountryCodeRow(selected: String, onSelect: (String) -> Unit) {
+    val chosen = normalizeDialCode(selected)
+    // A code that came off an import but isn't in the list still has to show.
+    val options = remember(chosen) {
+        if (DIAL_CODES.any { it.code == chosen }) DIAL_CODES
+        else DIAL_CODES + DialCode(chosen, "🌐", "Other")
+    }
+    Column {
+        Text("Country code", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(6.dp))
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            options.forEach { dc ->
+                SheetChip(
+                    text = "${dc.flag} ${dc.code}",
+                    selected = dc.code == chosen,
+                    onClick = { onSelect(dc.code) },
+                )
+            }
+        }
+    }
+}
+
 private val BHK_CHOICES = listOf("1 BHK", "2 BHK", "3 BHK", "4 BHK", "Villa", "Plot")
 
 /**
@@ -389,6 +425,7 @@ private val BHK_CHOICES = listOf("1 BHK", "2 BHK", "3 BHK", "4 BHK", "Villa", "P
 private fun ContactSheet(existing: CpContact?, onDismiss: () -> Unit, onSave: (CpContactPayload) -> Unit) {
     var name by remember { mutableStateOf(existing?.name ?: "") }
     var phone by remember { mutableStateOf(existing?.phone ?: "") }
+    var countryCode by remember { mutableStateOf(normalizeDialCode(existing?.countryCode)) }
     var email by remember { mutableStateOf(existing?.email ?: "") }
     var bhk by remember { mutableStateOf(existing?.bhkPreference ?: "") }
     var tags by remember { mutableStateOf(existing?.tags ?: "") }
@@ -427,6 +464,7 @@ private fun ContactSheet(existing: CpContact?, onDismiss: () -> Unit, onSave: (C
                                 CpContactPayload(
                                     name = name.trim(),
                                     phone = phone.trim(),
+                                    countryCode = countryCode,
                                     email = email.ifBlank { null },
                                     notes = notes.ifBlank { null },
                                     tags = tags.ifBlank { null },
@@ -448,10 +486,23 @@ private fun ContactSheet(existing: CpContact?, onDismiss: () -> Unit, onSave: (C
                 value = name, onValueChange = { name = it },
                 label = "Full name", icon = Icons.Outlined.Person, placeholder = "e.g. Ramesh Kumar",
             )
+            // Pasting a number with its own code retags the picker rather than
+            // stripping the code — that is how a number arrives off WhatsApp.
+            CountryCodeRow(selected = countryCode, onSelect = { countryCode = it })
             SheetField(
-                value = phone, onValueChange = { phone = it.filter(Char::isDigit) },
+                value = phone,
+                onValueChange = { typed ->
+                    if (typed.startsWith("+") || typed.startsWith("00")) {
+                        val (code, national) = splitDialCode(typed, fallback = countryCode)
+                        countryCode = code
+                        phone = national
+                    } else {
+                        phone = typed.filter(Char::isDigit)
+                    }
+                },
                 label = "Phone", icon = Icons.Outlined.Phone, keyboardType = KeyboardType.Phone,
-                placeholder = "10-digit mobile",
+                placeholder = if (countryCode == DEFAULT_DIAL_CODE) "10-digit mobile" else "Number without $countryCode",
+                supporting = phone.takeIf { it.length >= 6 }?.let { "Saves as ${formatPhone(countryCode, it)}" },
             )
             SheetField(
                 value = email, onValueChange = { email = it },

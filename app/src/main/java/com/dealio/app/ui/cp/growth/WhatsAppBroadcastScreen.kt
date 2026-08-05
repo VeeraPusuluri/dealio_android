@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.dealio.app.data.api.CpContact
+import com.dealio.app.ui.cp.contacts.formatPhone
 import com.dealio.app.data.api.Project
 import com.dealio.app.ui.builder.DealioCard
 import com.dealio.app.ui.builder.EmptyState
@@ -123,7 +124,7 @@ fun WhatsAppBroadcastScreen(nav: NavController, vm: CpGrowthViewModel = viewMode
                                 Spacer(Modifier.width(10.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(c.name, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                                    Text(c.phone + (c.bhkPreference?.let { " · $it" } ?: ""), color = TextSecondary, fontSize = 11.sp)
+                                    Text(formatPhone(c.countryCode, c.phone) + (c.bhkPreference?.let { " · $it" } ?: ""), color = TextSecondary, fontSize = 11.sp)
                                 }
                             }
                         }
@@ -208,6 +209,6 @@ private fun sendBroadcast(
     val chosen = contacts.filter { selectedIds.contains(it.id) }.take(3)
     chosen.forEach { c ->
         val msg = custom.ifBlank { broadcastMessage(c.name, project) }
-        if (c.phone.isNotBlank()) openWhatsApp(ctx, c.phone, msg)
+        if (c.phone.isNotBlank()) openWhatsApp(ctx, c.phone, msg, c.countryCode)
     }
 }
