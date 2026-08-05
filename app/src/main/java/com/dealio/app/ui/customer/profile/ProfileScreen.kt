@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.AddCard
@@ -286,6 +287,17 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
                         colors = ButtonDefaults.buttonColors(containerColor = Teal),
                     ) { Text("Save email", color = Color.White, fontWeight = FontWeight.SemiBold) }
                 }
+
+                // Meetups had no home of their own: the only way in was the strip
+                // on Explore, which deliberately renders nothing when nothing is
+                // on — so a customer with a quiet week could not reach the page
+                // at all, or find the invitations waiting on it.
+                ActionGroup(
+                    "Around you",
+                    listOf(
+                        ActionItem("Meetups", Icons.Outlined.Groups, Teal) { nav.navigate(CustomerRoutes.MEETUPS) },
+                    ),
+                )
 
                 ActionGroup(
                     "Home & finance",
