@@ -8,6 +8,11 @@ import com.dealio.app.ui.builder.titleCase
 /**
  * Caption generation for the Content Studio.
  *
+ * A caption is built from three inputs the CP chooses: the [OfferType] (what is actually
+ * on the table), the platform (how it is written), and the tone (who it is written for).
+ * The offer supplies the substance — its headline, terms and follow-up ask — while the
+ * platform composer decides the shape and the tone decides the angle.
+ *
  * A CP posting the same project to a family group and to a LinkedIn feed needs two
  * different posts, so we never hand back a single "the" caption. Every generate
  * produces one caption per [captionTones] entry and the CP picks the angle that fits
@@ -30,14 +35,14 @@ val captionTones = listOf(
 )
 
 /**
- * Three captions for [platform], one per tone.
+ * Three captions for [offer] on [platform], one per tone.
  *
- * [seed] rotates the hook and call-to-action pools, so "Regenerate" gives genuinely
- * different copy rather than the same sentence with a different emoji.
+ * [seed] rotates the hook, offer-term and follow-up pools, so "Regenerate" gives
+ * genuinely different copy rather than the same sentence with a different emoji.
  */
-fun captionVariants(project: Project, platform: String, seed: Int): List<CaptionVariant> {
+fun captionVariants(project: Project, offer: OfferType, platform: String, seed: Int): List<CaptionVariant> {
     val f = Facts(project)
-    return captionTones.map { tone -> CaptionVariant(tone, compose(f, platform, tone.id, seed)) }
+    return captionTones.map { tone -> CaptionVariant(tone, compose(f, offer, platform, tone.id, seed)) }
 }
 
 /** Compact INR — ₹1.2 Cr / ₹85 L. Shared by the caption and flyer builders. */
@@ -106,19 +111,37 @@ private fun urgencyHook(f: Facts, seed: Int) = pick(
     seed,
 )
 
-// ─── Platform composers ──────────────────────────────────────────────────────
+// ─── Offer block ─────────────────────────────────────────────────────────────
 
-private fun compose(f: Facts, platform: String, tone: String, seed: Int): String = when (platform) {
-    "instagram" -> instagram(f, tone, seed)
-    "facebook" -> facebook(f, tone, seed)
-    "linkedin" -> linkedin(f, tone, seed)
-    else -> whatsapp(f, tone, seed)
+/**
+ * The part of the caption that is about the deal rather than the building: a badge, the
+ * offer framed for this audience, and two of its terms. [bold] wraps the badge in
+ * WhatsApp's asterisks.
+ */
+private fun offerBlock(o: OfferType, tone: String, seed: Int, bold: Boolean = false): String {
+    val badge = if (bold) "*${o.badge}*" else o.badge
+    val terms = List(minOf(2, o.points.size)) { "• ${pick(o.points, seed + it)}" }
+    return (listOf("${o.emoji} $badge", o.angle(tone)) + terms).joinToString("\n")
 }
 
-private fun whatsapp(f: Facts, tone: String, seed: Int): String = when (tone) {
+/** What the CP is offering to send back, phrased to sit after "send you" / "share". */
+private fun OfferType.ask(seed: Int): String = pick(asks, seed)
+
+// ─── Platform composers ──────────────────────────────────────────────────────
+
+private fun compose(f: Facts, o: OfferType, platform: String, tone: String, seed: Int): String = when (platform) {
+    "instagram" -> instagram(f, o, tone, seed)
+    "facebook" -> facebook(f, o, tone, seed)
+    "linkedin" -> linkedin(f, o, tone, seed)
+    else -> whatsapp(f, o, tone, seed)
+}
+
+private fun whatsapp(f: Facts, o: OfferType, tone: String, seed: Int): String = when (tone) {
     "investor" -> lines(
         "📊 *${f.name}* — the numbers",
         f.where.takeIf { it.isNotBlank() }?.let { "📍 $it" },
+        "",
+        offerBlock(o, tone, seed, bold = true),
         "",
         f.price?.let { "• Entry from $it" },
         f.configs?.let { "• Configurations: $it" },
@@ -128,14 +151,7 @@ private fun whatsapp(f: Facts, tone: String, seed: Int): String = when (tone) {
         "",
         investorHook(f, seed),
         "",
-        pick(
-            listOf(
-                "Reply here and I'll send the price sheet, the payment plan and a rental comparison for the area.",
-                "Want the full investment note? Reply and I'll share it along with the payment schedule.",
-                "I can put together a cost sheet with registration and GST included — just say the word.",
-            ),
-            seed,
-        ),
+        "Reply here and I'll send you ${o.ask(seed)}.",
     )
 
     "urgency" -> lines(
@@ -143,16 +159,11 @@ private fun whatsapp(f: Facts, tone: String, seed: Int): String = when (tone) {
         listOfNotNull(f.configs, f.price?.let { "from $it" }).joinToString(" · ").takeIf { it.isNotBlank() },
         f.where.takeIf { it.isNotBlank() }?.let { "📍 $it" },
         "",
+        offerBlock(o, tone, seed, bold = true),
+        "",
         urgencyHook(f, seed),
         "",
-        pick(
-            listOf(
-                "Reply today and I'll hold a shortlist of units for you.",
-                "Say the word and I'll check what is still open on the good floors.",
-                "Free this weekend? I can block a site visit slot before the release closes.",
-            ),
-            seed,
-        ),
+        "Reply today and I'll send you ${o.ask(seed)}.",
     )
 
     else -> lines(
@@ -161,28 +172,24 @@ private fun whatsapp(f: Facts, tone: String, seed: Int): String = when (tone) {
         "",
         lifestyleHook(f, seed),
         "",
+        offerBlock(o, tone, seed, bold = true),
+        "",
         f.configs?.let { "🛏 $it" },
         f.price?.let { "💰 Starting $it" },
         f.possession?.let { "🗓 Possession $it" },
         f.amenities?.let { "✨ $it" },
         "",
-        pick(
-            listOf(
-                "Reply here and I'll send the floor plans and the latest price sheet.",
-                "Shall I send across the brochure and the payment plan?",
-                "Free to visit this weekend? I can block a site visit slot for you.",
-            ),
-            seed,
-        ),
+        "Reply here and I'll send you ${o.ask(seed)}.",
     )
 }
 
-private fun instagram(f: Facts, tone: String, seed: Int): String {
+private fun instagram(f: Facts, o: OfferType, tone: String, seed: Int): String {
     val tags = when (tone) {
-        "investor" -> "#RealEstateInvestment #${f.tag} #PropertyInvestment #RentalYield #RealEstateIndia"
-        "urgency" -> "#${f.tag}Property #NewLaunch #LimitedUnits #RealEstateIndia"
-        else -> "#${f.tag}RealEstate #${f.tag}Homes #NewLaunch #DreamHome #RealEstateIndia"
+        "investor" -> "${o.hashtag} #RealEstateInvestment #${f.tag} #PropertyInvestment #RealEstateIndia"
+        "urgency" -> "${o.hashtag} #${f.tag}Property #LimitedUnits #RealEstateIndia"
+        else -> "${o.hashtag} #${f.tag}RealEstate #${f.tag}Homes #DreamHome #RealEstateIndia"
     }
+    val dm = "DM \"${o.keyword}\" and I'll send you ${o.ask(seed)}"
     return when (tone) {
         "investor" -> lines(
             "📈 ${investorHook(f, seed)}",
@@ -190,12 +197,14 @@ private fun instagram(f: Facts, tone: String, seed: Int): String {
             f.name,
             f.where.takeIf { it.isNotBlank() },
             "",
+            offerBlock(o, tone, seed),
+            "",
             f.price?.let { "• Ticket size from $it" },
             f.configs?.let { "• $it" },
             f.possession?.let { "• Possession $it" },
             f.rera?.let { "• RERA $it" },
             "",
-            "DM \"NUMBERS\" and I'll send the price sheet and payment plan 📊",
+            "$dm 📊",
             "",
             tags,
         )
@@ -206,7 +215,9 @@ private fun instagram(f: Facts, tone: String, seed: Int): String {
             "${f.name}${f.where.takeIf { it.isNotBlank() }?.let { " — $it" } ?: ""}",
             listOfNotNull(f.price?.let { "From $it" }, f.configs).joinToString(" · ").takeIf { it.isNotBlank() },
             "",
-            "DM before the next price revision 🔑",
+            offerBlock(o, tone, seed),
+            "",
+            "$dm 🔑",
             "",
             tags,
         )
@@ -217,68 +228,81 @@ private fun instagram(f: Facts, tone: String, seed: Int): String {
             "🏡 ${f.name}${f.configs?.let { " — $it" } ?: ""}",
             f.where.takeIf { it.isNotBlank() }?.let { "📍 $it" },
             f.price?.let { "💰 Starting $it" },
-            f.amenities?.let { "\n✨ $it" },
+            f.amenities?.let { "✨ $it" },
             "",
-            "DM \"HOME\" and I'll send the full details 🔑",
+            offerBlock(o, tone, seed),
+            "",
+            "$dm 🔑",
             "",
             tags,
         )
     }
 }
 
-private fun facebook(f: Facts, tone: String, seed: Int): String = when (tone) {
-    "investor" -> lines(
-        "📊 Investment snapshot — ${f.name}${f.where.takeIf { it.isNotBlank() }?.let { ", $it" } ?: ""}",
-        "",
-        investorHook(f, seed),
-        "",
-        f.price?.let { "💰 Entry from $it" },
-        f.configs?.let { "🏗️ $it" },
-        f.possession?.let { "🗓️ Possession $it" },
-        f.builder?.let { "🏢 Developed by $it" },
-        f.rera?.let { "✅ RERA $it" },
-        "",
-        "Message me for the full investment note — price sheet, payment plan and comparables.",
-        "",
-        "#RealEstateInvestment #${f.tag}",
-    )
-
-    "urgency" -> lines(
-        "⚡ ${f.name} — ${urgencyHook(f, seed)}",
-        "",
-        listOfNotNull(
-            f.where.takeIf { it.isNotBlank() }?.let { "📍 $it" },
-            f.price?.let { "💰 From $it" },
+private fun facebook(f: Facts, o: OfferType, tone: String, seed: Int): String {
+    val comment = "Comment \"${o.keyword}\" or message me and I'll share ${o.ask(seed)}."
+    return when (tone) {
+        "investor" -> lines(
+            "📊 Investment snapshot — ${f.name}${f.where.takeIf { it.isNotBlank() }?.let { ", $it" } ?: ""}",
+            "",
+            investorHook(f, seed),
+            "",
+            offerBlock(o, tone, seed),
+            "",
+            f.price?.let { "💰 Entry from $it" },
             f.configs?.let { "🏗️ $it" },
-        ).joinToString("\n").takeIf { it.isNotBlank() },
-        "",
-        "Comment \"SEND\" and I'll share the details before this release closes.",
-        "",
-        "#${f.tag}Homes #NewLaunch",
-    )
+            f.possession?.let { "🗓️ Possession $it" },
+            f.builder?.let { "🏢 Developed by $it" },
+            f.rera?.let { "✅ RERA $it" },
+            "",
+            comment,
+            "",
+            "${o.hashtag} #RealEstateInvestment #${f.tag}",
+        )
 
-    else -> lines(
-        "🏠 Introducing ${f.name}${f.builder?.let { " by $it" } ?: ""}",
-        "",
-        lifestyleHook(f, seed),
-        "",
-        f.where.takeIf { it.isNotBlank() }?.let { "📍 $it" },
-        f.configs?.let { "🏗️ $it" },
-        f.price?.let { "💰 Starting $it" },
-        f.amenities?.let { "✨ $it" },
-        f.possession?.let { "🗓️ Possession $it" },
-        "",
-        "Comment \"INTERESTED\" or send me a message and I'll share the brochure and floor plans.",
-        "",
-        "#${f.tag}Homes #RealEstate",
-    )
+        "urgency" -> lines(
+            "⚡ ${f.name} — ${urgencyHook(f, seed)}",
+            "",
+            listOfNotNull(
+                f.where.takeIf { it.isNotBlank() }?.let { "📍 $it" },
+                f.price?.let { "💰 From $it" },
+                f.configs?.let { "🏗️ $it" },
+            ).joinToString("\n").takeIf { it.isNotBlank() },
+            "",
+            offerBlock(o, tone, seed),
+            "",
+            comment,
+            "",
+            "${o.hashtag} #${f.tag}Homes",
+        )
+
+        else -> lines(
+            "🏠 Introducing ${f.name}${f.builder?.let { " by $it" } ?: ""}",
+            "",
+            lifestyleHook(f, seed),
+            "",
+            offerBlock(o, tone, seed),
+            "",
+            f.where.takeIf { it.isNotBlank() }?.let { "📍 $it" },
+            f.configs?.let { "🏗️ $it" },
+            f.price?.let { "💰 Starting $it" },
+            f.amenities?.let { "✨ $it" },
+            f.possession?.let { "🗓️ Possession $it" },
+            "",
+            comment,
+            "",
+            "${o.hashtag} #${f.tag}Homes #RealEstate",
+        )
+    }
 }
 
-private fun linkedin(f: Facts, tone: String, seed: Int): String = when (tone) {
+private fun linkedin(f: Facts, o: OfferType, tone: String, seed: Int): String = when (tone) {
     "investor" -> lines(
         "Investment note — ${f.name}${f.where.takeIf { it.isNotBlank() }?.let { ", $it" } ?: ""}.",
         "",
         investorHook(f, seed),
+        "",
+        offerBlock(o, tone, seed),
         "",
         f.price?.let { "• Entry ticket: $it" },
         f.configs?.let { "• Configurations: $it" },
@@ -286,9 +310,9 @@ private fun linkedin(f: Facts, tone: String, seed: Int): String = when (tone) {
         f.builder?.let { "• Developer: $it" },
         f.rera?.let { "• RERA: $it" },
         "",
-        "Happy to share the price sheet, payment plan and micro-market comparables with anyone evaluating the corridor.",
+        "Happy to share ${o.ask(seed)} with anyone evaluating the corridor.",
         "",
-        "#RealEstateInvestment #${f.tag} #PropertyMarket",
+        "${o.hashtag} #RealEstateInvestment #${f.tag} #PropertyMarket",
     )
 
     "urgency" -> lines(
@@ -296,11 +320,13 @@ private fun linkedin(f: Facts, tone: String, seed: Int): String = when (tone) {
         "",
         urgencyHook(f, seed),
         "",
+        offerBlock(o, tone, seed),
+        "",
         listOfNotNull(f.price?.let { "Starting $it" }, f.configs).joinToString(" · ").takeIf { it.isNotBlank() },
         "",
-        "If you or someone in your network is evaluating ${f.city ?: "the market"} right now, I can share the current availability.",
+        "If you or someone in your network is evaluating ${f.city ?: "the market"} right now, I can send across ${o.ask(seed)}.",
         "",
-        "#RealEstate #${f.tag}",
+        "${o.hashtag} #RealEstate #${f.tag}",
     )
 
     else -> lines(
@@ -308,14 +334,16 @@ private fun linkedin(f: Facts, tone: String, seed: Int): String = when (tone) {
         "",
         lifestyleHook(f, seed),
         "",
+        offerBlock(o, tone, seed),
+        "",
         f.configs?.let { "• Configurations: $it" },
         f.price?.let { "• Starting price: $it" },
         f.possession?.let { "• Possession: $it" },
         f.status?.let { "• Status: $it" },
         f.rera?.let { "• RERA: $it" },
         "",
-        "Reach out if you would like the detailed presentation or a site visit arranged.",
+        "Reach out if you would like ${o.ask(seed)} or a site visit arranged.",
         "",
-        "#RealEstate #${f.tag} #Housing",
+        "${o.hashtag} #RealEstate #${f.tag} #Housing",
     )
 }

@@ -97,6 +97,7 @@ fun ContentStudioScreen(nav: NavController, vm: CpGrowthViewModel = viewModel())
     var mode by remember { mutableStateOf("caption") }
 
     // Caption state
+    var offerId by remember { mutableStateOf<String?>(null) }
     var platform by remember { mutableStateOf("whatsapp") }
     var variants by remember { mutableStateOf<List<CaptionVariant>>(emptyList()) }
     var chosenTone by remember { mutableStateOf<String?>(null) }
@@ -174,9 +175,59 @@ fun ContentStudioScreen(nav: NavController, vm: CpGrowthViewModel = viewModel())
             }
 
             if (mode == "caption") {
+                // Offer — what is actually on the table decides what the caption says
+                val offer = offerTypeOf(offerId)
+                DealioCard {
+                    SectionLabel("2. What is on offer?")
+                    Text(
+                        "The caption is built around this, so pick the one you are actually selling on.",
+                        color = TextSecondary,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Column(
+                        Modifier.heightIn(max = 260.dp).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        offerTypes.forEach { o ->
+                            val sel = offerId == o.id
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .background(if (sel) Color(0xFFF3FCFD) else Color.White, RoundedCornerShape(13.dp))
+                                    .border(if (sel) 1.5.dp else 1.dp, if (sel) Teal else CardBorder, RoundedCornerShape(13.dp))
+                                    .clickable { offerId = o.id; resetCaptions() }
+                                    .padding(13.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(o.emoji, fontSize = 15.sp)
+                                Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(o.label, color = if (sel) Teal else TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text(o.keyFeature, color = TextSecondary, fontSize = 10.5.sp, modifier = Modifier.padding(top = 2.dp))
+                                }
+                                if (sel) {
+                                    Spacer(Modifier.width(8.dp))
+                                    Icon(Icons.Outlined.CheckCircle, null, tint = Teal, modifier = Modifier.size(17.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (offer == null) {
+                    Text(
+                        "Pick an offer type and the captions will be written around its terms.",
+                        color = TextSecondary,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                    )
+                    return@Column
+                }
+
                 // Platform
                 DealioCard {
-                    SectionLabel("2. Choose platform")
+                    SectionLabel("3. Choose platform")
                     Spacer(Modifier.height(10.dp))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         platforms.forEach { pl ->
@@ -207,7 +258,7 @@ fun ContentStudioScreen(nav: NavController, vm: CpGrowthViewModel = viewModel())
                         scope.launch {
                             delay(450)
                             seed = next
-                            variants = captionVariants(selected, platform, next)
+                            variants = captionVariants(selected, offer, platform, next)
                             chosenTone = null
                             draft = ""
                             generating = false
@@ -217,9 +268,9 @@ fun ContentStudioScreen(nav: NavController, vm: CpGrowthViewModel = viewModel())
 
                 if (variants.isNotEmpty()) {
                     DealioCard {
-                        SectionLabel("3. Pick the one that fits")
+                        SectionLabel("4. Pick the one that fits")
                         Text(
-                            "Same project, three angles. Tap one to edit and send it.",
+                            "Same offer, three angles. Tap one to edit and send it.",
                             color = TextSecondary,
                             fontSize = 11.sp,
                             modifier = Modifier.padding(top = 4.dp),
@@ -263,7 +314,7 @@ fun ContentStudioScreen(nav: NavController, vm: CpGrowthViewModel = viewModel())
                 if (chosenTone != null) {
                     DealioCard {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            SectionLabel("4. Edit and send")
+                            SectionLabel("5. Edit and send")
                             Row(
                                 Modifier.clickable { copyToClipboard(ctx, "Caption", draft) },
                                 verticalAlignment = Alignment.CenterVertically,

@@ -228,6 +228,12 @@ data class CpMeetup(
     val description: String? = null,
     /** See [com.dealio.app.ui.cp.meetups.MeetupCategory]. */
     val category: String = "SITE_VISIT",
+    /** The photograph at the top of the event page. null falls back to the category wash. */
+    val coverImage: String? = null,
+    /** Venue photographs, in upload order. */
+    val photos: List<String> = emptyList(),
+    /** What it is about, in the organiser's words — "First-time buyers", "NRI". */
+    val topics: List<String> = emptyList(),
     val location: String = "",
     /** What a customer's preferred city is matched against. */
     val city: String? = null,
