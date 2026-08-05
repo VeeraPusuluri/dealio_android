@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The only files we ever hand to another app: the flyer JPEGs the Content Studio
+  renders. They live in the cache so the OS can reclaim them, and nothing else in
+  the app's storage is exposed.
+-->
+<paths>
+    <cache-path name="shared_flyers" path="shared_flyers/" />
+</paths>
