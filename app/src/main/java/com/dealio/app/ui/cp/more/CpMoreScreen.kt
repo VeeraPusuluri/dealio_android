@@ -73,6 +73,18 @@ fun CpMoreScreen(nav: NavController, onLogout: () -> Unit) {
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
+            // The partner's own account leads the page. Verification is what a CP
+            // opens More to check — whether they are cleared to deal — and it sat
+            // six rows down inside "Workspace", a group about their work rather
+            // than about them. iOS files the same row under "Account" too, in
+            // CPMoreView.swift.
+            ActionGroup(
+                "Account",
+                listOf(
+                    ActionItem("Profile & verification", Icons.Outlined.Person, IconBlue) { nav.navigate(CpRoutes.PROFILE) },
+                ),
+            )
+
             ActionGroup(
                 "Workspace",
                 listOf(
@@ -85,7 +97,6 @@ fun CpMoreScreen(nav: NavController, onLogout: () -> Unit) {
                     // gathering, with a guest list.
                     ActionItem("Site meetings", Icons.Outlined.CalendarMonth, IconPurple) { nav.navigate(CpRoutes.MEETINGS) },
                     ActionItem("Your meetups", Icons.Outlined.Groups, Teal) { nav.navigate(CpRoutes.MEETUPS) },
-                    ActionItem("Profile & verification", Icons.Outlined.Person, IconBlue) { nav.navigate(CpRoutes.PROFILE) },
                     ActionItem("Notifications", Icons.Outlined.Notifications, IconRed) { nav.navigate(CpRoutes.NOTIFICATIONS) },
                 ),
             )
