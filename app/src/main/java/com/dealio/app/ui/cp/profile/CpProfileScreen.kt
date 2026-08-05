@@ -233,7 +233,7 @@ fun CpProfileScreen(nav: NavController, vm: CpProfileViewModel = viewModel()) {
                         reraNumber = cp?.reraNumber,
                         authorizedBuilders = p?.authorizedBuilders ?: emptyList(),
                         uploadingPhoto = state.uploadingDoc == "photo",
-                        onPhotoClick = { photoPicker.launch("image/*") },
+                        onChangePhoto = { photoPicker.launch("image/*") },
                     )
 
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -22,6 +23,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,9 +37,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.dealio.app.data.api.CpAuthorizedBuilder
 import com.dealio.app.ui.builder.initialsOf
+import com.dealio.app.ui.builder.resolveUrl
 import com.dealio.app.ui.theme.NavyDeep
 import com.dealio.app.ui.theme.NavyPrimary
 import com.dealio.app.ui.theme.softShadow
@@ -80,9 +88,12 @@ fun EngravedLabel(text: String, color: Color, modifier: Modifier = Modifier, siz
 /**
  * The CP's credential card.
  *
- * [onPhotoClick] makes the portrait the upload target — on a card, the portrait
- * is the obvious thing to tap, so a separate "change photo" control would only
- * be a second place to look.
+ * The portrait and the camera badge are two different gestures, not one target
+ * hit twice: tapping a face shows you the face, and the badge — the only thing
+ * on the card wearing a camera — is what replaces it. Wiring both to the picker
+ * meant a partner could never look at their own photo without being asked for a
+ * new one. Until there *is* a photo the portrait falls through to
+ * [onChangePhoto], since an empty viewer is not worth opening.
  */
 @Composable
 fun CpCredentialCard(
@@ -94,11 +105,16 @@ fun CpCredentialCard(
     reraNumber: String? = null,
     authorizedBuilders: List<CpAuthorizedBuilder> = emptyList(),
     uploadingPhoto: Boolean = false,
-    onPhotoClick: (() -> Unit)? = null,
+    onChangePhoto: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val metal = metalFor(tier)
     val shape = RoundedCornerShape(22.dp)
+    // The backend stores the upload URL with whatever scheme it saw at upload
+    // time — usually plain http, which this app's network config blocks. Left
+    // unresolved the portrait silently fell back to initials forever.
+    val resolvedPhoto = resolveUrl(photoUrl)
+    var viewingPhoto by remember { mutableStateOf(false) }
 
     Box(
         modifier
@@ -125,7 +141,14 @@ fun CpCredentialCard(
 
         Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                CredentialPortrait(name, photoUrl, metal, uploadingPhoto, onPhotoClick)
+                CredentialPortrait(
+                    name = name,
+                    photoUrl = resolvedPhoto,
+                    metal = metal,
+                    uploading = uploadingPhoto,
+                    onView = if (resolvedPhoto != null) ({ viewingPhoto = true }) else onChangePhoto,
+                    onChange = onChangePhoto,
+                )
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     EngravedLabel("${metal.label} Partner", metal.face)
@@ -185,6 +208,16 @@ fun CpCredentialCard(
             }
         }
     }
+
+    if (viewingPhoto && resolvedPhoto != null) {
+        CredentialPhotoDialog(
+            name = name,
+            photoUrl = resolvedPhoto,
+            metal = metal,
+            onChangePhoto = onChangePhoto?.let { change -> { viewingPhoto = false; change() } },
+            onDismiss = { viewingPhoto = false },
+        )
+    }
 }
 
 @Composable
@@ -193,7 +226,8 @@ private fun CredentialPortrait(
     photoUrl: String?,
     metal: TierMetal,
     uploading: Boolean,
-    onPhotoClick: (() -> Unit)?,
+    onView: (() -> Unit)?,
+    onChange: (() -> Unit)?,
 ) {
     val ring = RoundedCornerShape(18.dp)
     Box(contentAlignment = Alignment.BottomEnd) {
@@ -203,7 +237,7 @@ private fun CredentialPortrait(
                 .clip(ring)
                 .background(Color.White.copy(alpha = 0.10f))
                 .border(1.dp, metal.face.copy(alpha = 0.45f), ring)
-                .then(if (onPhotoClick != null && !uploading) Modifier.clickable { onPhotoClick() } else Modifier),
+                .then(if (onView != null && !uploading) Modifier.clickable { onView() } else Modifier),
             contentAlignment = Alignment.Center,
         ) {
             // Initials are drawn first and the photo sits on top, so a URL that
@@ -223,13 +257,91 @@ private fun CredentialPortrait(
                 }
             }
         }
-        if (onPhotoClick != null && !uploading) {
+        if (onChange != null && !uploading) {
             Box(
                 Modifier.size(22.dp).clip(CircleShape).background(metal.face)
-                    .clickable { onPhotoClick() },
+                    .clickable { onChange() },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Outlined.PhotoCamera, "Change photo", tint = NavyDeep, modifier = Modifier.size(13.dp))
+                Icon(Icons.Outlined.PhotoCamera, "Upload photo", tint = NavyDeep, modifier = Modifier.size(13.dp))
+            }
+        }
+    }
+}
+
+/**
+ * The portrait, full size.
+ *
+ * No dialog chrome, same as the credential dialog it can open from: the photo
+ * on the navy field is the content. "Change photo" is repeated here because the
+ * one place you can look at the picture is the obvious place to decide you want
+ * a different one — and it closes the viewer first, so the picker doesn't come
+ * back to a stale image sitting underneath it.
+ */
+@Composable
+private fun CredentialPhotoDialog(
+    name: String,
+    photoUrl: String,
+    metal: TierMetal,
+    onChangePhoto: (() -> Unit)?,
+    onDismiss: () -> Unit,
+) {
+    val frame = RoundedCornerShape(24.dp)
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(frame)
+                    .background(NavyDeep)
+                    .border(1.dp, metal.edge.copy(alpha = 0.55f), frame),
+                contentAlignment = Alignment.Center,
+            ) {
+                // Initials underneath, as on the card, so a photo that fails to
+                // load leaves something face-shaped rather than a black square.
+                Text(
+                    initialsOf(name),
+                    color = Color.White.copy(alpha = 0.30f),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 64.sp,
+                )
+                AsyncImage(
+                    model = photoUrl,
+                    contentDescription = name,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(frame),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(
+                Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(NavyDeep.copy(alpha = 0.88f))
+                    .padding(horizontal = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                EngravedLabel(
+                    "Close",
+                    Color.White.copy(alpha = 0.60f),
+                    Modifier.clip(RoundedCornerShape(10.dp)).clickable { onDismiss() }
+                        .padding(horizontal = 12.dp, vertical = 11.dp),
+                    size = 11,
+                )
+                if (onChangePhoto != null) {
+                    EngravedLabel(
+                        "Change photo",
+                        metal.face,
+                        Modifier.clip(RoundedCornerShape(10.dp)).clickable { onChangePhoto() }
+                            .padding(horizontal = 12.dp, vertical = 11.dp),
+                        size = 11,
+                    )
+                }
             }
         }
     }

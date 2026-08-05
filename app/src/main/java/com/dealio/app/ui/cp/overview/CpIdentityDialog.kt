@@ -73,7 +73,7 @@ fun CpIdentityDialog(
                 reraNumber = reraNumber,
                 authorizedBuilders = authorizedBuilders,
                 uploadingPhoto = uploadingPhoto,
-                onPhotoClick = { photoPicker.launch("image/*") },
+                onChangePhoto = { photoPicker.launch("image/*") },
             )
 
             if (authorizedBuilders.isEmpty()) {
