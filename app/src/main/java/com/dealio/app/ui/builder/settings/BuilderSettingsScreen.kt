@@ -17,9 +17,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material3.Icon
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,7 +37,9 @@ import com.dealio.app.ui.builder.DealioCard
 import com.dealio.app.ui.builder.InfoRow
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.SubScreenScaffold
-import com.dealio.app.ui.builder.initialsOf
+import com.dealio.app.ui.components.ProfileAvatar
+import com.dealio.app.ui.components.rememberProfileAvatarState
+import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.ErrorRed
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
@@ -43,16 +49,24 @@ import com.dealio.app.ui.theme.TextSecondary
 fun BuilderSettingsScreen(nav: NavController, onLogout: () -> Unit) {
     val context = LocalContext.current
     val user = remember { TokenStore(context).user() }
+    val snackbar = remember { SnackbarHostState() }
+    val avatar = rememberProfileAvatarState(rememberCoroutineScope())
+    LaunchedEffect(avatar.message) { avatar.consumeMessage()?.let { snackbar.showSnackbar(it) } }
 
     SubScreenScaffold("Settings", nav) { pad ->
+      Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().padding(pad).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             // Profile card
             DealioCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier.size(56.dp).background(Teal, RoundedCornerShape(16.dp)),
-                        contentAlignment = Alignment.Center,
-                    ) { Text(initialsOf(user?.fullName), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+                    ProfileAvatar(
+                        name = user?.fullName,
+                        state = avatar,
+                        size = 64.dp,
+                        // On white card stock the white ring the branded headers
+                        // use would simply vanish.
+                        ringColor = CardBorder,
+                    )
                     Spacer(Modifier.size(14.dp))
                     Column {
                         Text(user?.fullName ?: "Builder", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold)
@@ -89,5 +103,7 @@ fun BuilderSettingsScreen(nav: NavController, onLogout: () -> Unit) {
                 Text("Sign out", color = ErrorRed, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
             }
         }
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(16.dp))
+      }
     }
 }

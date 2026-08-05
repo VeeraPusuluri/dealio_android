@@ -1,8 +1,12 @@
 package com.dealio.app.data.api
 
+import okhttp3.MultipartBody
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.Part
 
 /**
  * Auth endpoints of the Dealio backend (under /api/auth).
@@ -41,6 +45,16 @@ interface AuthApi {
     /** Registers this device's FCM token for push notifications (requires auth). */
     @POST("auth/device-token")
     suspend fun registerDeviceToken(@Body body: DeviceTokenRequest): Response<ApiEnvelope<Unit>>
+
+    // ── Profile picture ──────────────────────────────────────────────────────
+    // Whoever holds the token; there is no user id in the path by design.
+
+    @Multipart
+    @POST("auth/me/avatar")
+    suspend fun uploadAvatar(@Part file: MultipartBody.Part): Response<ApiEnvelope<AuthUser>>
+
+    @DELETE("auth/me/avatar")
+    suspend fun removeAvatar(): Response<ApiEnvelope<AuthUser>>
 }
 
 // ── Requests ─────────────────────────────────────────────────────────────────
@@ -116,4 +130,9 @@ data class AuthUser(
     val phone: String,
     val role: String,
     val email: String? = null,
+    /**
+     * Profile picture, absolute. Null for anyone who has not set one — every
+     * screen that draws it falls back to initials rather than a grey silhouette.
+     */
+    val avatarUrl: String? = null,
 )

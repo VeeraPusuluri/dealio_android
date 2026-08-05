@@ -3,6 +3,7 @@ package com.dealio.app.data
 import com.dealio.app.data.api.ApiEnvelope
 import com.dealio.app.data.api.AuthApi
 import com.dealio.app.data.api.AuthData
+import com.dealio.app.data.api.AuthUser
 import com.dealio.app.data.api.FirebaseAuthRequest
 import com.dealio.app.data.api.PhoneLookupData
 import com.dealio.app.data.api.PhoneLookupRequest
@@ -11,6 +12,9 @@ import com.dealio.app.data.api.SendOtpRequest
 import com.dealio.app.data.api.VerifyLoginRequest
 import com.dealio.app.data.api.VerifySignupRequest
 import com.google.gson.Gson
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Response
 import java.io.IOException
 
@@ -93,6 +97,23 @@ class AuthRepository(
                 )
             )
         }.also { if (it is ApiResult.Success) tokenStore.save(it.data) }
+
+    // ── Profile picture ──────────────────────────────────────────────────────
+    // Both write straight back into the token store: it holds the app's only
+    // copy of the signed-in user between logins, so a picture that changed on
+    // the server but not here would come back the moment a screen re-read it.
+
+    suspend fun uploadAvatar(bytes: ByteArray, fileName: String, mime: String): ApiResult<AuthUser> {
+        val part = MultipartBody.Part.createFormData(
+            "file", fileName, bytes.toRequestBody(mime.toMediaTypeOrNull()),
+        )
+        return call { api.uploadAvatar(part) }
+            .also { if (it is ApiResult.Success) tokenStore.avatarUrl = it.data.avatarUrl }
+    }
+
+    suspend fun removeAvatar(): ApiResult<AuthUser> =
+        call { api.removeAvatar() }
+            .also { if (it is ApiResult.Success) tokenStore.avatarUrl = null }
 
     /** Unwraps the `{ ok, message, data }` envelope and normalizes failures. */
     private suspend fun <T> call(block: suspend () -> Response<ApiEnvelope<T>>): ApiResult<T> {

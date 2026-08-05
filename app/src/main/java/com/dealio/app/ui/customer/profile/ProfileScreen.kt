@@ -51,6 +51,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,6 +79,8 @@ import com.dealio.app.ui.components.IconGreen
 import com.dealio.app.ui.components.IconOrange
 import com.dealio.app.ui.components.IconPurple
 import com.dealio.app.ui.components.IconRed
+import com.dealio.app.ui.components.ProfileAvatar
+import com.dealio.app.ui.components.rememberProfileAvatarState
 import com.dealio.app.ui.components.dealioFieldColors
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.customer.CustomerViewModel
@@ -153,6 +156,9 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
 
+    val avatar = rememberProfileAvatarState(rememberCoroutineScope())
+    LaunchedEffect(avatar.message) { avatar.consumeMessage()?.let { snackbar.showSnackbar(it) } }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
@@ -183,24 +189,7 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
                         .padding(horizontal = 20.dp, vertical = 26.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Box(
-                        Modifier
-                            .size(88.dp)
-                            .border(2.dp, Color.White.copy(alpha = 0.35f), CircleShape)
-                            .padding(5.dp)
-                            .background(
-                                Brush.linearGradient(listOf(TealBright, Teal)),
-                                CircleShape,
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            initialsOf(state.name),
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 28.sp,
-                        )
-                    }
+                    ProfileAvatar(name = state.name, state = avatar)
                     Spacer(Modifier.height(14.dp))
                     Text(state.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     if (state.phone.isNotBlank()) {

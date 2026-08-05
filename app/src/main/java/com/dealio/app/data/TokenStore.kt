@@ -30,6 +30,7 @@ class TokenStore(context: Context) {
             putString(KEY_PHONE, auth.user.phone)
             putString(KEY_ROLE, auth.user.role)
             putString(KEY_EMAIL, auth.user.email)
+            putString(KEY_AVATAR_URL, auth.user.avatarUrl)
         }
     }
 
@@ -41,8 +42,19 @@ class TokenStore(context: Context) {
             phone = prefs.getString(KEY_PHONE, "") ?: "",
             role = prefs.getString(KEY_ROLE, "CUSTOMER") ?: "CUSTOMER",
             email = prefs.getString(KEY_EMAIL, null),
+            avatarUrl = prefs.getString(KEY_AVATAR_URL, null),
         )
     }
+
+    /**
+     * Remembers a picture the user just set.
+     *
+     * The session payload only arrives at sign-in, so without this a new photo
+     * would not appear anywhere else in the app until the next login.
+     */
+    var avatarUrl: String?
+        get() = prefs.getString(KEY_AVATAR_URL, null)
+        set(value) = prefs.edit { putString(KEY_AVATAR_URL, value) }
 
     /**
      * The customer's preferred city, remembered locally.
@@ -67,6 +79,7 @@ class TokenStore(context: Context) {
         const val KEY_PHONE = "phone"
         const val KEY_ROLE = "role"
         const val KEY_EMAIL = "email"
+        const val KEY_AVATAR_URL = "avatar_url"
         const val KEY_PREFERRED_CITY = "preferred_city"
     }
 }
