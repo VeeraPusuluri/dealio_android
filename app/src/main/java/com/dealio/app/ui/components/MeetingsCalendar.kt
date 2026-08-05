@@ -59,6 +59,16 @@ data class CalMeeting(
     val color: Color,
 )
 
+/**
+ * What kind of appointment this is.
+ *
+ * Shared because both sides of the same booking offer it: a buyer arranging
+ * their own visit from a project page, and a CP arranging one on their behalf.
+ * The string is stored on the meeting exactly as picked, so the two lists have
+ * to stay identical or the builder sees two vocabularies for one thing.
+ */
+val meetingTypes = listOf("Site Visit", "Virtual Tour", "Office Meeting")
+
 /** "2026-07-02" / "2026-07-02T…" → LocalDate (null if unparseable). */
 fun calDate(iso: String?): LocalDate? {
     if (iso == null || iso.length < 10) return null

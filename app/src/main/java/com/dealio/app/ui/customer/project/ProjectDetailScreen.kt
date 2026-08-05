@@ -127,6 +127,7 @@ import com.dealio.app.ui.builder.priceLow
 import com.dealio.app.ui.builder.resolveUrl
 import com.dealio.app.ui.builder.titleCase
 import com.dealio.app.ui.components.dealioFieldColors
+import com.dealio.app.ui.components.meetingTypes
 import com.dealio.app.ui.components.shareViaWhatsApp
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.theme.CardBorder
@@ -153,7 +154,8 @@ private const val HERO_ADVANCE_MS = 4_000L
 private const val LOCATION_ADV_PREVIEW = 4
 
 private val timeSlots = listOf("10:00 AM", "11:00 AM", "12:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM")
-private val visitTypes = listOf("Site Visit", "Virtual Tour", "Office Meeting")
+// The CP's own booking form offers the same three — see meetingTypes.
+private val visitTypes = meetingTypes
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
