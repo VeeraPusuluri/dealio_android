@@ -75,7 +75,7 @@ class CpGrowthViewModel(app: Application) : CpViewModel(app) {
  * national number; contacts carry their own code and should pass it, or a UAE
  * number gets dialled as an Indian one.
  */
-fun openWhatsApp(ctx: Context, phone: String?, text: String, countryCode: String = DEFAULT_DIAL_CODE) {
+fun openWhatsApp(ctx: Context, phone: String?, text: String, countryCode: String? = DEFAULT_DIAL_CODE) {
     val digits = phone?.filter { it.isDigit() }?.takeIf { it.isNotBlank() }
     val to = if (digits != null) dialable(countryCode, digits) else ""
     val url = "https://wa.me/$to?text=${Uri.encode(text)}"

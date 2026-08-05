@@ -16,6 +16,18 @@ import com.dealio.app.ui.builder.BuilderViewModel
 import kotlinx.coroutines.launch
 
 data class PaymentPlanInput(val name: String = "", val description: String = "")
+
+/**
+ * One plot size on sale. A plotted layout is sold by yardage, not bedroom
+ * count, and every layout carves its land differently — so the sizes are typed
+ * in rather than picked from a fixed list. They are persisted through the same
+ * `configurations` field the BHK chips use, as "200 sq yd" labels.
+ */
+data class PlotSizeInput(val yards: String = "", val count: String = "", val price: String = "")
+
+fun plotLabel(yards: Int) = "$yards sq yd"
+fun parsePlotYards(label: String) = label.filter { it.isDigit() }.toIntOrNull() ?: 0
+
 data class LocationAdvInput(
     val category: String = "Corporate",
     val name: String = "",
@@ -30,6 +42,8 @@ data class ProjectForm(
     val builderName: String = "",
     val projectType: String = "Apartment",
     val configurations: List<String> = listOf("3BHK"),
+    /** Plot-only. Ignored — and left untouched — for every other project type. */
+    val plotSizes: List<PlotSizeInput> = listOf(PlotSizeInput()),
     val totalUnits: String = "",
     val towers: String = "",
     val floorsPerTower: String = "",
@@ -103,6 +117,15 @@ class ProjectFormViewModel(app: Application) : BuilderViewModel(app) {
 
     fun update(block: ProjectForm.() -> ProjectForm) { form = form.block() }
 
+    /**
+     * What actually gets stored. For a plot the sizes are the rows the builder
+     * typed, deduped and labelled; for everything else the BHK chips stand.
+     */
+    private fun ProjectForm.effectiveConfigurations(): List<String> =
+        if (projectType == "Plot")
+            plotSizes.mapNotNull { it.yards.toIntOrNull()?.takeIf { y -> y > 0 } }.distinct().map(::plotLabel)
+        else configurations
+
     fun loadForEdit(projectId: Long) {
         if (editingId == projectId) return
         editingId = projectId
@@ -137,6 +160,7 @@ class ProjectFormViewModel(app: Application) : BuilderViewModel(app) {
         val locs = locationAdvantages.filter { it.name.isNotBlank() }
             .map { LocationAdvantage(it.category, it.name, it.distanceKm.ifBlank { null }, it.driveMinutes.ifBlank { null }) }
         val pct = commissionPercent.toDoubleOrNull()
+        val cfgs = effectiveConfigurations()
         return ProjectPayload(
             name = name.trim(),
             city = city.ifBlank { null },
@@ -148,8 +172,8 @@ class ProjectFormViewModel(app: Application) : BuilderViewModel(app) {
             description = description.ifBlank { null },
             status = statusEnum(status),
             projectType = projectType.uppercase().replace(" ", "_"),
-            configurations = configurations.ifEmpty { null },
-            bhkTypes = configurations.ifEmpty { null },
+            configurations = cfgs.ifEmpty { null },
+            bhkTypes = cfgs.ifEmpty { null },
             amenities = amenities.ifEmpty { null },
             nearbyHighlights = nearbyHighlights.ifEmpty { null },
             totalUnits = totalUnits.toIntOrNull(),
@@ -218,8 +242,11 @@ class ProjectFormViewModel(app: Application) : BuilderViewModel(app) {
 
     private fun validate(): String? = when {
         form.name.isBlank() -> "Project name is required"
-        form.configurations.isEmpty() -> "Select at least one configuration"
-        (form.totalUnits.toIntOrNull() ?: 0) <= 0 -> "Total units is required"
+        form.projectType == "Plot" && form.effectiveConfigurations().isEmpty() ->
+            "Add at least one plot size (in sq yd)"
+        form.projectType != "Plot" && form.configurations.isEmpty() -> "Select at least one configuration"
+        (form.totalUnits.toIntOrNull() ?: 0) <= 0 ->
+            if (form.projectType == "Plot") "Total plots is required" else "Total units is required"
         form.reraNumber.isBlank() -> "RERA number is required"
         form.address.isBlank() -> "Address is required"
         form.locality.isBlank() -> "Locality is required"
@@ -236,63 +263,75 @@ class ProjectFormViewModel(app: Application) : BuilderViewModel(app) {
     }
 }
 
-private fun Project.toForm() = ProjectForm(
-    name = name,
-    builderName = builderName ?: "",
-    projectType = (projectType ?: "APARTMENT").lowercase().split("_").joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } },
-    configurations = configurations ?: emptyList(),
-    totalUnits = totalUnits?.toString() ?: "",
-    towers = towers?.toString() ?: "",
-    floorsPerTower = floorsPerTower?.toString() ?: "",
-    status = when (status?.uppercase()) {
-        "PRE_LAUNCH" -> "Pre-Launch"; "LAUNCHED" -> "Launched"
-        "READY_TO_MOVE" -> "Ready to Move"; else -> "Under Construction"
-    },
-    reraNumber = reraNumber ?: "",
-    reraExpiry = reraExpiry ?: "",
-    reraState = reraState ?: "",
-    landArea = landArea ?: "",
-    buildingPermitNumber = buildingPermitNumber ?: "",
-    description = description ?: "",
-    address = address ?: "",
-    city = city ?: "Hyderabad",
-    locality = locality ?: "",
-    pincode = pincode ?: "",
-    landmark = landmark ?: "",
-    googleMapsLink = googleMapsLink ?: "",
-    nearbyHighlights = nearbyHighlights ?: emptyList(),
-    priceFrom = priceMin?.let { if (it % 1.0 == 0.0) it.toLong().toString() else it.toString() } ?: "",
-    priceTo = priceMax?.let { if (it % 1.0 == 0.0) it.toLong().toString() else it.toString() } ?: "",
-    pricePerSqftFrom = pricePerSqftFrom?.let { it.toLong().toString() } ?: "",
-    pricePerSqftTo = pricePerSqftTo?.let { it.toLong().toString() } ?: "",
-    maintenance = maintenanceCharges?.let { it.toLong().toString() } ?: "",
-    floorRise = floorRiseCharges?.let { it.toLong().toString() } ?: "",
-    commissionPercent = commissionValue?.toString() ?: "2.5",
-    cpIncentive = cpIncentive ?: "",
-    possessionDate = possessionDate ?: "",
-    closingSoon = closingSoon,
-    featured = featured,
-    amenities = amenities ?: emptyList(),
-    clubhouseAreaSqft = clubhouseAreaSqft?.toString() ?: "",
-    specStructure = specifications?.structure ?: "",
-    specFlooring = specifications?.flooring ?: "",
-    specDoors = specifications?.doors ?: "",
-    specWindows = specifications?.windows ?: "",
-    specElectrical = specifications?.electrical ?: "",
-    specPlumbing = specifications?.plumbing ?: "",
-    specKitchen = specifications?.kitchen ?: "",
-    specBathrooms = specifications?.bathrooms ?: "",
-    specPainting = specifications?.painting ?: "",
-    paymentPlans = paymentPlans?.map { PaymentPlanInput(it.name ?: "", it.description ?: "") }
-        ?.ifEmpty { listOf(PaymentPlanInput()) } ?: listOf(PaymentPlanInput()),
-    locationAdvantages = locationAdvantages?.map {
-        LocationAdvInput(it.category ?: "Corporate", it.name ?: "", it.distanceKm ?: "", it.driveMinutes ?: "")
-    }?.ifEmpty { listOf(LocationAdvInput()) } ?: listOf(LocationAdvInput()),
-    builderAbout = builderAbout ?: "",
-    builderYearEstablished = builderYearEstablished?.toString() ?: "",
-    builderDeliveredProjects = builderDeliveredProjects?.toString() ?: "",
-    builderWebsite = builderWebsite ?: "",
-    videoUrl = videoUrl ?: "",
-    virtualTourUrl = "",
-    existingImageUrl = imageUrl ?: coverUrl,
-)
+private fun Project.toForm(): ProjectForm {
+    val type = (projectType ?: "APARTMENT").lowercase().split("_")
+        .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+    val cfgs = configurations ?: emptyList()
+    // For a plot the saved label ("200 sq yd") *is* the size — read the yardage
+    // back out of it, or the rows reload empty and saving again wipes the sizes.
+    val plots = if (type == "Plot")
+        cfgs.map { PlotSizeInput(yards = parsePlotYards(it).takeIf { y -> y > 0 }?.toString() ?: "") }
+            .ifEmpty { listOf(PlotSizeInput()) }
+    else listOf(PlotSizeInput())
+    return ProjectForm(
+        name = name,
+        builderName = builderName ?: "",
+        projectType = type,
+        configurations = cfgs,
+        plotSizes = plots,
+        totalUnits = totalUnits?.toString() ?: "",
+        towers = towers?.toString() ?: "",
+        floorsPerTower = floorsPerTower?.toString() ?: "",
+        status = when (status?.uppercase()) {
+            "PRE_LAUNCH" -> "Pre-Launch"; "LAUNCHED" -> "Launched"
+            "READY_TO_MOVE" -> "Ready to Move"; else -> "Under Construction"
+        },
+        reraNumber = reraNumber ?: "",
+        reraExpiry = reraExpiry ?: "",
+        reraState = reraState ?: "",
+        landArea = landArea ?: "",
+        buildingPermitNumber = buildingPermitNumber ?: "",
+        description = description ?: "",
+        address = address ?: "",
+        city = city ?: "Hyderabad",
+        locality = locality ?: "",
+        pincode = pincode ?: "",
+        landmark = landmark ?: "",
+        googleMapsLink = googleMapsLink ?: "",
+        nearbyHighlights = nearbyHighlights ?: emptyList(),
+        priceFrom = priceMin?.let { if (it % 1.0 == 0.0) it.toLong().toString() else it.toString() } ?: "",
+        priceTo = priceMax?.let { if (it % 1.0 == 0.0) it.toLong().toString() else it.toString() } ?: "",
+        pricePerSqftFrom = pricePerSqftFrom?.let { it.toLong().toString() } ?: "",
+        pricePerSqftTo = pricePerSqftTo?.let { it.toLong().toString() } ?: "",
+        maintenance = maintenanceCharges?.let { it.toLong().toString() } ?: "",
+        floorRise = floorRiseCharges?.let { it.toLong().toString() } ?: "",
+        commissionPercent = commissionValue?.toString() ?: "2.5",
+        cpIncentive = cpIncentive ?: "",
+        possessionDate = possessionDate ?: "",
+        closingSoon = closingSoon,
+        featured = featured,
+        amenities = amenities ?: emptyList(),
+        clubhouseAreaSqft = clubhouseAreaSqft?.toString() ?: "",
+        specStructure = specifications?.structure ?: "",
+        specFlooring = specifications?.flooring ?: "",
+        specDoors = specifications?.doors ?: "",
+        specWindows = specifications?.windows ?: "",
+        specElectrical = specifications?.electrical ?: "",
+        specPlumbing = specifications?.plumbing ?: "",
+        specKitchen = specifications?.kitchen ?: "",
+        specBathrooms = specifications?.bathrooms ?: "",
+        specPainting = specifications?.painting ?: "",
+        paymentPlans = paymentPlans?.map { PaymentPlanInput(it.name ?: "", it.description ?: "") }
+            ?.ifEmpty { listOf(PaymentPlanInput()) } ?: listOf(PaymentPlanInput()),
+        locationAdvantages = locationAdvantages?.map {
+            LocationAdvInput(it.category ?: "Corporate", it.name ?: "", it.distanceKm ?: "", it.driveMinutes ?: "")
+        }?.ifEmpty { listOf(LocationAdvInput()) } ?: listOf(LocationAdvInput()),
+        builderAbout = builderAbout ?: "",
+        builderYearEstablished = builderYearEstablished?.toString() ?: "",
+        builderDeliveredProjects = builderDeliveredProjects?.toString() ?: "",
+        builderWebsite = builderWebsite ?: "",
+        videoUrl = videoUrl ?: "",
+        virtualTourUrl = "",
+        existingImageUrl = imageUrl ?: coverUrl,
+    )
+}
