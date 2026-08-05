@@ -190,6 +190,18 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     ProfileAvatar(name = state.name, state = avatar)
+                    // Only worth offering once there is something to remove; the
+                    // badge alone can replace a picture but never take one away.
+                    if (avatar.url != null && !avatar.uploading) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Remove photo",
+                            color = Color.White.copy(alpha = 0.75f),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable { avatar.remove() },
+                        )
+                    }
                     Spacer(Modifier.height(14.dp))
                     Text(state.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     if (state.phone.isNotBlank()) {
