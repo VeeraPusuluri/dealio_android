@@ -21,12 +21,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Contacts
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
@@ -39,8 +43,11 @@ import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.Savings
 import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material.icons.outlined.Work
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,10 +56,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
@@ -70,18 +80,28 @@ import com.dealio.app.ui.builder.EmptyState
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SubScreenScaffold
+import com.dealio.app.ui.builder.initialsOf
 import com.dealio.app.ui.components.FormSheet
+import com.dealio.app.ui.components.IconBlue
 import com.dealio.app.ui.components.IconGreen
+import com.dealio.app.ui.components.IconOrange
+import com.dealio.app.ui.components.IconPurple
 import com.dealio.app.ui.components.SheetChip
 import com.dealio.app.ui.components.SheetField
 import com.dealio.app.ui.components.SheetGhostButton
 import com.dealio.app.ui.components.SheetSection
 import com.dealio.app.ui.components.SheetSubmitButton
 import com.dealio.app.ui.cp.CpViewModel
+import com.dealio.app.ui.cp.growth.dial
+import com.dealio.app.ui.cp.growth.openWhatsApp
+import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.ErrorRed
+import com.dealio.app.ui.theme.FieldFill
+import com.dealio.app.ui.theme.Mist
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
+import com.dealio.app.ui.theme.tintBrush
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -226,6 +246,7 @@ fun ContactsScreen(nav: NavController, vm: ContactsViewModel = viewModel()) {
     var editing by remember { mutableStateOf<CpContact?>(null) }
     var showDialog by remember { mutableStateOf(false) }
     var showChooser by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf<CpContact?>(null) }
 
     val pickSheet = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { vm.stageFromSheet(it) }
@@ -277,44 +298,11 @@ fun ContactsScreen(nav: NavController, vm: ContactsViewModel = viewModel()) {
                 }
                 items(ordered.size) { i ->
                     val c = ordered[i]
-                    DealioCard {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(c.name, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                // The flag carries the country at a glance; the code
-                                // is still spelled out so it can be read off and dialled.
-                                Text(
-                                    "${flagFor(c.countryCode)} ${formatPhone(c.countryCode, c.phone)}",
-                                    color = TextSecondary, fontSize = 12.sp,
-                                )
-                                // What they do and earn is how a CP decides who to call first.
-                                val qualifiers = listOfNotNull(
-                                    c.designation?.takeIf { it.isNotBlank() },
-                                    c.salary?.takeIf { it > 0 }?.let { formatSalaryShort(it) },
-                                    c.address?.takeIf { it.isNotBlank() },
-                                )
-                                if (qualifiers.isNotEmpty()) {
-                                    Text(qualifiers.joinToString(" · "), color = TextSecondary, fontSize = 11.sp, maxLines = 2)
-                                }
-                                c.investment?.takeIf { it > 0 }?.let {
-                                    Text(
-                                        "Can invest ${formatSalaryShort(it)}/yr",
-                                        color = IconGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-                                    )
-                                }
-                                if (!c.bhkPreference.isNullOrBlank() || !c.tags.isNullOrBlank()) {
-                                    Text(listOfNotNull(c.bhkPreference, c.tags).joinToString(" · "), color = Teal, fontSize = 11.sp)
-                                }
-                            }
-                            Icon(Icons.Outlined.Edit, "Edit", tint = TextSecondary, modifier = Modifier.size(20.dp).clickable { editing = c; showDialog = true })
-                            Spacer(Modifier.width(14.dp))
-                            Icon(Icons.Outlined.Delete, "Delete", tint = ErrorRed, modifier = Modifier.size(20.dp).clickable { vm.delete(c.id) })
-                        }
-                        if (!c.notes.isNullOrBlank()) {
-                            Spacer(Modifier.height(6.dp))
-                            Text(c.notes!!, color = TextSecondary, fontSize = 12.sp)
-                        }
-                    }
+                    ContactCard(
+                        c,
+                        onEdit = { editing = c; showDialog = true },
+                        onDelete = { deleting = c },
+                    )
                 }
             }
         }
@@ -362,7 +350,188 @@ fun ContactsScreen(nav: NavController, vm: ContactsViewModel = viewModel()) {
             vm.save(editing, p); showDialog = false
         }
     }
+
+    // Delete sits in the same action row as Call, so a mis-tap is a plausible
+    // way to lose a contact the CP spent months collecting. Ask first.
+    deleting?.let { target ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            confirmButton = {
+                TextButton(onClick = { vm.delete(target.id); deleting = null }) {
+                    Text("Delete", color = ErrorRed, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel", color = TextSecondary) } },
+            title = { Text("Delete contact?", fontWeight = FontWeight.Bold, color = TextPrimary) },
+            text = { Text("${target.name} will be removed from your book.", color = TextSecondary, fontSize = 13.sp) },
+        )
+    }
     LaunchedEffect(state.message) { state.message?.let { vm.clearMessage() } }
+}
+
+// Accents rotate by name so a long book is scannable by colour as well as by
+// text — two Rameshes still land on different tiles.
+private val CONTACT_ACCENTS = listOf(Teal, IconBlue, IconPurple, IconOrange, IconGreen)
+
+private fun accentFor(name: String): Color {
+    val i = name.hashCode() % CONTACT_ACCENTS.size
+    return CONTACT_ACCENTS[if (i < 0) i + CONTACT_ACCENTS.size else i]
+}
+
+/**
+ * One entry in the book.
+ *
+ * A CP reads this list to decide who to ring next, so the card leads with who
+ * the person is and what they can spend, demotes the qualifiers to chips that
+ * wrap instead of a dot-joined line that truncates, and puts call and WhatsApp
+ * on the card — previously the number could only be read off and re-typed.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ContactCard(c: CpContact, onEdit: () -> Unit, onDelete: () -> Unit) {
+    val ctx = LocalContext.current
+    val accent = remember(c.name) { accentFor(c.name) }
+
+    DealioCard(contentPadding = 14.dp) {
+        Row(verticalAlignment = Alignment.Top) {
+            Box(
+                Modifier.size(44.dp).background(tintBrush(accent), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(initialsOf(c.name), color = accent, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    c.name, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+                c.designation?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, color = TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Spacer(Modifier.height(3.dp))
+                // The flag carries the country at a glance; the code is still
+                // spelled out so it can be read off and dialled.
+                Text(
+                    "${flagFor(c.countryCode)} ${formatPhone(c.countryCode, c.phone)}",
+                    color = TextPrimary.copy(alpha = 0.8f), fontSize = 12.sp, fontWeight = FontWeight.Medium,
+                )
+            }
+            // Capacity is what the investor sort ranks on, so it gets the one
+            // spot the eye lands on after the name rather than a line of body text.
+            c.investment?.takeIf { it > 0 }?.let {
+                Spacer(Modifier.width(8.dp))
+                Row(
+                    Modifier.background(IconGreen.copy(alpha = 0.12f), RoundedCornerShape(9.dp))
+                        .padding(horizontal = 8.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Outlined.Savings, null, tint = IconGreen, modifier = Modifier.size(12.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "${formatSalaryShort(it)}/yr", color = IconGreen, fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold, maxLines = 1,
+                    )
+                }
+            }
+        }
+
+        val tags = c.tags?.split(",")?.map(String::trim)?.filter { it.isNotBlank() }.orEmpty()
+        val hasChips = !c.bhkPreference.isNullOrBlank() || tags.isNotEmpty() ||
+            (c.salary ?: 0.0) > 0 || !c.address.isNullOrBlank() || !c.email.isNullOrBlank()
+        if (hasChips) {
+            Spacer(Modifier.height(10.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                c.bhkPreference?.takeIf { it.isNotBlank() }?.let { MetaChip(it, Icons.Outlined.Sell, Teal) }
+                tags.forEach { MetaChip(it, null, accent) }
+                c.salary?.takeIf { it > 0 }?.let { MetaChip("Earns ${formatSalaryShort(it)}", Icons.Outlined.Payments, TextSecondary) }
+                c.address?.takeIf { it.isNotBlank() }?.let { MetaChip(it, Icons.Outlined.LocationOn, TextSecondary) }
+                c.email?.takeIf { it.isNotBlank() }?.let { MetaChip(it, Icons.Outlined.MailOutline, TextSecondary) }
+            }
+        }
+
+        if (!c.notes.isNullOrBlank()) {
+            Spacer(Modifier.height(10.dp))
+            Box(Modifier.fillMaxWidth().background(Mist, RoundedCornerShape(12.dp)).padding(10.dp)) {
+                Text(
+                    c.notes!!, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp,
+                    maxLines = 3, overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+        HorizontalDivider(color = CardBorder.copy(alpha = 0.7f))
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (c.phone.isNotBlank()) {
+                // Dial the international form: a UAE contact rung as a bare
+                // national number reaches the wrong person, or nobody.
+                ActionPill("Call", Icons.Outlined.Phone, IconGreen) {
+                    dial(ctx, "+${dialable(c.countryCode, c.phone)}")
+                }
+                Spacer(Modifier.width(8.dp))
+                ActionPill("WhatsApp", Icons.Outlined.ChatBubbleOutline, Teal) {
+                    openWhatsApp(ctx, c.phone, "Hi ${c.name.trim()}, ", c.countryCode)
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            IconAction(Icons.Outlined.Edit, "Edit", TextSecondary, onEdit)
+            Spacer(Modifier.width(8.dp))
+            IconAction(Icons.Outlined.Delete, "Delete", ErrorRed, onDelete)
+        }
+    }
+}
+
+/** A qualifier — BHK, tag, salary, locality — sized to be skimmed, not read. */
+@Composable
+private fun MetaChip(text: String, icon: ImageVector?, color: Color) {
+    Row(
+        Modifier.background(color.copy(alpha = 0.10f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            Icon(icon, null, tint = color, modifier = Modifier.size(11.dp))
+            Spacer(Modifier.width(4.dp))
+        }
+        Text(
+            text, color = color, fontSize = 11.sp, fontWeight = FontWeight.Medium,
+            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 200.dp),
+        )
+    }
+}
+
+/** Labelled tap target for the two things a CP does from this list. */
+@Composable
+private fun ActionPill(label: String, icon: ImageVector, color: Color, onClick: () -> Unit) {
+    Row(
+        Modifier.clip(RoundedCornerShape(10.dp))
+            .background(color.copy(alpha = 0.12f))
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, null, tint = color, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(5.dp))
+        Text(label, color = color, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+/** Edit and delete: present, but not competing with the call actions. */
+@Composable
+private fun IconAction(icon: ImageVector, label: String, tint: Color, onClick: () -> Unit) {
+    Box(
+        Modifier.size(32.dp).clip(RoundedCornerShape(10.dp))
+            .background(FieldFill)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, label, tint = tint, modifier = Modifier.size(16.dp))
+    }
 }
 
 /**
