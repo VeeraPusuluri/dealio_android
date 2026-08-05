@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.horizontalScroll
@@ -800,9 +801,18 @@ private fun HeroHeader(p: Project, images: List<String>, onBack: () -> Unit) {
                 Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.65f))),
             ),
         )
+        // The photograph runs edge to edge, under the status bar, so the button
+        // has to be pushed clear of it by hand. Without statusBarsPadding it
+        // starts 8dp from the top of the *window*, and its 48dp touch target
+        // ends at 56dp — inside a status bar that is 53dp tall on a Pixel 9 Pro
+        // and 62dp on the Fold's cover screen. The system status bar window
+        // swallows every tap in that strip, so the arrow simply did nothing.
         IconButton(
             onClick = onBack,
-            modifier = Modifier.padding(8.dp).background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
+            modifier = Modifier
+                .statusBarsPadding()
+                .padding(8.dp)
+                .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
         ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
 
         Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
