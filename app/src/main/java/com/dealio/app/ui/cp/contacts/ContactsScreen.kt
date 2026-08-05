@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.Savings
 import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material.icons.outlined.Work
 import androidx.compose.material3.Icon
@@ -70,6 +71,7 @@ import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.components.FormSheet
+import com.dealio.app.ui.components.IconGreen
 import com.dealio.app.ui.components.SheetChip
 import com.dealio.app.ui.components.SheetField
 import com.dealio.app.ui.components.SheetGhostButton
@@ -88,10 +90,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** How the book is ordered. Newest first day to day; by spend when a project launches. */
+enum class ContactSort(val label: String) { RECENT("Recent"), INVESTMENT("Top investors") }
+
 data class ContactsState(
     val loading: Boolean = true,
     val error: String? = null,
     val items: List<CpContact> = emptyList(),
+    val sort: ContactSort = ContactSort.RECENT,
     val message: String? = null,
     // Rows waiting to be reviewed before import. Held here rather than in the
     // composable so a rotation mid-review doesn't discard a parsed sheet.
@@ -132,6 +138,8 @@ class ContactsViewModel(app: Application) : CpViewModel(app) {
             if (r is ApiResult.Success) load(silent = true)
         }
     }
+
+    fun setSort(sort: ContactSort) = _state.update { it.copy(sort = sort) }
 
     fun clearMessage() = _state.update { it.copy(message = null) }
 
@@ -258,8 +266,17 @@ fun ContactsScreen(nav: NavController, vm: ContactsViewModel = viewModel()) {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                items(state.items.size) { i ->
-                    val c = state.items[i]
+                item {
+                    SortRow(state.sort, vm::setSort)
+                }
+                // Nobody with an unknown capacity outranks someone with a known one,
+                // so unset investments sink to the bottom rather than sorting as zero.
+                val ordered = when (state.sort) {
+                    ContactSort.RECENT -> state.items
+                    ContactSort.INVESTMENT -> state.items.sortedByDescending { it.investment ?: -1.0 }
+                }
+                items(ordered.size) { i ->
+                    val c = ordered[i]
                     DealioCard {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
@@ -273,6 +290,12 @@ fun ContactsScreen(nav: NavController, vm: ContactsViewModel = viewModel()) {
                                 )
                                 if (qualifiers.isNotEmpty()) {
                                     Text(qualifiers.joinToString(" · "), color = TextSecondary, fontSize = 11.sp, maxLines = 2)
+                                }
+                                c.investment?.takeIf { it > 0 }?.let {
+                                    Text(
+                                        "Can invest ${formatSalaryShort(it)}/yr",
+                                        color = IconGreen, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                                    )
                                 }
                                 if (!c.bhkPreference.isNullOrBlank() || !c.tags.isNullOrBlank()) {
                                     Text(listOfNotNull(c.bhkPreference, c.tags).joinToString(" · "), color = Teal, fontSize = 11.sp)
@@ -337,6 +360,24 @@ fun ContactsScreen(nav: NavController, vm: ContactsViewModel = viewModel()) {
     LaunchedEffect(state.message) { state.message?.let { vm.clearMessage() } }
 }
 
+/**
+ * When a project launches a CP wants to work the book top-down by who can afford
+ * it, not by who they happened to add last. Two chips is the whole feature.
+ */
+@Composable
+private fun SortRow(sort: ContactSort, onSort: (ContactSort) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(bottom = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Sort", color = TextSecondary, fontSize = 12.sp)
+        ContactSort.entries.forEach { option ->
+            SheetChip(option.label, selected = sort == option, onClick = { onSort(option) })
+        }
+    }
+}
+
 private val BHK_CHOICES = listOf("1 BHK", "2 BHK", "3 BHK", "4 BHK", "Villa", "Plot")
 
 /**
@@ -354,7 +395,13 @@ private fun ContactSheet(existing: CpContact?, onDismiss: () -> Unit, onSave: (C
     var notes by remember { mutableStateOf(existing?.notes ?: "") }
     var designation by remember { mutableStateOf(existing?.designation ?: "") }
     var salary by remember { mutableStateOf(existing?.salary?.let { formatSalaryInput(it) } ?: "") }
+    var investment by remember { mutableStateOf(existing?.investment?.let { formatSalaryInput(it) } ?: "") }
     var address by remember { mutableStateOf(existing?.address ?: "") }
+    // A figure the CP typed is theirs to keep — only a still-seeded one follows
+    // the salary. Matches how the backend decides whether to re-seed on save.
+    var investmentEdited by remember {
+        mutableStateOf(existing?.investment != null && existing.investment != seedInvestment(existing.salary))
+    }
 
     val canSave = name.isNotBlank() && phone.length >= 6
 
@@ -386,6 +433,7 @@ private fun ContactSheet(existing: CpContact?, onDismiss: () -> Unit, onSave: (C
                                     bhkPreference = bhk.ifBlank { null },
                                     designation = designation.ifBlank { null },
                                     salary = salary.toDoubleOrNull(),
+                                    investment = investment.toDoubleOrNull(),
                                     address = address.ifBlank { null },
                                 ),
                             )
@@ -418,11 +466,30 @@ private fun ContactSheet(existing: CpContact?, onDismiss: () -> Unit, onSave: (C
                 label = "Designation", icon = Icons.Outlined.Work, placeholder = "e.g. Senior Engineer",
             )
             SheetField(
-                value = salary, onValueChange = { salary = it.filter(Char::isDigit) },
+                value = salary,
+                onValueChange = {
+                    salary = it.filter(Char::isDigit)
+                    if (!investmentEdited) {
+                        investment = seedInvestment(salary.toDoubleOrNull())?.let(::formatSalaryInput).orEmpty()
+                    }
+                },
                 label = "Annual salary (₹)", icon = Icons.Outlined.Payments,
                 keyboardType = KeyboardType.Number, placeholder = "1200000",
                 // Seven digits are hard to read back; echo them as the CP thinks.
                 supporting = salary.toDoubleOrNull()?.takeIf { it > 0 }?.let { "That's ${formatSalaryShort(it)} a year" },
+            )
+            SheetField(
+                value = investment,
+                onValueChange = { investment = it.filter(Char::isDigit); investmentEdited = true },
+                label = "Investment capacity (₹/yr)", icon = Icons.Outlined.Savings,
+                keyboardType = KeyboardType.Number, placeholder = "240000",
+                supporting = when {
+                    investment.isBlank() -> "Filled in at 20% of salary — change it if you know better"
+                    investmentEdited -> investment.toDoubleOrNull()?.takeIf { it > 0 }
+                        ?.let { "${formatSalaryShort(it)} a year — your figure, not the 20% default" }
+                    else -> investment.toDoubleOrNull()?.takeIf { it > 0 }
+                        ?.let { "${formatSalaryShort(it)} a year — 20% of salary. Tap to change." }
+                },
             )
         }
         Spacer(Modifier.height(20.dp))

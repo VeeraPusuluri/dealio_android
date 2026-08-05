@@ -5,6 +5,20 @@ import android.provider.ContactsContract
 import com.dealio.app.data.api.CpContactPayload
 
 /**
+ * A salaried buyer can realistically commit about a fifth of what they earn to
+ * property in a year. An imported list carries salary but never an investment
+ * figure, so seed one at this rate — the CP can then sort a fresh address book
+ * by who can actually buy, and correct the number as they learn it.
+ *
+ * The backend seeds identically (utils/contactMoney.ts); it is repeated here so
+ * the import preview can show the CP what is about to be saved.
+ */
+private const val INVESTMENT_RATE = 0.2
+
+fun seedInvestment(salary: Double?): Double? =
+    salary?.takeIf { it > 0 }?.let { Math.round(it * INVESTMENT_RATE).toDouble() }
+
+/**
  * One row staged for import, from a spreadsheet or the phone's address book.
  * Selectable so the CP can untick rows before committing.
  */
@@ -14,6 +28,7 @@ data class ImportContact(
     val email: String? = null,
     val designation: String? = null,
     val salary: Double? = null,
+    val investment: Double? = null,
     val address: String? = null,
     val bhkPreference: String? = null,
     val selected: Boolean = true,
@@ -26,6 +41,7 @@ data class ImportContact(
         bhkPreference = bhkPreference,
         designation = designation,
         salary = salary,
+        investment = investment,
         address = address,
     )
 }
@@ -59,21 +75,27 @@ fun rowsToContacts(rows: List<List<String>>): List<ImportContact> {
     val emailIdx = find("email", "mail")
     val desigIdx = find("designation", "role", "job", "title", "occupation")
     val salaryIdx = find("salary", "income", "ctc", "package")
+    // A sheet that already carries a real figure beats anything derived from salary.
+    val investIdx = find("investment", "budget", "corpus", "capacity")
     val addrIdx = find("address", "location", "city", "area")
     val bhkIdx = find("bhk", "preference", "config")
 
     fun cell(row: List<String>, i: Int) = if (i >= 0) row.getOrNull(i)?.trim().orEmpty() else ""
+    fun money(row: List<String>, i: Int) =
+        cell(row, i).filter { it.isDigit() || it == '.' }.toDoubleOrNull()?.takeIf { it > 0 }
 
     return rows.drop(1).mapNotNull { row ->
         val name = cell(row, nameIdx)
         val phone = normalizePhone(cell(row, phoneIdx))
         if (name.isBlank() || phone.length < 6) return@mapNotNull null
+        val salary = money(row, salaryIdx)
         ImportContact(
             name = name,
             phone = phone,
             email = cell(row, emailIdx).ifBlank { null },
             designation = cell(row, desigIdx).ifBlank { null },
-            salary = cell(row, salaryIdx).filter { it.isDigit() || it == '.' }.toDoubleOrNull()?.takeIf { it > 0 },
+            salary = salary,
+            investment = money(row, investIdx) ?: seedInvestment(salary),
             address = cell(row, addrIdx).ifBlank { null },
             bhkPreference = cell(row, bhkIdx).ifBlank { null },
         )

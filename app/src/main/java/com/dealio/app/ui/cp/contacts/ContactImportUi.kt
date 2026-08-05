@@ -130,6 +130,13 @@ fun ImportPreviewSheet(
                     color = TextSecondary, fontSize = 13.sp,
                 )
             } else {
+                if (items.any { it.investment != null }) {
+                    Text(
+                        "Where a salary was given, investment capacity is set to 20% of it. " +
+                            "Edit any contact afterwards to correct the figure.",
+                        color = TextSecondary, fontSize = 12.sp,
+                    )
+                }
                 Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("$chosen of ${items.size} selected", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
                     Row(
@@ -165,6 +172,14 @@ fun ImportPreviewSheet(
                                     listOfNotNull(c.phone, c.designation, c.address).joinToString(" · "),
                                     color = TextSecondary, fontSize = 11.sp, maxLines = 1,
                                 )
+                                // The seeded figure is what makes the book sortable, so show
+                                // it now rather than letting the CP discover it after import.
+                                c.investment?.let {
+                                    Text(
+                                        "Can invest ${formatSalaryShort(it)}/yr",
+                                        color = Teal, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1,
+                                    )
+                                }
                             }
                         }
                     }

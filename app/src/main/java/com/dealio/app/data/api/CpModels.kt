@@ -116,6 +116,8 @@ data class CpContact(
     val bhkPreference: String? = null,
     val designation: String? = null,
     val salary: Double? = null,
+    /** What they can put into property in a year. Seeded from salary on import. */
+    val investment: Double? = null,
     val address: String? = null,
     val createdAt: String = "",
 )
@@ -129,6 +131,7 @@ data class CpContactPayload(
     val bhkPreference: String? = null,
     val designation: String? = null,
     val salary: Double? = null,
+    val investment: Double? = null,
     val address: String? = null,
 )
 
