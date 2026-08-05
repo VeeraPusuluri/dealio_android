@@ -44,6 +44,8 @@ import com.dealio.app.ui.cp.growth.WhatsAppBroadcastScreen
 import com.dealio.app.ui.cp.leads.CpDealDetailScreen
 import com.dealio.app.ui.cp.leads.LeadsScreen
 import com.dealio.app.ui.cp.meetings.CpMeetingsScreen
+import com.dealio.app.ui.cp.meetups.CpMeetupDetailScreen
+import com.dealio.app.ui.cp.meetups.CpMeetupFormScreen
 import com.dealio.app.ui.cp.meetups.CpMeetupsScreen
 import com.dealio.app.ui.cp.more.CpMoreScreen
 import com.dealio.app.ui.cp.notifications.CpNotificationsScreen
@@ -66,6 +68,8 @@ object CpRoutes {
     const val CALLLOGS = "cp_calllogs"
     const val MEETINGS = "cp_meetings"
     const val MEETUPS = "cp_meetups"
+    const val MEETUP_DETAIL = "cp_meetup_detail"
+    const val MEETUP_FORM = "cp_meetup_form"
     const val PROFILE = "cp_profile"
     const val NOTIFICATIONS = "cp_notifications"
 
@@ -84,6 +88,10 @@ object CpRoutes {
 
     fun dealDetail(id: Long) = "$DEAL_DETAIL/$id"
     fun projectDetail(id: Long) = "$PROJECT_DETAIL/$id"
+    fun meetupDetail(id: Long) = "$MEETUP_DETAIL/$id"
+
+    /** No id creates; an id edits. One screen, so the two cannot drift apart. */
+    fun meetupForm(id: Long? = null) = "$MEETUP_FORM?id=${id ?: -1}"
 }
 
 private val tabs = listOf(
@@ -166,6 +174,18 @@ fun CpRoot(onLogout: () -> Unit) {
             composable(CpRoutes.CALLLOGS) { CallLogsScreen(nav) }
             composable(CpRoutes.MEETINGS) { CpMeetingsScreen(nav) }
             composable(CpRoutes.MEETUPS) { CpMeetupsScreen(nav) }
+
+            composable(
+                "${CpRoutes.MEETUP_DETAIL}/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.LongType }),
+            ) { e -> CpMeetupDetailScreen(nav, e.arguments?.getLong("id") ?: 0) }
+
+            composable(
+                "${CpRoutes.MEETUP_FORM}?id={id}",
+                arguments = listOf(navArgument("id") { type = NavType.LongType; defaultValue = -1L }),
+            ) { e ->
+                CpMeetupFormScreen(nav, e.arguments?.getLong("id")?.takeIf { it > 0 })
+            }
             composable(CpRoutes.PROFILE) { CpProfileScreen(nav) }
             composable(CpRoutes.NOTIFICATIONS) { CpNotificationsScreen(nav) }
 

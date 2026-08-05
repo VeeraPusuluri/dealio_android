@@ -109,8 +109,13 @@ data class CpDocumentUploadResponse(
 data class CpContact(
     val id: Long = 0,
     val name: String = "",
-    /** Dial code, e.g. "+91". Kept apart from [phone] — see CountryCodes.kt. */
-    val countryCode: String = "+91",
+    /**
+     * Dial code, e.g. "+91". Kept apart from [phone] — see CountryCodes.kt.
+     * Nullable because Gson ignores Kotlin defaults: a backend that predates
+     * the column leaves this null rather than "+91", and every reader of it
+     * treats null as India.
+     */
+    val countryCode: String? = null,
     val phone: String = "",
     val email: String? = null,
     val notes: String? = null,
@@ -220,34 +225,145 @@ data class CpProfileUpdateRequest(
 data class CpMeetup(
     val id: Long = 0,
     val title: String = "",
+    val description: String? = null,
+    /** See [com.dealio.app.ui.cp.meetups.MeetupCategory]. */
+    val category: String = "SITE_VISIT",
     val location: String = "",
+    /** What a customer's preferred city is matched against. */
+    val city: String? = null,
     val mapsLink: String? = null,
+    /** IN_PERSON | ONLINE | HYBRID */
+    val mode: String = "IN_PERSON",
+    val onlineLink: String? = null,
     val date: String = "",
     val time: String = "",
+    val startAt: String? = null,
     val notes: String? = null,
+    /** PRIVATE — invite list only. PUBLIC — also discoverable in [city]. */
+    val visibility: String = "PUBLIC",
+    /** SCHEDULED | CANCELLED */
+    val status: String = "SCHEDULED",
+    val cancelReason: String? = null,
+    val capacity: Int? = null,
     val invitees: List<CpMeetupInvitee> = emptyList(),
+    val counts: CpMeetupCounts = CpMeetupCounts(),
     val createdAt: String = "",
+) {
+    val isCancelled: Boolean get() = status == "CANCELLED"
+    val isPublic: Boolean get() = visibility == "PUBLIC"
+    /** Full only once a cap is set and the confirmed heads have reached it. */
+    val isFull: Boolean get() = capacity != null && counts.goingHeads >= capacity
+}
+
+/**
+ * Server-computed tallies.
+ *
+ * [goingHeads] counts people, [going] counts rows — someone bringing two guests
+ * is one row and three heads. Capacity is measured in heads.
+ */
+data class CpMeetupCounts(
+    val invited: Int = 0,
+    val going: Int = 0,
+    val maybe: Int = 0,
+    val declined: Int = 0,
+    val noReply: Int = 0,
+    val checkedIn: Int = 0,
+    val goingHeads: Int = 0,
 )
 
 data class CpMeetupInvitee(
     val id: Long = 0,
+    /** INVITED — the organiser added them. DISCOVERY — they found it themselves. */
+    val source: String = "INVITED",
     val contactId: Long? = null,
+    /** Set when this person has a Dealio account, so the invite reaches their app. */
+    val userId: Long? = null,
     val name: String = "",
     val phone: String = "",
-)
+    val email: String? = null,
+    /** INVITED | GOING | MAYBE | DECLINED */
+    val rsvp: String = "INVITED",
+    val guests: Int = 0,
+    val respondedAt: String? = null,
+    val checkedInAt: String? = null,
+) {
+    val foundItThemselves: Boolean get() = source == "DISCOVERY"
+}
 
 data class CreateCpMeetupRequest(
     val title: String,
     val location: String,
     val date: String,
     val time: String,
+    val description: String? = null,
+    val category: String = "SITE_VISIT",
+    val city: String? = null,
     val mapsLink: String? = null,
+    val mode: String = "IN_PERSON",
+    val onlineLink: String? = null,
     val notes: String? = null,
+    val visibility: String = "PUBLIC",
+    val capacity: Int? = null,
     val invitees: List<CpMeetupInviteePayload> = emptyList(),
+)
+
+/**
+ * An edit. Every field is nullable and only what is sent moves, so a partial
+ * edit from one screen cannot blank out what another screen set.
+ */
+data class UpdateCpMeetupRequest(
+    val title: String? = null,
+    val description: String? = null,
+    val category: String? = null,
+    val location: String? = null,
+    val city: String? = null,
+    val mapsLink: String? = null,
+    val mode: String? = null,
+    val onlineLink: String? = null,
+    val date: String? = null,
+    val time: String? = null,
+    val notes: String? = null,
+    val visibility: String? = null,
+    val capacity: Int? = null,
 )
 
 data class CpMeetupInviteePayload(
     val contactId: Long? = null,
     val name: String,
     val phone: String,
+    val email: String? = null,
+)
+
+data class AddInviteesRequest(val invitees: List<CpMeetupInviteePayload>)
+
+data class SetRsvpRequest(val rsvp: String? = null, val guests: Int? = null)
+
+data class CancelMeetupRequest(val reason: String? = null)
+
+/**
+ * Who the organiser can invite: their own contact book, and Dealio customers.
+ *
+ * Both arrive in one call so the picker can offer two tabs without a second
+ * round-trip while a partner is mid-form.
+ */
+data class InvitableResponse(
+    val contacts: List<InvitableContact> = emptyList(),
+    val customers: List<InvitableCustomer> = emptyList(),
+)
+
+data class InvitableContact(
+    val id: Long = 0,
+    val name: String = "",
+    val phone: String = "",
+    val countryCode: String? = null,
+    val email: String? = null,
+)
+
+data class InvitableCustomer(
+    val id: Long = 0,
+    val name: String = "",
+    val phone: String = "",
+    val email: String? = null,
+    /** Their preferred city — how the organiser spots who is even local. */
+    val city: String? = null,
 )

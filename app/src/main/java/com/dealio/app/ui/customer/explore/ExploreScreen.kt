@@ -66,6 +66,7 @@ import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.customer.CustomerProjectCard
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.customer.FeaturedCard
+import com.dealio.app.ui.customer.meetups.MeetupsStrip
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.ErrorRed
 import com.dealio.app.ui.theme.NavyTealGradient
@@ -106,6 +107,10 @@ fun ExploreScreen(nav: NavController, vm: ExploreViewModel = viewModel()) {
                         }
                     }
                 }
+
+                // Meetups on in this customer's city. Renders nothing when there
+                // are none, so the section never sits here empty.
+                item { MeetupsStrip(nav) }
 
                 item {
                     Row(

@@ -79,3 +79,61 @@ data class PhoneRequest(val phone: String)
 data class CustomerMessageRequest(val phone: String, val recipientRole: String, val message: String)
 data class PreferredCityRequest(val city: String?)
 data class ProfileUpdateRequest(val email: String?)
+
+// ─── Meetups ─────────────────────────────────────────────────────────────────
+// A gathering hosted by a channel partner, as a customer sees it.
+//
+// Deliberately thinner than the organiser's [CpMeetup]: a customer browsing by
+// city is a stranger to this event, so the invite list never crosses the wire.
+// What arrives is what a public event page shows — plus this customer's own
+// standing on it.
+
+data class CustomerMeetup(
+    val id: Long = 0,
+    val title: String = "",
+    val description: String? = null,
+    val category: String = "SITE_VISIT",
+    val location: String = "",
+    val city: String? = null,
+    val mapsLink: String? = null,
+    val mode: String = "IN_PERSON",
+    /** Only sent once this customer is going — the link is for attendees. */
+    val onlineLink: String? = null,
+    val date: String = "",
+    val time: String = "",
+    val startAt: String? = null,
+    val status: String = "SCHEDULED",
+    val cancelReason: String? = null,
+    val capacity: Int? = null,
+    val hostName: String = "",
+    /** Only sent when this customer was personally invited. */
+    val hostPhone: String? = null,
+    val hostPhoto: String? = null,
+    val hostTier: String? = null,
+    val goingCount: Int = 0,
+    /** True when a partner asked this customer by name, rather than them finding it. */
+    val invited: Boolean = false,
+    /** null until they answer. INVITED means asked but still silent. */
+    val myRsvp: String? = null,
+    val myGuests: Int = 0,
+) {
+    val isCancelled: Boolean get() = status == "CANCELLED"
+    val isGoing: Boolean get() = myRsvp == "GOING"
+    /** Asked, but has not said yes or no yet. */
+    val awaitingReply: Boolean get() = invited && (myRsvp == null || myRsvp == "INVITED")
+    val isFull: Boolean get() = capacity != null && goingCount >= capacity && !isGoing
+}
+
+/**
+ * The meetup feed.
+ *
+ * Carries the city the server resolved from this customer's preference, so the
+ * list can say "On in Hyderabad" rather than a vague "near you" — naming the
+ * city is what makes it obvious the list is theirs and not a generic listing.
+ */
+data class CustomerMeetupFeed(
+    val city: String? = null,
+    val meetups: List<CustomerMeetup> = emptyList(),
+)
+
+data class MeetupRsvpRequest(val rsvp: String, val guests: Int = 0)

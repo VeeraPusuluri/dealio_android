@@ -79,8 +79,12 @@ fun CpMoreScreen(nav: NavController, onLogout: () -> Unit) {
                     ActionItem("Conversations", Icons.Outlined.ChatBubbleOutline, Teal) { nav.navigate(CpRoutes.CONVERSATIONS) },
                     ActionItem("Contacts", Icons.Outlined.Contacts, IconBlue) { nav.navigate(CpRoutes.CONTACTS) },
                     ActionItem("Follow-ups", Icons.Outlined.EventRepeat, IconOrange) { nav.navigate(CpRoutes.FOLLOWUPS) },
-                    ActionItem("Meetings", Icons.Outlined.CalendarMonth, IconPurple) { nav.navigate(CpRoutes.MEETINGS) },
-                    ActionItem("Meetups", Icons.Outlined.Groups, Teal) { nav.navigate(CpRoutes.MEETUPS) },
+                    // "Meetings" and "Meetups" read as synonyms, so the labels have
+                    // to carry the difference: a site meeting is one builder
+                    // appointment for one customer; a meetup is the partner's own
+                    // gathering, with a guest list.
+                    ActionItem("Site meetings", Icons.Outlined.CalendarMonth, IconPurple) { nav.navigate(CpRoutes.MEETINGS) },
+                    ActionItem("Your meetups", Icons.Outlined.Groups, Teal) { nav.navigate(CpRoutes.MEETUPS) },
                     ActionItem("Profile & verification", Icons.Outlined.Person, IconBlue) { nav.navigate(CpRoutes.PROFILE) },
                     ActionItem("Notifications", Icons.Outlined.Notifications, IconRed) { nav.navigate(CpRoutes.NOTIFICATIONS) },
                 ),

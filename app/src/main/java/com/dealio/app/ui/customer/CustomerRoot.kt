@@ -40,6 +40,8 @@ import com.dealio.app.ui.customer.loan.LoanApplyScreen
 import com.dealio.app.ui.customer.support.CustomerContactScreen
 import com.dealio.app.ui.customer.loan.LoanEligibilityScreen
 import com.dealio.app.ui.customer.loan.LoansScreen
+import com.dealio.app.ui.customer.meetups.CustomerMeetupDetailScreen
+import com.dealio.app.ui.customer.meetups.CustomerMeetupsScreen
 import com.dealio.app.ui.customer.notifications.CustomerNotificationsScreen
 import com.dealio.app.ui.customer.property.PropertyScreen
 import com.dealio.app.ui.customer.profile.ProfileScreen
@@ -69,7 +71,10 @@ object CustomerRoutes {
     const val PROPERTY = "c_property"
     const val DOCUMENTS = "c_documents"
     const val NOTIFICATIONS = "c_notifications"
+    const val MEETUPS = "c_meetups"
+    const val MEETUP_DETAIL = "c_meetup_detail"
 
+    fun meetupDetail(id: Long) = "$MEETUP_DETAIL/$id"
     fun projectDetail(id: Long) = "$PROJECT_DETAIL/$id"
     fun dealDetail(id: Long) = "$DEAL_DETAIL/$id"
     fun loanApply(projectId: Long? = null, builderId: Long? = null) =
@@ -156,6 +161,12 @@ fun CustomerRoot(onLogout: () -> Unit) {
             composable(CustomerRoutes.PROPERTY) { PropertyScreen(nav) }
             composable(CustomerRoutes.DOCUMENTS) { DocumentsScreen(nav) }
             composable(CustomerRoutes.NOTIFICATIONS) { CustomerNotificationsScreen(nav) }
+
+            composable(CustomerRoutes.MEETUPS) { CustomerMeetupsScreen(nav) }
+            composable(
+                "${CustomerRoutes.MEETUP_DETAIL}/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.LongType }),
+            ) { e -> CustomerMeetupDetailScreen(nav, e.arguments?.getLong("id") ?: 0) }
         }
     }
 }

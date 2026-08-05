@@ -19,6 +19,26 @@ interface CustomerApi {
     @GET("customer/cities")
     suspend fun getCities(): Response<ApiEnvelope<List<String>>>
 
+    // ── Meetups ─────────────────────────────────────────────────────────────
+    // Gatherings hosted by channel partners. The list is everything this
+    // customer was personally invited to, plus public ones in the city they
+    // follow — the server decides which, from their preferred city.
+
+    @GET("customer/meetups")
+    suspend fun getMeetups(
+        @Query("city") city: String? = null,
+        @Query("category") category: String? = null,
+    ): Response<ApiEnvelope<CustomerMeetupFeed>>
+
+    @GET("customer/meetups/{id}")
+    suspend fun getMeetup(@Path("id") id: Long): Response<ApiEnvelope<CustomerMeetup>>
+
+    @POST("customer/meetups/{id}/rsvp")
+    suspend fun rsvpMeetup(
+        @Path("id") id: Long,
+        @Body body: MeetupRsvpRequest,
+    ): Response<ApiEnvelope<CustomerMeetup>>
+
     @GET("customer/projects")
     suspend fun getProjects(@Query("city") city: String? = null): Response<ApiEnvelope<List<Project>>>
 

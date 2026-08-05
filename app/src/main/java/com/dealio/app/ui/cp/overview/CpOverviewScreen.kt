@@ -26,6 +26,7 @@ import androidx.compose.material.icons.outlined.Contacts
 import androidx.compose.material.icons.outlined.CurrencyRupee
 import androidx.compose.material.icons.outlined.EventRepeat
 import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.Icon
@@ -188,7 +189,13 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         QuickActionTile("Follow-ups", Icons.Outlined.EventRepeat, Modifier.weight(1f)) { nav.navigate(CpRoutes.FOLLOWUPS) }
-                        QuickActionTile("Meetings", Icons.Outlined.CalendarMonth, Modifier.weight(1f)) { nav.navigate(CpRoutes.MEETINGS) }
+                        QuickActionTile("Site meetings", Icons.Outlined.CalendarMonth, Modifier.weight(1f)) { nav.navigate(CpRoutes.MEETINGS) }
+                    }
+                }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        QuickActionTile("Your meetups", Icons.Outlined.Groups, Modifier.weight(1f)) { nav.navigate(CpRoutes.MEETUPS) }
+                        QuickActionTile("Earnings", Icons.Outlined.Payments, Modifier.weight(1f)) { nav.navigateToCpTab(CpRoutes.EARNINGS) }
                     }
                 }
 

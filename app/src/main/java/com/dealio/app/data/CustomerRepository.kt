@@ -8,7 +8,10 @@ import com.dealio.app.data.api.BookMeetingRequest
 import com.dealio.app.data.api.BuilderNotification
 import com.dealio.app.data.api.CustomerApi
 import com.dealio.app.data.api.CustomerDeal
+import com.dealio.app.data.api.CustomerMeetup
+import com.dealio.app.data.api.CustomerMeetupFeed
 import com.dealio.app.data.api.CustomerMessageRequest
+import com.dealio.app.data.api.MeetupRsvpRequest
 import com.dealio.app.data.api.LoanApplicationRequest
 import com.dealio.app.data.api.Meeting
 import com.dealio.app.data.api.PhoneRequest
@@ -50,6 +53,18 @@ class CustomerRepository(context: Context) {
         call { api.getProjectDocuments(builderId, projectId) }
 
     suspend fun getAvailableCPs(): ApiResult<List<AvailableCP>> = call { api.getAvailableCPs() }
+
+    // ── Meetups ───────────────────────────────────────────────────────────────
+    // Passing no city lets the server fall back to the customer's saved
+    // preferred city, which is the case that matters — the list should be right
+    // without the app having to know what they picked.
+    suspend fun getMeetups(city: String? = null, category: String? = null): ApiResult<CustomerMeetupFeed> =
+        call { api.getMeetups(city, category) }
+
+    suspend fun getMeetup(id: Long): ApiResult<CustomerMeetup> = call { api.getMeetup(id) }
+
+    suspend fun rsvpMeetup(id: Long, rsvp: String, guests: Int = 0): ApiResult<CustomerMeetup> =
+        call { api.rsvpMeetup(id, MeetupRsvpRequest(rsvp, guests)) }
 
     // ── Profile / notifications ─────────────────────────────────────────────
     /** The city last chosen on this device — see [TokenStore.preferredCity]. */

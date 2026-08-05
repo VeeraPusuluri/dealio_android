@@ -9,8 +9,10 @@ import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Part
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 /**
  * Channel-partner endpoints under "cp/...". Most are keyed by the signed-in
@@ -38,9 +40,18 @@ interface CpApi {
         @Path("projectId") projectId: Long,
     ): Response<ApiEnvelope<ShareLinkResponse>>
 
-    // ── Leads ─────────────────────────────────────────────────────────────────
+    // ── Meetups ───────────────────────────────────────────────────────────────
     @GET("cp/{cpUserId}/meetups")
-    suspend fun getMeetups(@Path("cpUserId") cpUserId: Long): Response<ApiEnvelope<List<CpMeetup>>>
+    suspend fun getMeetups(
+        @Path("cpUserId") cpUserId: Long,
+        @Query("scope") scope: String? = null,
+    ): Response<ApiEnvelope<List<CpMeetup>>>
+
+    @GET("cp/{cpUserId}/meetups/{meetupId}")
+    suspend fun getMeetup(
+        @Path("cpUserId") cpUserId: Long,
+        @Path("meetupId") meetupId: Long,
+    ): Response<ApiEnvelope<CpMeetup>>
 
     @POST("cp/{cpUserId}/meetups")
     suspend fun createMeetup(
@@ -48,11 +59,53 @@ interface CpApi {
         @Body body: CreateCpMeetupRequest,
     ): Response<ApiEnvelope<CpMeetup>>
 
+    @PUT("cp/{cpUserId}/meetups/{meetupId}")
+    suspend fun updateMeetup(
+        @Path("cpUserId") cpUserId: Long,
+        @Path("meetupId") meetupId: Long,
+        @Body body: UpdateCpMeetupRequest,
+    ): Response<ApiEnvelope<CpMeetup>>
+
+    @POST("cp/{cpUserId}/meetups/{meetupId}/cancel")
+    suspend fun cancelMeetup(
+        @Path("cpUserId") cpUserId: Long,
+        @Path("meetupId") meetupId: Long,
+        @Body body: CancelMeetupRequest,
+    ): Response<ApiEnvelope<CpMeetup>>
+
     @DELETE("cp/{cpUserId}/meetups/{meetupId}")
     suspend fun deleteMeetup(
         @Path("cpUserId") cpUserId: Long,
         @Path("meetupId") meetupId: Long,
     ): Response<ApiEnvelope<Any>>
+
+    /** Everyone the organiser could invite: their contacts and Dealio customers. */
+    @GET("cp/{cpUserId}/meetups/invitable")
+    suspend fun getInvitable(@Path("cpUserId") cpUserId: Long): Response<ApiEnvelope<InvitableResponse>>
+
+    @POST("cp/{cpUserId}/meetups/{meetupId}/invitees")
+    suspend fun addInvitees(
+        @Path("cpUserId") cpUserId: Long,
+        @Path("meetupId") meetupId: Long,
+        @Body body: AddInviteesRequest,
+    ): Response<ApiEnvelope<CpMeetup>>
+
+    @PATCH("cp/{cpUserId}/meetups/{meetupId}/invitees/{inviteeId}")
+    suspend fun setInviteeRsvp(
+        @Path("cpUserId") cpUserId: Long,
+        @Path("meetupId") meetupId: Long,
+        @Path("inviteeId") inviteeId: Long,
+        @Body body: SetRsvpRequest,
+    ): Response<ApiEnvelope<CpMeetup>>
+
+    @DELETE("cp/{cpUserId}/meetups/{meetupId}/invitees/{inviteeId}")
+    suspend fun removeInvitee(
+        @Path("cpUserId") cpUserId: Long,
+        @Path("meetupId") meetupId: Long,
+        @Path("inviteeId") inviteeId: Long,
+    ): Response<ApiEnvelope<CpMeetup>>
+
+    // ── Leads ─────────────────────────────────────────────────────────────────
 
     @GET("cp/{cpUserId}/leads")
     suspend fun getLeads(@Path("cpUserId") cpUserId: Long): Response<ApiEnvelope<List<CpLead>>>
