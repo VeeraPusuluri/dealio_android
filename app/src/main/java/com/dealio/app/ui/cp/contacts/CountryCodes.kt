@@ -125,3 +125,13 @@ fun formatPhone(countryCode: String?, phone: String): String {
 /** For wa.me and tel: links — "919876543210", no plus, no spaces. */
 fun dialable(countryCode: String?, phone: String): String =
     normalizeDialCode(countryCode).drop(1) + phone.filter(Char::isDigit)
+
+/**
+ * Whether two saved rows are the same person: the last ten digits of the number.
+ *
+ * Two rows for one buyer rarely agree on formatting — one was typed with the
+ * code folded in, the other imported with it split off — but they always agree
+ * here. It is also the identity the server matches leads and invitees on.
+ */
+fun phoneIdentity(countryCode: String?, phone: String): String =
+    dialable(countryCode, phone).takeLast(10)

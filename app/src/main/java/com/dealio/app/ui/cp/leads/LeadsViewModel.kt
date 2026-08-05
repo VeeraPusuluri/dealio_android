@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.dealio.app.data.ApiResult
 import com.dealio.app.data.Spreadsheet
 import com.dealio.app.ui.cp.contacts.ImportContact
+import com.dealio.app.ui.cp.contacts.phoneIdentity
 import com.dealio.app.ui.cp.contacts.rowsToContacts
 import com.dealio.app.data.api.CpContact
 import com.dealio.app.data.api.CpLead
@@ -56,7 +57,9 @@ class LeadsViewModel(app: Application) : CpViewModel(app) {
             }
             // Pickers for the add-lead form (best-effort; failures leave them empty).
             (repo.getProjects() as? ApiResult.Success)?.let { r -> _state.update { it.copy(projects = r.data) } }
-            (repo.getContacts() as? ApiResult.Success)?.let { r -> _state.update { it.copy(contacts = r.data) } }
+            (repo.getContacts() as? ApiResult.Success)?.let { r ->
+                _state.update { it.copy(contacts = onePerPerson(r.data)) }
+            }
         }
     }
 
@@ -128,6 +131,37 @@ class LeadsViewModel(app: Application) : CpViewModel(app) {
             load(silent = true)
         }
     }
+}
+
+/**
+ * One chip per person for the add-lead form's contact shortcuts.
+ *
+ * A book collects twins: importing the phone a second time re-adds everyone
+ * already in it, and a buyer entered by hand turns up again in the next
+ * spreadsheet — the server stores each row as it arrives without matching on
+ * the number. Harmless on the contacts page, where the CP can see and delete
+ * the extra, but the picker is a single scrolling row where the same name
+ * twice is just noise.
+ *
+ * The newest row wins, being the one the CP last touched, and an older twin
+ * lends whatever the newer one left blank rather than being dropped whole —
+ * picking a contact should still fill in the email that was saved for them.
+ */
+internal fun onePerPerson(contacts: List<CpContact>): List<CpContact> {
+    val byPerson = LinkedHashMap<String, CpContact>()
+    contacts.forEach { c ->
+        // Contacts without a usable number are keyed by name, so two different
+        // people missing one stay apart instead of collapsing into each other.
+        val key = phoneIdentity(c.countryCode, c.phone)
+            .takeIf { it.length >= 6 }
+            ?: "name:${c.name.trim().lowercase()}"
+        val kept = byPerson[key]
+        byPerson[key] = if (kept == null) c else kept.copy(
+            name = kept.name.ifBlank { c.name },
+            email = kept.email?.takeIf { it.isNotBlank() } ?: c.email,
+        )
+    }
+    return byPerson.values.toList()
 }
 
 private fun sheetName(ctx: android.content.Context, uri: Uri): String {
