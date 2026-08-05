@@ -2,6 +2,7 @@ package com.dealio.app.data.api
 
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
@@ -101,6 +102,18 @@ interface CustomerApi {
 
     @POST("portal/customer/deals/{dealId}/messages")
     suspend fun sendDealMessage(@Path("dealId") dealId: Long, @Body body: CustomerMessageRequest): Response<ApiEnvelope<Any>>
+
+    // ── Saved projects (bookmarks) ────────────────────────────────────────────
+    // The caller is read from the token, so no phone travels in the request.
+
+    @GET("customer/saved-projects")
+    suspend fun getSavedProjects(): Response<ApiEnvelope<List<Project>>>
+
+    @POST("customer/saved-projects/{projectId}")
+    suspend fun saveProject(@Path("projectId") projectId: Long): Response<ApiEnvelope<SavedProjectResult>>
+
+    @DELETE("customer/saved-projects/{projectId}")
+    suspend fun unsaveProject(@Path("projectId") projectId: Long): Response<ApiEnvelope<SavedProjectResult>>
 
     // ── Shortlists ────────────────────────────────────────────────────────────
     @GET("portal/customer/shortlist")

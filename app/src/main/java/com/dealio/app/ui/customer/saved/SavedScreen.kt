@@ -47,6 +47,7 @@ import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.titleCase
 import com.dealio.app.ui.components.PortalEmptyState
 import com.dealio.app.ui.components.PortalHeader
+import com.dealio.app.ui.customer.CustomerProjectCard
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.TextPrimary
@@ -65,11 +66,10 @@ fun SavedScreen(nav: NavController, vm: SavedViewModel = viewModel()) {
         topBar = {
             PortalHeader(
                 title = "Saved homes",
-                subtitle = "Your shortlist, side by side",
+                subtitle = "Bookmarks and shortlists, side by side",
                 stats = buildList {
-                    add("${state.items.size}" to "shortlisted")
-                    val projects = state.items.map { it.projectId }.distinct().size
-                    if (projects > 0) add("$projects" to "projects")
+                    if (state.projects.isNotEmpty()) add("${state.projects.size}" to "bookmarked")
+                    if (state.items.isNotEmpty()) add("${state.items.size}" to "shortlisted")
                 },
             )
         },
@@ -77,11 +77,11 @@ fun SavedScreen(nav: NavController, vm: SavedViewModel = viewModel()) {
         when {
             state.loading -> LoadingState(Modifier.padding(inner))
             state.error != null -> ErrorState(state.error!!, onRetry = { vm.load() }, modifier = Modifier.padding(inner))
-            state.items.isEmpty() -> Box(Modifier.padding(inner)) {
+            state.isEmpty -> Box(Modifier.padding(inner)) {
                 PortalEmptyState(
                     icon = Icons.Outlined.Bookmark,
-                    title = "Nothing shortlisted yet",
-                    subtitle = "Save a configuration from any project and it lands here, ready to compare and ask pricing on.",
+                    title = "Nothing saved yet",
+                    subtitle = "Bookmark a project while you browse and it waits here — along with any configuration you shortlist with a builder.",
                     actionLabel = "Browse homes",
                     onAction = { nav.navigate(CustomerRoutes.EXPLORE) },
                 )
@@ -90,12 +90,38 @@ fun SavedScreen(nav: NavController, vm: SavedViewModel = viewModel()) {
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = inner.calculateTopPadding() + 8.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(state.items.size) { i ->
-                    SavedCard(state.items[i], onOpen = { nav.navigate(CustomerRoutes.projectDetail(state.items[i].projectId)) }, onPricing = { vm.requestPricing(state.items[i]) })
+                // Bookmarks first: they are the ones the customer put here on
+                // purpose, and the only ones they can take back.
+                if (state.projects.isNotEmpty()) {
+                    item { SavedSectionLabel("Bookmarked projects") }
+                    items(state.projects.size) { i ->
+                        val p = state.projects[i]
+                        CustomerProjectCard(
+                            p,
+                            saved = true,
+                            onToggleSave = { vm.unsave(p.id) },
+                        ) { nav.navigate(CustomerRoutes.projectDetail(p.id)) }
+                    }
+                }
+                if (state.items.isNotEmpty()) {
+                    item { SavedSectionLabel("Shortlisted with a builder") }
+                    items(state.items.size) { i ->
+                        SavedCard(state.items[i], onOpen = { nav.navigate(CustomerRoutes.projectDetail(state.items[i].projectId)) }, onPricing = { vm.requestPricing(state.items[i]) })
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun SavedSectionLabel(text: String) {
+    Text(
+        text.uppercase(),
+        color = TextSecondary, fontSize = 10.5.sp,
+        fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp,
+        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
+    )
 }
 
 @Composable

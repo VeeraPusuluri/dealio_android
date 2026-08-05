@@ -21,6 +21,7 @@ import com.dealio.app.data.api.Project
 import com.dealio.app.data.api.ProfileUpdateRequest
 import com.dealio.app.data.api.ProjectDocument
 import com.dealio.app.data.api.RateRequest
+import com.dealio.app.data.api.SavedProjectResult
 import com.dealio.app.data.api.Shortlist
 import com.dealio.app.data.api.ShortlistRequest
 import com.google.gson.Gson
@@ -130,6 +131,15 @@ class CustomerRepository(context: Context) {
 
     suspend fun sendDealMessage(dealId: Long, recipientRole: String, message: String): ApiResult<Any> =
         call { api.sendDealMessage(dealId, CustomerMessageRequest(phone, recipientRole, message)) }
+
+    // ── Saved projects (bookmarks) ────────────────────────────────────────────
+    suspend fun getSavedProjects(): ApiResult<List<Project>> = call { api.getSavedProjects() }
+
+    suspend fun saveProject(projectId: Long): ApiResult<SavedProjectResult> =
+        call { api.saveProject(projectId) }
+
+    suspend fun unsaveProject(projectId: Long): ApiResult<SavedProjectResult> =
+        call { api.unsaveProject(projectId) }
 
     // ── Shortlists ────────────────────────────────────────────────────────────
     suspend fun getMyShortlists(): ApiResult<List<Shortlist>> = call { api.getMyShortlists(phone) }

@@ -19,6 +19,8 @@ data class ProjectDetailState(
     val documents: List<ProjectDocument> = emptyList(),
     val working: Boolean = false,
     val message: String? = null,
+    /** Whether this project is in the customer's bookmarks. */
+    val saved: Boolean = false,
 )
 
 class ProjectDetailViewModel(app: Application) : CustomerViewModel(app) {
@@ -32,6 +34,10 @@ class ProjectDetailViewModel(app: Application) : CustomerViewModel(app) {
             when (val r = repo.getProject(id)) {
                 is ApiResult.Success -> {
                     _state.update { it.copy(loading = false, project = r.data) }
+                    // Whether it is already bookmarked, so the icon starts right.
+                    (repo.getSavedProjects() as? ApiResult.Success)?.let { saved ->
+                        _state.update { st -> st.copy(saved = saved.data.any { it.id == id }) }
+                    }
                     // Project photos / floor plans for the gallery (best-effort).
                     r.data.builderId?.let { bid ->
                         val docs = (repo.getProjectDocuments(bid, id) as? ApiResult.Success)?.data ?: emptyList()
@@ -39,6 +45,22 @@ class ProjectDetailViewModel(app: Application) : CustomerViewModel(app) {
                     }
                 }
                 is ApiResult.Error -> _state.update { it.copy(loading = false, error = r.message) }
+            }
+        }
+    }
+
+    /**
+     * Bookmarks or un-bookmarks this project. Private — unlike [shortlist],
+     * which tells the builder a buyer wants a particular unit.
+     */
+    fun toggleSaved() {
+        val id = _state.value.project?.id ?: return
+        val wasSaved = _state.value.saved
+        _state.update { it.copy(saved = !wasSaved) }
+        viewModelScope.launch {
+            val r = if (wasSaved) repo.unsaveProject(id) else repo.saveProject(id)
+            if (r is ApiResult.Error) {
+                _state.update { it.copy(saved = wasSaved, message = r.message) }
             }
         }
     }

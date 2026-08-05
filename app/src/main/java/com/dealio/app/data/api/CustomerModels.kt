@@ -53,6 +53,12 @@ data class ShortlistRequest(
     val unitDetails: Map<String, String?>,
 )
 
+/** What the save/unsave endpoints answer with — enough to trust the toggle. */
+data class SavedProjectResult(
+    val projectId: Long = 0,
+    val saved: Boolean = false,
+)
+
 data class PricingRequest(
     val builderId: Long,
     val projectId: Long,

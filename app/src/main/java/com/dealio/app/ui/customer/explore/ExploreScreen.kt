@@ -140,7 +140,11 @@ fun ExploreScreen(nav: NavController, vm: ExploreViewModel = viewModel()) {
                 } else {
                     items(state.filtered.size) { i ->
                         Box(Modifier.padding(horizontal = 16.dp)) {
-                            CustomerProjectCard(state.filtered[i]) { nav.navigate(CustomerRoutes.projectDetail(state.filtered[i].id)) }
+                            CustomerProjectCard(
+                                state.filtered[i],
+                                saved = state.filtered[i].id in state.savedIds,
+                                onToggleSave = { vm.toggleSaved(state.filtered[i].id) },
+                            ) { nav.navigate(CustomerRoutes.projectDetail(state.filtered[i].id)) }
                         }
                     }
                 }

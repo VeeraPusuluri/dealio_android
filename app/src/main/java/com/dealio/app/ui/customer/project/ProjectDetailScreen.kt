@@ -129,6 +129,7 @@ import com.dealio.app.ui.builder.titleCase
 import com.dealio.app.ui.components.dealioFieldColors
 import com.dealio.app.ui.components.meetingTypes
 import com.dealio.app.ui.components.shareViaWhatsApp
+import com.dealio.app.ui.customer.BookmarkButton
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.Navy
@@ -204,7 +205,15 @@ fun ProjectDetailScreen(nav: NavController, projectId: Long, vm: ProjectDetailVi
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = inner.calculateBottomPadding() + 16.dp),
             ) {
-                item { HeroHeader(p, galleryUrls(p, state.documents)) { nav.navigateUp() } }
+                item {
+                    HeroHeader(
+                        p = p,
+                        images = galleryUrls(p, state.documents),
+                        saved = state.saved,
+                        onToggleSave = vm::toggleSaved,
+                        onBack = { nav.navigateUp() },
+                    )
+                }
                 projectDetailSections(
                     p = p,
                     documents = state.documents,
@@ -795,7 +804,13 @@ internal fun ProjectImagePager(
 }
 
 @Composable
-private fun HeroHeader(p: Project, images: List<String>, onBack: () -> Unit) {
+private fun HeroHeader(
+    p: Project,
+    images: List<String>,
+    saved: Boolean,
+    onToggleSave: () -> Unit,
+    onBack: () -> Unit,
+) {
     ProjectImagePager(images, p.name) {
         // Bottom scrim for legible overlay text
         Box(
@@ -816,6 +831,16 @@ private fun HeroHeader(p: Project, images: List<String>, onBack: () -> Unit) {
                 .padding(8.dp)
                 .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
         ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
+
+        // Opposite the back arrow, clear of the status bar for the same reason.
+        BookmarkButton(
+            saved = saved,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(16.dp),
+            onClick = onToggleSave,
+        )
 
         Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
             if (!p.status.isNullOrBlank()) {

@@ -16,9 +16,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.Icon
@@ -86,7 +89,13 @@ private fun HeroImage(p: Project, modifier: Modifier) {
 
 /** Full-width browse card. */
 @Composable
-fun CustomerProjectCard(p: Project, onClick: () -> Unit) {
+fun CustomerProjectCard(
+    p: Project,
+    /** Null hides the bookmark entirely — for lists where saving makes no sense. */
+    saved: Boolean? = null,
+    onToggleSave: (() -> Unit)? = null,
+    onClick: () -> Unit,
+) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -96,7 +105,12 @@ fun CustomerProjectCard(p: Project, onClick: () -> Unit) {
             .border(1.dp, CardBorder.copy(alpha = 0.6f), RoundedCornerShape(20.dp))
             .clickable { onClick() },
     ) {
-        HeroImage(p, Modifier.fillMaxWidth().height(160.dp))
+        Box(Modifier.fillMaxWidth().height(160.dp)) {
+            HeroImage(p, Modifier.fillMaxWidth().height(160.dp))
+            if (saved != null && onToggleSave != null) {
+                BookmarkButton(saved, Modifier.align(Alignment.TopEnd).padding(8.dp), onToggleSave)
+            }
+        }
         Column(Modifier.padding(14.dp)) {
             Text(p.name, color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(3.dp))
@@ -123,6 +137,36 @@ fun CustomerProjectCard(p: Project, onClick: () -> Unit) {
                 )
             }
         }
+    }
+}
+
+/**
+ * Save-for-later toggle, filled once it is on.
+ *
+ * Deliberately not the same gesture as shortlisting a unit: that tells the
+ * builder a buyer is interested and cannot be undone, while this is private and
+ * exists to be changed its mind about.
+ */
+@Composable
+fun BookmarkButton(
+    saved: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier
+            .size(34.dp)
+            // Over a photograph, the icon alone disappears against a bright sky.
+            .background(Color.Black.copy(alpha = 0.35f), CircleShape)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            if (saved) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+            if (saved) "Saved — tap to remove" else "Save this project",
+            tint = Color.White,
+            modifier = Modifier.size(19.dp),
+        )
     }
 }
 

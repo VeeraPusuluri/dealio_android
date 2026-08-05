@@ -39,6 +39,8 @@ data class ExploreState(
     val query: String = "",
     val all: List<Project> = emptyList(),
     val name: String = "Customer",
+    /** Ids this customer has bookmarked, for the filled/hollow toggle. */
+    val savedIds: Set<Long> = emptySet(),
 ) {
     val hasActiveFilters: Boolean
         get() = selectedCity != null || selectedBhk != null || selectedBudget != null || query.isNotBlank()
@@ -106,6 +108,33 @@ class ExploreViewModel(app: Application) : CustomerViewModel(app) {
                     )
                 }
                 is ApiResult.Error -> _state.update { it.copy(loading = false, error = projects.message) }
+            }
+            // Best-effort: a discovery list that cannot say what is bookmarked is
+            // still worth showing, so a failure here just leaves every icon hollow.
+            (repo.getSavedProjects() as? ApiResult.Success)?.let { r ->
+                _state.update { s -> s.copy(savedIds = r.data.map { it.id }.toSet()) }
+            }
+        }
+    }
+
+    /**
+     * Turns the bookmark on or off.
+     *
+     * The icon flips first and the call follows: a save is one row and a tap
+     * that appears to do nothing until the network answers feels broken. If the
+     * server refuses, the flip is undone rather than left lying.
+     */
+    fun toggleSaved(projectId: Long) {
+        val wasSaved = projectId in _state.value.savedIds
+        _state.update {
+            it.copy(savedIds = if (wasSaved) it.savedIds - projectId else it.savedIds + projectId)
+        }
+        viewModelScope.launch {
+            val r = if (wasSaved) repo.unsaveProject(projectId) else repo.saveProject(projectId)
+            if (r is ApiResult.Error) {
+                _state.update {
+                    it.copy(savedIds = if (wasSaved) it.savedIds + projectId else it.savedIds - projectId)
+                }
             }
         }
     }
