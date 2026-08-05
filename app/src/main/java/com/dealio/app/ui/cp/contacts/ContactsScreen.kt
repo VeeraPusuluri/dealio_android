@@ -391,10 +391,11 @@ private fun SortRow(sort: ContactSort, onSort: (ContactSort) -> Unit) {
 @Composable
 private fun CountryCodeRow(selected: String, onSelect: (String) -> Unit) {
     val chosen = normalizeDialCode(selected)
-    // A code that came off an import but isn't in the list still has to show.
+    // A code that came off an import isn't necessarily one the picker offers —
+    // show it anyway, or editing a British contact would silently make them Indian.
     val options = remember(chosen) {
-        if (DIAL_CODES.any { it.code == chosen }) DIAL_CODES
-        else DIAL_CODES + DialCode(chosen, "🌐", "Other")
+        if (PICKER_DIAL_CODES.any { it.code == chosen }) PICKER_DIAL_CODES
+        else PICKER_DIAL_CODES + (DIAL_CODES.firstOrNull { it.code == chosen } ?: DialCode(chosen, "🌐", "Other"))
     }
     Column {
         Text("Country code", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)

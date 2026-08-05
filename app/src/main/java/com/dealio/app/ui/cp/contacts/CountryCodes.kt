@@ -32,6 +32,20 @@ val DIAL_CODES = listOf(
     DialCode("+27", "🇿🇦", "South Africa"),
 )
 
+/**
+ * What the new-contact form offers. Deliberately shorter than [DIAL_CODES]:
+ * these are the two markets in use, and a row of seventeen chips buries them.
+ *
+ * The parser above keeps the full list on purpose — a sheet or address book can
+ * still carry a "+44" number, and it has to import as British rather than be
+ * mangled into an Indian one just because the picker does not offer it. Editing
+ * such a contact shows its own code alongside these (see CountryCodeRow).
+ */
+val PICKER_DIAL_CODES = listOf(
+    DIAL_CODES.first { it.code == "+91" },
+    DIAL_CODES.first { it.code == "+971" },
+)
+
 const val DEFAULT_DIAL_CODE = "+91"
 
 /** Longest first, so "+971" is never mistaken for "+97" and "+91" never for "+9". */
