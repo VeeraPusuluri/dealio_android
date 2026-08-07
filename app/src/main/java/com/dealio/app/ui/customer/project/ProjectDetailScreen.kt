@@ -352,7 +352,7 @@ internal fun LazyListScope.projectDetailSections(
     item { Section("Virtual tour") { VirtualTourSection(p.videoUrl) } }
 
     // Home-loan EMI calculator
-    item { Section("Loan") { LoanCalculator(p.priceLow() ?: p.priceHigh() ?: 50_00_000.0, p.name) } }
+    item { Section("Loan") { LoanCalculator(p.priceLow(), p.priceHigh(), p.name) } }
 
     // Availability
     if ((p.totalUnits ?: 0) > 0) {
@@ -1519,9 +1519,18 @@ private fun VirtualTourSection(videoUrl: String?) {
 
 // ─── Inline home-loan EMI calculator ─────────────────────────────────────────
 
+/**
+ * [low] seeds the property value — the cheapest config is where most people
+ * start — while [high] sets how far the slider travels, so the larger configs in
+ * the project's own price band stay reachable. A project quoting a single price
+ * collapses the two, hence the guard on the ceiling.
+ */
 @Composable
-private fun LoanCalculator(price: Double, projectName: String) {
-    var propertyValue by remember { mutableFloatStateOf(price.toFloat().coerceAtLeast(5_00_000f)) }
+private fun LoanCalculator(low: Double?, high: Double?, projectName: String) {
+    val seed = (low ?: high ?: 50_00_000.0).toFloat().coerceAtLeast(5_00_000f)
+    val ceiling = (high ?: low ?: 50_00_000.0).toFloat().coerceAtLeast(seed + 1f)
+
+    var propertyValue by remember { mutableFloatStateOf(seed) }
     var downPct by remember { mutableFloatStateOf(20f) }
     var rate by remember { mutableFloatStateOf(8.65f) }
     var years by remember { mutableFloatStateOf(20f) }
@@ -1564,7 +1573,7 @@ private fun LoanCalculator(price: Double, projectName: String) {
         }
         Spacer(Modifier.height(10.dp))
 
-        CalcSlider("Property value", formatINRShort(propertyValue.toDouble()), propertyValue, 5_00_000f..price.toFloat().coerceAtLeast(5_00_001f)) { propertyValue = it }
+        CalcSlider("Property value", formatINRShort(propertyValue.toDouble()), propertyValue, 5_00_000f..ceiling) { propertyValue = it }
         CalcSlider("Down payment", "${downPct.toInt()}%", downPct, 10f..50f, steps = 7) { downPct = it }
         CalcSlider("Interest rate", "${"%.2f".format(rate)}%", rate, 7f..15f) { rate = it }
         CalcSlider("Tenure", "${years.toInt()} yr", years, 5f..30f) { years = it }
