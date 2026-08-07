@@ -179,6 +179,9 @@ data class DealSummary(
     val status: String = "",
     val dealValue: Double? = null,
     val createdAt: String = "",
+    // Already returned by the endpoint; the model just never declared it. The
+    // move queue sorts by staleness, which is time since the deal last moved.
+    val updatedAt: String = "",
     val customerName: String = "",
     val customerPhone: String = "",
     val projectName: String = "",

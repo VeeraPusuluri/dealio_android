@@ -52,6 +52,8 @@ import com.dealio.app.ui.builder.QuickActionTile
 import com.dealio.app.ui.builder.SectionHeader
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.StatTile
+import com.dealio.app.ui.flow.DealRole
+import com.dealio.app.ui.flow.MoveQueue
 import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.formatINRShort
@@ -108,6 +110,14 @@ fun OverviewScreen(nav: NavController, vm: OverviewViewModel = viewModel()) {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                item {
+                    MoveQueue(
+                        viewer = DealRole.BUILDER,
+                        items = state.moves,
+                        onOpen = { nav.navigate(BuilderRoutes.dealDetail(it)) },
+                    )
+                }
+
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         StatTile("Projects", state.projects.toString(), Icons.Outlined.Apartment, Teal, Modifier.weight(1f), onClick = { nav.navigate(BuilderRoutes.PROJECTS) })

@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.dealio.app.data.ApiResult
 import com.dealio.app.data.api.DealSummary
 import com.dealio.app.ui.builder.BuilderViewModel
+import com.dealio.app.ui.flow.MoveItem
+import com.dealio.app.ui.flow.idleDaysSince
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +23,8 @@ data class OverviewState(
     val revenue: Double = 0.0,
     val recentDeals: List<DealSummary> = emptyList(),
     val builderName: String? = null,
+    /** Every deal reduced for the move queue — the whole list, not the recent few. */
+    val moves: List<MoveItem> = emptyList(),
 )
 
 class OverviewViewModel(app: Application) : BuilderViewModel(app) {
@@ -59,6 +63,18 @@ class OverviewViewModel(app: Application) : BuilderViewModel(app) {
                     booked = booked.size,
                     revenue = booked.sumOf { d -> d.dealValue ?: 0.0 },
                     recentDeals = dealList.take(6),
+                    moves = dealList.map { d ->
+                        MoveItem(
+                            dealId = d.id,
+                            title = d.customerName,
+                            subtitle = d.projectName,
+                            rawStatus = d.status,
+                            // The builder never holds the baton at Agreement, the
+                            // only stage the flags affect, so their absence here
+                            // cannot change what lands in this queue.
+                            idleDays = idleDaysSince(d.updatedAt.ifBlank { d.createdAt }),
+                        )
+                    },
                     builderName = name,
                 )
             }
