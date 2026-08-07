@@ -195,6 +195,7 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                         // carries the action instead of a second button below it.
                         actionLabel = if (ownsConfirm) "Confirm" else null,
                         onAction = if (ownsConfirm) ({ vm.confirm() }) else null,
+                        onNudge = { vm.nudge() },
                     )
                 }
 

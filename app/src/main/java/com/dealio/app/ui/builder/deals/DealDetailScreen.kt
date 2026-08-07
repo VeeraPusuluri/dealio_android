@@ -125,6 +125,7 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                         viewer = DealRole.BUILDER,
                         cpAgreed = d.cpAgreed,
                         customerConfirmed = d.customerConfirmed,
+                        onNudge = { vm.nudge() },
                     )
 
                     DealioCard {

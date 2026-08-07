@@ -47,6 +47,28 @@ class CpDealDetailViewModel(app: Application) : CpViewModel(app) {
     }
 
     /**
+     * Nudge whoever the deal is waiting on.
+     *
+     * Surfaced through the existing snackbar either way: the cooldown reply is
+     * the whole point of the rate limit and the user needs to read it.
+     */
+    fun nudge() {
+        _state.update { it.copy(working = true) }
+        viewModelScope.launch {
+            val r = threads.nudge(dealId)
+            _state.update {
+                it.copy(
+                    working = false,
+                    message = when (r) {
+                        is ApiResult.Success -> "Nudged. They'll see what the deal is waiting for."
+                        is ApiResult.Error -> r.message
+                    },
+                )
+            }
+        }
+    }
+
+    /**
      * Mark a thread read and clear its badge locally.
      *
      * Optimistic: the badge clears immediately rather than waiting for the round

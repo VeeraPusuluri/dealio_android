@@ -43,6 +43,23 @@ class DealDetailViewModel(app: Application) : CustomerViewModel(app) {
         }
     }
 
+    /** Nudge whoever the deal is waiting on; the cooldown reply is worth showing. */
+    fun nudge() {
+        _state.update { it.copy(working = true) }
+        viewModelScope.launch {
+            val r = threads.nudge(dealId)
+            _state.update {
+                it.copy(
+                    working = false,
+                    message = when (r) {
+                        is ApiResult.Success -> "Nudged. They'll see what's needed next."
+                        is ApiResult.Error -> r.message
+                    },
+                )
+            }
+        }
+    }
+
     /** Optimistic: clear the badge now, since a failed mark costs only a stale badge. */
     fun markThreadRead(threadKey: String) {
         if (_state.value.unread[threadKey].let { it == null || it == 0 }) return

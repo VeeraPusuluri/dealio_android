@@ -187,6 +187,7 @@ fun CpDealDetailScreen(nav: NavController, dealId: Long, vm: CpDealDetailViewMod
                         customerConfirmed = d.customerConfirmed,
                         actionLabel = if (ownsAgree) "Agree" else null,
                         onAction = if (ownsAgree) ({ vm.agree() }) else null,
+                        onNudge = { vm.nudge() },
                     )
                 }
 

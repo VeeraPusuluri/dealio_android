@@ -2,6 +2,7 @@ package com.dealio.app.data
 
 import com.dealio.app.data.api.ApiClient
 import com.dealio.app.data.api.ApiEnvelope
+import com.dealio.app.data.api.NudgeResult
 import com.dealio.app.data.api.ThreadReadRequest
 import com.dealio.app.data.api.ThreadRef
 import com.dealio.app.data.api.ThreadSummary
@@ -34,6 +35,14 @@ class ThreadRepository {
      */
     suspend fun markRead(dealId: Long, threadKey: String): ApiResult<Any> =
         call { api.markRead(ThreadReadRequest(dealId, threadKey)) }
+
+    /**
+     * Nudge whoever the deal is waiting on.
+     *
+     * Unlike markRead this is worth surfacing: the caller wants to know it landed,
+     * and a 429 carries the cooldown message the user should read.
+     */
+    suspend fun nudge(dealId: Long): ApiResult<NudgeResult> = call { api.nudge(dealId) }
 
     private suspend fun <T> call(block: suspend () -> Response<ApiEnvelope<T>>): ApiResult<T> {
         return try {
