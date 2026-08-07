@@ -270,7 +270,10 @@ private fun MeetupFormBody(
     var mode by remember { mutableStateOf(MeetupMode.from(editing?.mode)) }
     var location by remember { mutableStateOf(editing?.location ?: "") }
     var city by remember { mutableStateOf(editing?.city ?: "") }
-    var mapsLink by remember { mutableStateOf(editing?.mapsLink ?: "") }
+    // No longer typed here — the form dropped the field. Still carried so that
+    // editing a meetup whose link was set elsewhere (the admin CRM sets one)
+    // saves it back untouched instead of quietly clearing it.
+    val mapsLink = editing?.mapsLink ?: ""
     var onlineLink by remember { mutableStateOf(editing?.onlineLink ?: "") }
     var notes by remember { mutableStateOf(editing?.notes ?: "") }
     var capacity by remember { mutableStateOf(editing?.capacity?.toString() ?: "") }
@@ -370,13 +373,6 @@ private fun MeetupFormBody(
                     value = location, onValueChange = { location = it },
                     modifier = Modifier.fillMaxWidth(), minLines = 2,
                     placeholder = { Text("Address or landmark", color = TextSecondary.copy(alpha = 0.6f), fontSize = 13.sp) },
-                    shape = RoundedCornerShape(14.dp), colors = dealioFieldColors(),
-                )
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = mapsLink, onValueChange = { mapsLink = it },
-                    modifier = Modifier.fillMaxWidth(), singleLine = true,
-                    placeholder = { Text("Google Maps link (optional)", color = TextSecondary.copy(alpha = 0.6f), fontSize = 13.sp) },
                     shape = RoundedCornerShape(14.dp), colors = dealioFieldColors(),
                 )
             }

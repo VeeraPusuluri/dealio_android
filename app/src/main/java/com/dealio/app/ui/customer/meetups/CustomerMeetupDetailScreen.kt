@@ -12,13 +12,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -223,7 +227,10 @@ fun CustomerMeetupDetailScreen(
             },
         )
 
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp))
+        SnackbarHost(
+            snackbar,
+            Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 120.dp),
+        )
     }
 
     viewerAt?.let { at ->
@@ -376,7 +383,9 @@ private fun MeetupBody(
             }
 
             // Clears the pinned bar so the last thing on the page is reachable.
+            // The bar grew by the navigation-bar inset, so this has to as well.
             Spacer(Modifier.height(160.dp))
+            Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
         }
     }
 }
@@ -731,6 +740,10 @@ private fun RsvpBar(
             .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
             .background(Color.White)
             .border(1.dp, CardBorder, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+            // After the background, not before: the white sheet runs to the very
+            // bottom of the screen while the buttons sit above the gesture bar.
+            // Without this the Attend button is drawn under the system nav.
+            .navigationBarsPadding()
             .padding(horizontal = 16.dp, vertical = 14.dp),
     ) {
         // The guest stepper only matters to someone who is coming.
