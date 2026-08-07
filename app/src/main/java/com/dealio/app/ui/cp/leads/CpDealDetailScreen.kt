@@ -100,6 +100,17 @@ fun CpDealDetailScreen(nav: NavController, dealId: Long, vm: CpDealDetailViewMod
     var target by remember(dealId) { mutableStateOf<ThreadTarget?>(null) }
     val selected = target ?: roster.firstOrNull()
 
+    // Badges come from the deal's own threads. Refreshed when the deal loads and
+    // after each send, so a reply that arrives while the screen is open shows up.
+    val threadKeys = roster.map { threadKeyFor(DealRole.CP, it) }
+    LaunchedEffect(d?.id, d?.messages?.size) {
+        if (d != null) vm.refreshUnread(threadKeys)
+    }
+    // Opening a thread reads it.
+    LaunchedEffect(selected?.recipientRole, d?.id) {
+        if (d != null && selected != null) vm.markThreadRead(threadKeyFor(DealRole.CP, selected))
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
@@ -218,6 +229,7 @@ fun CpDealDetailScreen(nav: NavController, dealId: Long, vm: CpDealDetailViewMod
                         targets = roster,
                         selected = selected,
                         onSelect = { target = it },
+                        unreadOf = { state.unread[threadKeyFor(DealRole.CP, it)] ?: 0 },
                     )
                 }
 

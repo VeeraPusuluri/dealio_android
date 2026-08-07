@@ -3,7 +3,9 @@ package com.dealio.app.ui.cp.leads
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import com.dealio.app.data.ApiResult
+import com.dealio.app.data.ThreadRepository
 import com.dealio.app.data.api.CpDealDetail
+import com.dealio.app.data.api.ThreadRef
 import com.dealio.app.ui.cp.CpViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,12 +20,43 @@ data class CpDealDetailState(
     val working: Boolean = false,
     val sending: Boolean = false,
     val message: String? = null,
+    /** Unread count per threadKey, for the party rail's badges. */
+    val unread: Map<String, Int> = emptyMap(),
 )
 
 class CpDealDetailViewModel(app: Application) : CpViewModel(app) {
     private val _state = MutableStateFlow(CpDealDetailState())
     val state: StateFlow<CpDealDetailState> = _state.asStateFlow()
+    private val threads = ThreadRepository()
     private var dealId = 0L
+
+    /**
+     * Refresh the unread badges for this deal's threads.
+     *
+     * The screen supplies the keys because it owns the roster; the backend still
+     * authorizes each pair and silently drops any the caller may not see.
+     */
+    fun refreshUnread(threadKeys: List<String>) {
+        if (threadKeys.isEmpty()) return
+        viewModelScope.launch {
+            val r = threads.summaries(threadKeys.map { ThreadRef(dealId, it) })
+            if (r is ApiResult.Success) {
+                _state.update { s -> s.copy(unread = r.data.associate { it.threadKey to it.unreadCount }) }
+            }
+        }
+    }
+
+    /**
+     * Mark a thread read and clear its badge locally.
+     *
+     * Optimistic: the badge clears immediately rather than waiting for the round
+     * trip, since a failed mark costs a stale badge and nothing more.
+     */
+    fun markThreadRead(threadKey: String) {
+        if (_state.value.unread[threadKey].let { it == null || it == 0 }) return
+        _state.update { it.copy(unread = it.unread - threadKey) }
+        viewModelScope.launch { threads.markRead(dealId, threadKey) }
+    }
 
     fun load(id: Long, silent: Boolean = false) {
         dealId = id

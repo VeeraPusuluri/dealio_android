@@ -64,4 +64,7 @@ object ApiClient {
     val customerApi: CustomerApi by lazy { retrofit.create(CustomerApi::class.java) }
 
     val cpApi: CpApi by lazy { retrofit.create(CpApi::class.java) }
+
+    // Not role-scoped — the caller comes from the token, so every portal shares it.
+    val threadApi: ThreadApi by lazy { retrofit.create(ThreadApi::class.java) }
 }
