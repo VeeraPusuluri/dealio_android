@@ -12,7 +12,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Forward status flow for a deal, mirroring the web BuilderDealsPage STAGES. */
-val DEAL_STAGES = listOf("Meeting Done", "Negotiation", "Agreement", "Pending Booking", "Booked", "Closed")
+// The stage ladder now lives in ui/flow/DealFlow.kt, mirroring the backend's
+// canonical list. The six-stage version that used to sit here started at
+// "Meeting Done", so anything earlier matched nothing on the deal screen.
 
 data class DealDetailState(
     val loading: Boolean = true,

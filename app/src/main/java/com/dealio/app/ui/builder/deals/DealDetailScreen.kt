@@ -49,6 +49,10 @@ import com.dealio.app.ui.builder.InfoRow
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.StatusChip
+import com.dealio.app.ui.flow.DEAL_STAGES
+import com.dealio.app.ui.flow.DealRole
+import com.dealio.app.ui.flow.DealSpine
+import com.dealio.app.ui.flow.canonicalStage
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.builder.formatINRShort
@@ -83,7 +87,6 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                                 Text(d.customerName, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                                 Text(d.projectName, color = TextSecondary, fontSize = 13.sp)
                             }
-                            StatusChip(d.status)
                         }
                         if ((d.dealValue ?: 0.0) > 0) {
                             Spacer(Modifier.height(8.dp))
@@ -91,16 +94,26 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                         }
                     }
 
-                    // Status flow
+                    // The spine, then the builder's own controls. The stepper this
+                    // replaces ran on a six-stage list starting at "Meeting Done",
+                    // so an early deal matched nothing: no progress shown, and no
+                    // advance button at all. The canonical ladder covers all ten.
+                    DealSpine(
+                        rawStatus = d.status,
+                        viewer = DealRole.BUILDER,
+                        cpAgreed = d.cpAgreed,
+                        customerConfirmed = d.customerConfirmed,
+                    )
+
                     DealioCard {
-                        SectionLabel("Stage")
+                        SectionLabel("Advance")
                         Spacer(Modifier.height(8.dp))
-                        StageStepper(d.status)
-                        val idx = DEAL_STAGES.indexOfFirst { it.equals(d.status, true) }
+                        val idx = DEAL_STAGES.indexOf(canonicalStage(d.status))
                         val next = if (idx in 0 until DEAL_STAGES.lastIndex) DEAL_STAGES[idx + 1] else null
                         if (next != null) {
-                            Spacer(Modifier.height(12.dp))
                             ActionButton("Advance to $next", Navy, enabled = !state.working) { vm.updateStatus(next) }
+                        } else {
+                            Text("This deal is complete.", color = TextSecondary, fontSize = 13.sp)
                         }
                         if (d.status.equals("Pending Booking", true) || d.status.equals("Booked", true)) {
                             Spacer(Modifier.height(8.dp))
@@ -223,25 +236,6 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                     }
                     Spacer(Modifier.height(20.dp))
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StageStepper(status: String) {
-    val currentIdx = DEAL_STAGES.indexOfFirst { it.equals(status, true) }
-    Column {
-        DEAL_STAGES.forEachIndexed { i, stage ->
-            val done = currentIdx >= 0 && i <= currentIdx
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
-                Box(
-                    Modifier.size(18.dp).background(if (done) Teal else CardBorder, RoundedCornerShape(9.dp)),
-                    contentAlignment = Alignment.Center,
-                ) { Text("${i + 1}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
-                Spacer(Modifier.width(10.dp))
-                Text(stage, color = if (done) TextPrimary else TextSecondary, fontSize = 13.sp,
-                    fontWeight = if (i == currentIdx) FontWeight.Bold else FontWeight.Normal)
             }
         }
     }

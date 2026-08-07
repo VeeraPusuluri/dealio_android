@@ -63,7 +63,8 @@ import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.InfoRow
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SectionLabel
-import com.dealio.app.ui.builder.StatusChip
+import com.dealio.app.ui.flow.DealRole
+import com.dealio.app.ui.flow.DealSpine
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.formatINR
 import com.dealio.app.ui.builder.resolveUrl
@@ -139,16 +140,25 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                // The spine, in the buyer's register: no stage chip, no pipeline
+                // vocabulary. This screen used to show StatusChip(dealStatus) —
+                // the sales team's words ("Pending Booking") shown to the person
+                // buying the home, and no sense of progress at all.
                 item {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        StatusChip(d.dealStatus)
-                        Spacer(Modifier.width(8.dp))
-                        if (d.customerConfirmed) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Outlined.CheckCircle, null, tint = StatusColors.Green, modifier = Modifier.size(15.dp))
-                                Spacer(Modifier.width(3.dp))
-                                Text("Confirmed by you", color = StatusColors.Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                            }
+                    DealSpine(
+                        rawStatus = d.dealStatus,
+                        viewer = DealRole.CUSTOMER,
+                        customerConfirmed = d.customerConfirmed,
+                        buyerRegister = true,
+                    )
+                }
+
+                if (d.customerConfirmed) {
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.CheckCircle, null, tint = StatusColors.Green, modifier = Modifier.size(15.dp))
+                            Spacer(Modifier.width(3.dp))
+                            Text("Confirmed by you", color = StatusColors.Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }

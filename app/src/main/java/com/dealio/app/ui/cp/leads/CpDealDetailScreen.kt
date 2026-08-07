@@ -61,8 +61,9 @@ import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.InfoRow
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SectionLabel
-import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.StatusColors
+import com.dealio.app.ui.flow.DealRole
+import com.dealio.app.ui.flow.DealSpine
 import com.dealio.app.ui.builder.formatINR
 import com.dealio.app.ui.components.dealioFieldColors
 import com.dealio.app.ui.theme.CardBorder
@@ -131,6 +132,19 @@ fun CpDealDetailScreen(nav: NavController, dealId: Long, vm: CpDealDetailViewMod
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                // The spine: where the deal is, and whether it is waiting on this
+                // CP or on someone else. Previously this screen showed only a raw
+                // status chip, so a CP could not tell a deal that needed them from
+                // one that had been sitting with the builder for a fortnight.
+                item {
+                    DealSpine(
+                        rawStatus = d.status,
+                        viewer = DealRole.CP,
+                        cpAgreed = d.cpAgreed,
+                        customerConfirmed = d.customerConfirmed,
+                    )
+                }
+
                 item {
                     Column(
                         Modifier.fillMaxWidth().background(Color.White, RoundedCornerShape(16.dp))
@@ -138,7 +152,6 @@ fun CpDealDetailScreen(nav: NavController, dealId: Long, vm: CpDealDetailViewMod
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(d.customerName, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                            StatusChip(d.status)
                         }
                         Spacer(Modifier.height(8.dp))
                         InfoRow("Customer phone", d.customerPhone)
