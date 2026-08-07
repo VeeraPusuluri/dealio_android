@@ -105,6 +105,14 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
     var target by remember(dealId) { mutableStateOf<ThreadTarget?>(null) }
     val selected = target ?: roster.firstOrNull()
 
+    val threadKeys = roster.map { threadKeyFor(DealRole.CUSTOMER, it) }
+    LaunchedEffect(d?.dealId, d?.messages?.size) {
+        if (d != null) vm.refreshUnread(threadKeys)
+    }
+    LaunchedEffect(selected?.recipientRole, d?.dealId) {
+        if (d != null && selected != null) vm.markThreadRead(threadKeyFor(DealRole.CUSTOMER, selected))
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
@@ -241,6 +249,7 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                         targets = roster,
                         selected = selected,
                         onSelect = { target = it },
+                        unreadOf = { state.unread[threadKeyFor(DealRole.CUSTOMER, it)] ?: 0 },
                     )
                 }
                 val thread = selected?.let { threadKeyFor(DealRole.CUSTOMER, it) }

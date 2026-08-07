@@ -3,7 +3,9 @@ package com.dealio.app.ui.builder.deals
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import com.dealio.app.data.ApiResult
+import com.dealio.app.data.ThreadRepository
 import com.dealio.app.data.api.DealDetail
+import com.dealio.app.data.api.ThreadRef
 import com.dealio.app.ui.builder.BuilderViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +25,8 @@ data class DealDetailState(
     val sending: Boolean = false,
     val working: Boolean = false,
     val toast: String? = null,
+    /** Unread count per threadKey, for the party rail's badges. */
+    val unread: Map<String, Int> = emptyMap(),
 )
 
 class DealDetailViewModel(app: Application) : BuilderViewModel(app) {
@@ -31,6 +35,25 @@ class DealDetailViewModel(app: Application) : BuilderViewModel(app) {
     val state: StateFlow<DealDetailState> = _state.asStateFlow()
 
     private var dealId: Long = 0
+    private val threads = ThreadRepository()
+
+    /** Refresh the rail's unread badges. Keys come from the screen, which owns the roster. */
+    fun refreshUnread(threadKeys: List<String>) {
+        if (threadKeys.isEmpty()) return
+        viewModelScope.launch {
+            val r = threads.summaries(threadKeys.map { ThreadRef(dealId, it) })
+            if (r is ApiResult.Success) {
+                _state.update { s -> s.copy(unread = r.data.associate { it.threadKey to it.unreadCount }) }
+            }
+        }
+    }
+
+    /** Optimistic: clear the badge now, since a failed mark costs only a stale badge. */
+    fun markThreadRead(threadKey: String) {
+        if (_state.value.unread[threadKey].let { it == null || it == 0 }) return
+        _state.update { it.copy(unread = it.unread - threadKey) }
+        viewModelScope.launch { threads.markRead(dealId, threadKey) }
+    }
 
     fun load(id: Long) {
         dealId = id

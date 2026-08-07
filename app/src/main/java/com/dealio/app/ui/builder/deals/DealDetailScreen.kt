@@ -92,6 +92,12 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                 )
                 var target by remember(dealId) { mutableStateOf<ThreadTarget?>(null) }
                 val selected = target ?: roster.firstOrNull()
+
+                val threadKeys = roster.map { threadKeyFor(DealRole.BUILDER, it) }
+                LaunchedEffect(d.id, d.messages.size) { vm.refreshUnread(threadKeys) }
+                LaunchedEffect(selected?.recipientRole, d.id) {
+                    if (selected != null) vm.markThreadRead(threadKeyFor(DealRole.BUILDER, selected))
+                }
                 Column(
                     Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -221,6 +227,7 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                             targets = roster,
                             selected = selected,
                             onSelect = { target = it },
+                            unreadOf = { state.unread[threadKeyFor(DealRole.BUILDER, it)] ?: 0 },
                         )
                         Spacer(Modifier.height(12.dp))
                         val thread = selected?.let { threadKeyFor(DealRole.BUILDER, it) }
