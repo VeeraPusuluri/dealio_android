@@ -45,11 +45,11 @@ class CpDealDetailViewModel(app: Application) : CpViewModel(app) {
         }
     }
 
-    fun sendMessage(text: String) {
+    fun sendMessage(text: String, recipientRole: String = "builder") {
         if (text.isBlank()) return
         _state.update { it.copy(sending = true) }
         viewModelScope.launch {
-            val r = repo.sendDealMessage(dealId, text.trim())
+            val r = repo.sendDealMessage(dealId, text.trim(), recipientRole)
             _state.update { it.copy(sending = false, message = (r as? ApiResult.Error)?.message) }
             if (r is ApiResult.Success) load(dealId, silent = true)
         }

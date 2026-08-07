@@ -64,6 +64,10 @@ import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.DealSpine
+import com.dealio.app.ui.flow.PartyRail
+import com.dealio.app.ui.flow.ThreadTarget
+import com.dealio.app.ui.flow.rosterFor
+import com.dealio.app.ui.flow.threadKeyFor
 import com.dealio.app.ui.builder.formatINR
 import com.dealio.app.ui.components.dealioFieldColors
 import com.dealio.app.ui.theme.CardBorder
@@ -85,6 +89,17 @@ fun CpDealDetailScreen(nav: NavController, dealId: Long, vm: CpDealDetailViewMod
     LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
 
     val d = state.deal
+    // Which of this deal's threads the CP is looking at. Defaults to the builder,
+    // which is what the single composer used to be hardwired to.
+    val roster = rosterFor(
+        viewer = DealRole.CP,
+        hasCp = true,
+        rawStatus = d?.status,
+        customerName = d?.customerName,
+    )
+    var target by remember(dealId) { mutableStateOf<ThreadTarget?>(null) }
+    val selected = target ?: roster.firstOrNull()
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
@@ -108,12 +123,20 @@ fun CpDealDetailScreen(nav: NavController, dealId: Long, vm: CpDealDetailViewMod
                 ) {
                     OutlinedTextField(
                         value = draft, onValueChange = { draft = it }, modifier = Modifier.weight(1f),
-                        placeholder = { Text("Message the builder…") }, shape = RoundedCornerShape(22.dp),
+                        placeholder = {
+                            Text(
+                                if (selected?.isGroup == true) "Message all three…"
+                                else "Message ${selected?.label ?: "the builder"}…",
+                            )
+                        },
+                        shape = RoundedCornerShape(22.dp),
                         colors = dealioFieldColors(), maxLines = 4,
                     )
                     Spacer(Modifier.width(8.dp))
                     IconButton(
-                        onClick = { vm.sendMessage(draft); draft = "" },
+                        onClick = {
+                            vm.sendMessage(draft, selected?.recipientRole ?: "builder"); draft = ""
+                        },
                         enabled = draft.isNotBlank() && !state.sending,
                         modifier = Modifier.size(48.dp).background(Teal, RoundedCornerShape(24.dp)),
                     ) {
@@ -190,11 +213,30 @@ fun CpDealDetailScreen(nav: NavController, dealId: Long, vm: CpDealDetailViewMod
                     }
                 }
 
-                item { SectionLabel("Conversation") }
-                if (d.messages.isEmpty()) {
-                    item { Text("No messages yet.", color = TextSecondary, fontSize = 13.sp) }
+                item {
+                    PartyRail(
+                        targets = roster,
+                        selected = selected,
+                        onSelect = { target = it },
+                    )
+                }
+
+                // One transcript per thread. The screen used to pour every message
+                // on the deal into a single list, which is also why the CP could
+                // see traffic that was never theirs — now filtered here and, more
+                // importantly, at the source.
+                val thread = selected?.let { threadKeyFor(DealRole.CP, it) }
+                val shown = d.messages.filter { thread == null || it.threadKey == thread }
+                if (shown.isEmpty()) {
+                    item {
+                        Text(
+                            if (selected?.isGroup == true) "No messages in the group thread yet."
+                            else "No messages with ${selected?.label ?: "this party"} yet.",
+                            color = TextSecondary, fontSize = 13.sp,
+                        )
+                    }
                 } else {
-                    items(d.messages.size) { i -> MessageBubble(d.messages[i]) }
+                    items(shown.size) { i -> MessageBubble(shown[i]) }
                 }
             }
         }

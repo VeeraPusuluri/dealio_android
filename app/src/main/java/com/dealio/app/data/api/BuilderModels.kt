@@ -227,6 +227,13 @@ data class DealMessage(
     val senderRole: String = "",
     val message: String = "",
     val createdAt: String = "",
+    /**
+     * Which private thread this belongs to: "builder-cp" | "builder-customer" |
+     * "cp-customer" | "group". The backend only ever sends threads this caller is
+     * party to; this is what the UI switches on. Legacy rows default to
+     * builder-customer, matching the column default.
+     */
+    val threadKey: String = "builder-customer",
 )
 
 data class DealDocument(
@@ -393,5 +400,7 @@ data class MeetingUpdateRequest(
     val confirmedDate: String? = null,
     val confirmedTime: String? = null,
 )
-data class MessageRequest(val message: String)
+// recipientRole picks the thread: "cp" | "customer" | "group". Omitting it makes
+// the backend fall back to "cp".
+data class MessageRequest(val message: String, val recipientRole: String = "cp")
 data class ShortlistResponseRequest(val status: String, val builderNote: String? = null)

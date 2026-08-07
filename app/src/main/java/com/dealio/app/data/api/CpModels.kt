@@ -209,7 +209,10 @@ data class CreateCallLogRequest(
     val nextFollowUpTime: String? = null,
 )
 data class MeetingNoteRequest(val notes: String, val cpRating: Int? = null)
-data class CpMessageRequest(val message: String)
+// recipientRole picks the thread: "builder" | "customer" | "group". Omitting it
+// makes the backend fall back to "builder", which is why the app could only ever
+// reach the builder before the party rail existed.
+data class CpMessageRequest(val message: String, val recipientRole: String = "builder")
 data class CpProfileUpdateRequest(
     val fullName: String? = null,
     val email: String? = null,
