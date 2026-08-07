@@ -65,11 +65,11 @@ class DealDetailViewModel(app: Application) : BuilderViewModel(app) {
         }
     }
 
-    fun sendMessage(text: String) {
+    fun sendMessage(text: String, recipientRole: String = "cp") {
         if (text.isBlank()) return
         _state.update { it.copy(sending = true) }
         viewModelScope.launch {
-            when (val r = repo.sendDealMessage(dealId, text.trim())) {
+            when (val r = repo.sendDealMessage(dealId, text.trim(), recipientRole)) {
                 is ApiResult.Success -> { _state.update { it.copy(sending = false) }; load(dealId) }
                 is ApiResult.Error -> _state.update { it.copy(sending = false, toast = r.message) }
             }

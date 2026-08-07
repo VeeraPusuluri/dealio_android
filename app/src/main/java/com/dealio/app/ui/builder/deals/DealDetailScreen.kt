@@ -52,7 +52,11 @@ import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.flow.DEAL_STAGES
 import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.DealSpine
+import com.dealio.app.ui.flow.PartyRail
+import com.dealio.app.ui.flow.ThreadTarget
 import com.dealio.app.ui.flow.canonicalStage
+import com.dealio.app.ui.flow.rosterFor
+import com.dealio.app.ui.flow.threadKeyFor
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.builder.formatINRShort
@@ -76,6 +80,18 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
             state.deal != null -> {
                 val d = state.deal!!
                 var message by remember { mutableStateOf("") }
+                // Which thread the builder is looking at. Pre-booking with a CP
+                // attached the private customer pair is withheld, so the roster
+                // offers the group instead — matching the backend exactly.
+                val roster = rosterFor(
+                    viewer = DealRole.BUILDER,
+                    hasCp = d.cpName != null,
+                    rawStatus = d.status,
+                    cpName = d.cpName,
+                    customerName = d.customerName,
+                )
+                var target by remember(dealId) { mutableStateOf<ThreadTarget?>(null) }
+                val selected = target ?: roster.firstOrNull()
                 Column(
                     Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -196,14 +212,27 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                         }
                     }
 
-                    // Messages
+                    // Messages — one thread at a time. The backend only returns
+                    // threads this builder is party to; the rail picks between them.
                     DealioCard {
                         SectionLabel("Conversation")
                         Spacer(Modifier.height(8.dp))
-                        if (d.messages.isEmpty()) {
-                            Text("No messages yet. Start the conversation below.", color = TextSecondary, fontSize = 13.sp)
+                        PartyRail(
+                            targets = roster,
+                            selected = selected,
+                            onSelect = { target = it },
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        val thread = selected?.let { threadKeyFor(DealRole.BUILDER, it) }
+                        val shown = d.messages.filter { thread == null || it.threadKey == thread }
+                        if (shown.isEmpty()) {
+                            Text(
+                                if (selected?.isGroup == true) "No messages in the group thread yet."
+                                else "No messages with ${selected?.label ?: "this party"} yet.",
+                                color = TextSecondary, fontSize = 13.sp,
+                            )
                         } else {
-                            d.messages.forEach { m ->
+                            shown.forEach { m ->
                                 val mine = m.senderRole.equals("builder", true)
                                 Column(
                                     Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -223,13 +252,21 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             OutlinedTextField(
                                 value = message, onValueChange = { message = it },
-                                modifier = Modifier.weight(1f), placeholder = { Text("Message…") },
+                                modifier = Modifier.weight(1f),
+                                placeholder = {
+                                    Text(
+                                        if (selected?.isGroup == true) "Message all three…"
+                                        else "Message ${selected?.label ?: "…"}",
+                                    )
+                                },
                                 singleLine = true, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors(),
                             )
                             Spacer(Modifier.width(8.dp))
                             Box(
                                 Modifier.size(48.dp).background(Navy, RoundedCornerShape(12.dp))
-                                    .clickable(enabled = !state.sending && message.isNotBlank()) { vm.sendMessage(message); message = "" },
+                                    .clickable(enabled = !state.sending && message.isNotBlank()) {
+                                        vm.sendMessage(message, selected?.recipientRole ?: "cp"); message = ""
+                                    },
                                 contentAlignment = Alignment.Center,
                             ) { Icon(Icons.AutoMirrored.Outlined.Send, "Send", tint = Color.White, modifier = Modifier.size(20.dp)) }
                         }

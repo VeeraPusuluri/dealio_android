@@ -6,6 +6,10 @@ data class CustomerDeal(
     val dealId: Long = 0,
     val projectId: Long = 0,
     val projectName: String = "Unknown Project",
+    // The backend has always returned these; the model just never declared them.
+    // The party rail needs them to name the buyer's two counterparties.
+    val builderName: String? = null,
+    val cpName: String? = null,
     val dealStatus: String = "",
     val dealValue: Double? = null,
     val customerConfirmed: Boolean = false,

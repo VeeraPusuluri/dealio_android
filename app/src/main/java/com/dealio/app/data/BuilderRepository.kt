@@ -127,8 +127,12 @@ class BuilderRepository(context: Context) {
     suspend fun updateDealStatus(dealId: Long, status: String): ApiResult<Any> =
         withBuilder { bid -> call { api.updateDealStatus(bid, dealId, StatusRequest(status)) } }
 
-    suspend fun sendDealMessage(dealId: Long, message: String): ApiResult<Any> =
-        withBuilder { bid -> call { api.sendDealMessage(bid, dealId, MessageRequest(message)) } }
+    suspend fun sendDealMessage(
+        dealId: Long,
+        message: String,
+        recipientRole: String = "cp",
+    ): ApiResult<Any> =
+        withBuilder { bid -> call { api.sendDealMessage(bid, dealId, MessageRequest(message, recipientRole)) } }
 
     suspend fun markDealSold(dealId: Long): ApiResult<Any> =
         withBuilder { bid -> call { api.markDealSold(bid, dealId) } }
