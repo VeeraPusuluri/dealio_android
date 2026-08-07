@@ -35,6 +35,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.dealio.app.data.api.CustomerDeal
+import com.dealio.app.ui.flow.DealRole
+import com.dealio.app.ui.flow.MoveItem
+import com.dealio.app.ui.flow.MoveQueue
+import com.dealio.app.ui.flow.idleDaysSince
 import com.dealio.app.ui.builder.DealioCard
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
@@ -93,6 +97,27 @@ fun JourneyScreen(nav: NavController, vm: JourneyViewModel = viewModel()) {
                 ),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
+                // A buyer with nothing to do gets told so, rather than an absence
+                // they have to interpret.
+                item {
+                    MoveQueue(
+                        viewer = DealRole.CUSTOMER,
+                        items = state.deals.map { d ->
+                            MoveItem(
+                                dealId = d.dealId,
+                                title = d.projectName,
+                                subtitle = d.builderName ?: "Your purchase",
+                                rawStatus = d.dealStatus,
+                                cpAgreed = d.cpAgreed,
+                                customerConfirmed = d.customerConfirmed,
+                                idleDays = idleDaysSince(d.createdAt),
+                            )
+                        },
+                        onOpen = { nav.navigate(CustomerRoutes.dealDetail(it)) },
+                        emptyMessage = "Everything is with your builder or advisor right now.",
+                    )
+                }
+
                 items(state.deals.size) { i ->
                     DealCard(state.deals[i]) { nav.navigate(CustomerRoutes.dealDetail(state.deals[i].dealId)) }
                 }

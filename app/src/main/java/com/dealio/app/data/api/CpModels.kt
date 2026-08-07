@@ -12,6 +12,8 @@ data class CpLead(
     val customerEmail: String? = null,
     val dealValue: Double? = null,
     val status: String = "",
+    val cpAgreed: Boolean = false,
+    val customerConfirmed: Boolean = false,
     val commissionStatus: String = "Pending",
     val commissionPercent: Double? = null,
     val estimatedCommission: Double? = null,

@@ -56,6 +56,8 @@ import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.RefreshOnResume
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.StatTile
+import com.dealio.app.ui.flow.DealRole
+import com.dealio.app.ui.flow.MoveQueue
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.initialsOf
@@ -136,6 +138,16 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
             state.loading -> LoadingState()
             state.error != null -> ErrorState(state.error!!, onRetry = { vm.load() })
             else -> LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // The queue opens the screen; the metrics move below it. A count of
+                // leads never told the CP which one needed them today.
+                item {
+                    MoveQueue(
+                        viewer = DealRole.CP,
+                        items = state.moves,
+                        onOpen = { nav.navigate(CpRoutes.dealDetail(it)) },
+                    )
+                }
+
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         StatTile("Earned", formatINRShort(state.totalEarnings), Icons.Outlined.CurrencyRupee, StatusColors.Green, Modifier.weight(1f), onClick = { nav.navigateToCpTab(CpRoutes.EARNINGS) })

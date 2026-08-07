@@ -9,6 +9,8 @@ import com.dealio.app.data.api.CpDueToday
 import com.dealio.app.data.api.CpLead
 import com.dealio.app.ui.cp.CpViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import com.dealio.app.ui.flow.MoveItem
+import com.dealio.app.ui.flow.idleDaysSince
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -32,6 +34,11 @@ data class CpOverviewState(
     val pendingCommission: Double = 0.0,
     val totalDeals: Int = 0,
     val leadsCount: Int = 0,
+    /**
+     * Every lead reduced for the move queue — built from the whole list, not the
+     * recent five, since the deal that needs you most is usually the oldest.
+     */
+    val moves: List<MoveItem> = emptyList(),
     val recentLeads: List<CpLead> = emptyList(),
     val due: CpDueToday = CpDueToday(),
 )
@@ -72,6 +79,17 @@ class CpOverviewViewModel(app: Application) : CpViewModel(app) {
                     pendingCommission = cp?.pendingCommission ?: 0.0,
                     totalDeals = cp?.totalDeals ?: leadList.size,
                     leadsCount = leadList.size,
+                    moves = leadList.map { l ->
+                        MoveItem(
+                            dealId = l.id,
+                            title = l.customerName,
+                            subtitle = l.projectName,
+                            rawStatus = l.status,
+                            cpAgreed = l.cpAgreed,
+                            customerConfirmed = l.customerConfirmed,
+                            idleDays = idleDaysSince(l.updatedAt.ifBlank { l.createdAt }),
+                        )
+                    },
                     recentLeads = leadList.take(5),
                     due = (due as? ApiResult.Success)?.data ?: CpDueToday(),
                 )
