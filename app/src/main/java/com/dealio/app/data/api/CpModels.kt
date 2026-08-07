@@ -36,6 +36,7 @@ data class CpDealDetail(
     val commissionAmount: Double? = null,
     val messages: List<DealMessage> = emptyList(),
     val dealDocuments: List<DealDocument> = emptyList(),
+    val events: List<DealEvent> = emptyList(),
 )
 
 // ─── Commissions ─────────────────────────────────────────────────────────────

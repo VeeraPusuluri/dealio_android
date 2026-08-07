@@ -49,6 +49,7 @@ import com.dealio.app.ui.builder.InfoRow
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.StatusChip
+import com.dealio.app.ui.flow.ActivityLedger
 import com.dealio.app.ui.flow.DEAL_STAGES
 import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.DealSpine
@@ -217,6 +218,10 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                                 }
                             }
                         }
+                    }
+
+                    if (d.events.isNotEmpty()) {
+                        DealioCard { ActivityLedger(d.events) }
                     }
 
                     // Messages — one thread at a time. The backend only returns

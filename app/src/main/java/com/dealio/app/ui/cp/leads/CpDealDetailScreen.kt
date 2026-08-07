@@ -62,6 +62,7 @@ import com.dealio.app.ui.builder.InfoRow
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.StatusColors
+import com.dealio.app.ui.flow.ActivityLedger
 import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.DealSpine
 import com.dealio.app.ui.flow.PartyRail
@@ -242,6 +243,10 @@ fun CpDealDetailScreen(nav: NavController, dealId: Long, vm: CpDealDetailViewMod
                             Spacer(Modifier.width(6.dp)); Text("Log call", color = Navy, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
+                }
+
+                if (d.events.isNotEmpty()) {
+                    item { ActivityLedger(d.events) }
                 }
 
                 item {

@@ -217,6 +217,7 @@ data class DealDetail(
     val commissionAmount: Double? = null,
     val messages: List<DealMessage> = emptyList(),
     val dealDocuments: List<DealDocument> = emptyList(),
+    val events: List<DealEvent> = emptyList(),
     val paymentSchedule: List<PaymentInstallment>? = null,
 )
 
@@ -234,6 +235,19 @@ data class DealMessage(
      * builder-customer, matching the column default.
      */
     val threadKey: String = "builder-customer",
+)
+
+/**
+ * One entry in a deal's ledger. `summary` is written server-side for a reader, so
+ * the client renders it as-is rather than re-deriving phrasing from `type`.
+ */
+data class DealEvent(
+    val id: Long = 0,
+    val type: String = "",
+    val actorRole: String = "system",
+    val actorName: String? = null,
+    val summary: String = "",
+    val createdAt: String = "",
 )
 
 data class DealDocument(
