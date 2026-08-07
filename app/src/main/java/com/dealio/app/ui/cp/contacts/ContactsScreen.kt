@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,6 +27,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -99,6 +101,7 @@ import com.dealio.app.ui.theme.ErrorRed
 import com.dealio.app.ui.theme.FieldFill
 import com.dealio.app.ui.theme.Mist
 import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.TealDeep
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import com.dealio.app.ui.theme.tintBrush
@@ -553,19 +556,25 @@ private fun SortRow(sort: ContactSort, onSort: (ContactSort) -> Unit) {
 }
 
 /**
- * Dial-code picker. A scrolling row of flags rather than a dropdown: India is
- * the answer almost every time and stays first, so the common case is already
- * selected and the rest are one tap away without opening a menu.
+ * Dial-code picker. The markets that actually come up sit in a scrolling row of
+ * flags — India is the answer almost every time and stays first — and every
+ * other country is behind "More", which opens a searchable list.
+ *
+ * The whole world as chips would bury the common case; the whole world missing
+ * meant a partner with a French buyer had nowhere to put them.
  */
 @Composable
 private fun CountryCodeRow(selected: String, onSelect: (String) -> Unit) {
     val chosen = normalizeDialCode(selected)
-    // A code that came off an import isn't necessarily one the picker offers —
-    // show it anyway, or editing a British contact would silently make them Indian.
+    var browsing by remember { mutableStateOf(false) }
+
+    // A code that came off an import isn't necessarily one of the common ones —
+    // show it anyway, or editing a French contact would silently make them Indian.
     val options = remember(chosen) {
-        if (PICKER_DIAL_CODES.any { it.code == chosen }) PICKER_DIAL_CODES
-        else PICKER_DIAL_CODES + (DIAL_CODES.firstOrNull { it.code == chosen } ?: DialCode(chosen, "🌐", "Other"))
+        if (COMMON_DIAL_CODES.any { it.code == chosen }) COMMON_DIAL_CODES
+        else COMMON_DIAL_CODES + (DIAL_CODES.firstOrNull { it.code == chosen } ?: DialCode(chosen, "🌐", "Other"))
     }
+
     Column {
         Text("Country code", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(6.dp))
@@ -580,8 +589,75 @@ private fun CountryCodeRow(selected: String, onSelect: (String) -> Unit) {
                     onClick = { onSelect(dc.code) },
                 )
             }
+            SheetChip(text = "🌐 More", selected = false, onClick = { browsing = true })
         }
     }
+
+    if (browsing) {
+        CountryCodePickerDialog(
+            chosen = chosen,
+            onDismiss = { browsing = false },
+            onSelect = { onSelect(it); browsing = false },
+        )
+    }
+}
+
+/** Every country, searchable by name or by code — "france", "+33" and "33" all find it. */
+@Composable
+private fun CountryCodePickerDialog(chosen: String, onDismiss: () -> Unit, onSelect: (String) -> Unit) {
+    var query by remember { mutableStateOf("") }
+    val results = remember(query) {
+        val q = query.trim().lowercase().removePrefix("+")
+        if (q.isEmpty()) DIAL_CODES
+        else DIAL_CODES.filter {
+            it.label.lowercase().contains(q) || it.code.removePrefix("+").startsWith(q)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        title = { Text("Country code", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                SheetField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = "Search",
+                    placeholder = "Country or code",
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(8.dp))
+                if (results.isEmpty()) {
+                    Text("No country matches", color = TextSecondary, fontSize = 13.sp,
+                        modifier = Modifier.padding(vertical = 24.dp))
+                } else {
+                    LazyColumn(Modifier.heightIn(max = 340.dp)) {
+                        items(results, key = { it.code + it.label }) { dc ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSelect(dc.code) }
+                                    .padding(vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(dc.flag, fontSize = 18.sp)
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    dc.label,
+                                    color = if (dc.code == chosen) TealDeep else TextPrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = if (dc.code == chosen) FontWeight.Bold else FontWeight.Normal,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(dc.code, color = TextSecondary, fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+    )
 }
 
 private val BHK_CHOICES = listOf("1 BHK", "2 BHK", "3 BHK", "4 BHK", "Villa", "Plot")
