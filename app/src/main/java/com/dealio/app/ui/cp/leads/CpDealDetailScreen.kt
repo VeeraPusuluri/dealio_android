@@ -65,6 +65,8 @@ import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.DealSpine
 import com.dealio.app.ui.flow.PartyRail
+import com.dealio.app.ui.flow.batonOf
+import com.dealio.app.ui.flow.canonicalStage
 import com.dealio.app.ui.flow.ThreadTarget
 import com.dealio.app.ui.flow.rosterFor
 import com.dealio.app.ui.flow.threadKeyFor
@@ -170,12 +172,21 @@ fun CpDealDetailScreen(nav: NavController, dealId: Long, vm: CpDealDetailViewMod
                 // CP or on someone else. Previously this screen showed only a raw
                 // status chip, so a CP could not tell a deal that needed them from
                 // one that had been sitting with the builder for a fortnight.
+                // When the baton is genuinely on the CP to agree, the spine owns
+                // that action — one primary CTA per screen. Everywhere else
+                // agreeing is still possible but demoted below, because it is not
+                // what the deal is waiting for.
+                val ownsAgree = batonOf(d.status, d.cpAgreed, d.customerConfirmed)
+                    .heldBy(DealRole.CP) && !d.cpAgreed &&
+                    canonicalStage(d.status) == "Agreement"
                 item {
                     DealSpine(
                         rawStatus = d.status,
                         viewer = DealRole.CP,
                         cpAgreed = d.cpAgreed,
                         customerConfirmed = d.customerConfirmed,
+                        actionLabel = if (ownsAgree) "Agree" else null,
+                        onAction = if (ownsAgree) ({ vm.agree() }) else null,
                     )
                 }
 
@@ -201,13 +212,21 @@ fun CpDealDetailScreen(nav: NavController, dealId: Long, vm: CpDealDetailViewMod
                     }
                 }
 
-                if (!d.cpAgreed) {
+                // Agreeing early is legitimate — the endpoint sets cpAgreed *and*
+                // moves the deal to Agreement — so this stays available. It is
+                // just no longer a full-width primary competing with a spine that
+                // says the deal is waiting on someone else.
+                if (!d.cpAgreed && !ownsAgree) {
                     item {
-                        Button(
+                        OutlinedButton(
                             onClick = vm::agree, enabled = !state.working,
-                            modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Teal),
-                        ) { Text("Agree to this deal", color = Color.White, fontWeight = FontWeight.Bold) }
+                            modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Text(
+                                "Agree and move to Agreement",
+                                color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                            )
+                        }
                     }
                 }
 

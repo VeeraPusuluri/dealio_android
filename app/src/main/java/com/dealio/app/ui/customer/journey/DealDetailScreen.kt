@@ -63,9 +63,11 @@ import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.InfoRow
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SectionLabel
+import androidx.compose.material3.OutlinedButton
 import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.DealSpine
 import com.dealio.app.ui.flow.PartyRail
+import com.dealio.app.ui.flow.batonOf
 import com.dealio.app.ui.flow.ThreadTarget
 import com.dealio.app.ui.flow.rosterFor
 import com.dealio.app.ui.flow.threadKeyFor
@@ -104,6 +106,12 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
     )
     var target by remember(dealId) { mutableStateOf<ThreadTarget?>(null) }
     val selected = target ?: roster.firstOrNull()
+
+    // True when the deal is genuinely waiting on the buyer and there is a
+    // confirm to make — the one case where the spine should carry the action.
+    val ownsConfirm = d != null &&
+        batonOf(d.dealStatus, d.cpAgreed, d.customerConfirmed).heldBy(DealRole.CUSTOMER) &&
+        showConfirmFor(d)
 
     val threadKeys = roster.map { threadKeyFor(DealRole.CUSTOMER, it) }
     LaunchedEffect(d?.dealId, d?.messages?.size) {
@@ -183,6 +191,10 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                         viewer = DealRole.CUSTOMER,
                         customerConfirmed = d.customerConfirmed,
                         buyerRegister = true,
+                        // When the deal really is waiting on the buyer, the spine
+                        // carries the action instead of a second button below it.
+                        actionLabel = if (ownsConfirm) "Confirm" else null,
+                        onAction = if (ownsConfirm) ({ vm.confirm() }) else null,
                     )
                 }
 
@@ -197,7 +209,9 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                 }
 
                 // Actions
-                item { DealActions(d, working = state.working, onAccept = vm::acceptNegotiation, onConfirm = vm::confirm) }
+                if (!ownsConfirm) {
+                    item { DealActions(d, working = state.working, onAccept = vm::acceptNegotiation, onConfirm = vm::confirm) }
+                }
 
                 // Loan info
                 if (d.loanCaseId != null) {
@@ -270,25 +284,31 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
     }
 }
 
+// A buyer can accept a quote while the deal still reads "Negotiation" — the
+// status column has no separate "quote sent" state — so this action is offered
+// even when the baton is not on them. It just renders as a secondary control,
+// so it never competes with a spine saying the deal is waiting on someone else.
+internal fun showAcceptFor(d: CustomerDeal): Boolean =
+    d.dealStatus.lowercase().contains("negotiation") && !d.customerConfirmed
+
+internal fun showConfirmFor(d: CustomerDeal): Boolean {
+    val status = d.dealStatus.lowercase()
+    return !d.customerConfirmed && !showAcceptFor(d) &&
+        (status.contains("agreement") || status.contains("pending booking") || status.contains("booked"))
+}
+
 @Composable
 private fun DealActions(d: CustomerDeal, working: Boolean, onAccept: () -> Unit, onConfirm: () -> Unit) {
-    val status = d.dealStatus.lowercase()
-    val showAccept = status.contains("negotiation") && !d.customerConfirmed
-    val showConfirm = !d.customerConfirmed && !showAccept &&
-        (status.contains("agreement") || status.contains("pending booking") || status.contains("booked"))
-
-    if (showAccept) {
-        Button(
+    if (showAcceptFor(d)) {
+        OutlinedButton(
             onClick = onAccept, enabled = !working,
-            modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Teal),
-        ) { Text("Accept negotiated price", color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold) }
-    } else if (showConfirm) {
-        Button(
+            modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(12.dp),
+        ) { Text("Accept negotiated price", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
+    } else if (showConfirmFor(d)) {
+        OutlinedButton(
             onClick = onConfirm, enabled = !working,
-            modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Teal),
-        ) { Text("Confirm deal", color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold) }
+            modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(12.dp),
+        ) { Text("Confirm deal", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
     }
 }
 
