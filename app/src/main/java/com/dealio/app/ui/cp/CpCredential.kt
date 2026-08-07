@@ -72,6 +72,16 @@ fun metalFor(tier: String?): TierMetal = when (tier?.trim()?.lowercase()) {
     else -> Silver
 }
 
+/**
+ * A partner's ID, struck the way a card number is: four digits, zero-padded.
+ *
+ * The raw value is a database row number, and "7" sitting next to a RERA number
+ * reads as a placeholder rather than something issued. Padding gives every
+ * partner an ID of the same shape. Anyone past four digits prints in full —
+ * this widens ids, it never truncates them.
+ */
+fun formatPartnerId(id: Long): String = id.toString().padStart(4, '0')
+
 /** Engraved register: small, letterspaced caps. Used for every label on the card. */
 @Composable
 fun EngravedLabel(text: String, color: Color, modifier: Modifier = Modifier, size: Int = 10) {
@@ -172,8 +182,26 @@ fun CpCredentialCard(
                 }
             }
 
-            if (!reraNumber.isNullOrBlank()) {
+            // The ID belongs on the face of the card, not two taps deep behind the
+            // portrait. It is the one thing every partner has — tier and RERA are
+            // optional, an ID is not — so it leads the plate below the name.
+            if (partnerId != null) {
                 Spacer(Modifier.height(14.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    EngravedLabel("CP ID", Color.White.copy(alpha = 0.40f))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        formatPartnerId(partnerId),
+                        color = Color.White.copy(alpha = 0.80f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 1.sp,
+                    )
+                }
+            }
+
+            if (!reraNumber.isNullOrBlank()) {
+                Spacer(Modifier.height(if (partnerId != null) 8.dp else 14.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     EngravedLabel("RERA", Color.White.copy(alpha = 0.40f))
                     Spacer(Modifier.width(8.dp))
@@ -363,12 +391,13 @@ private fun CredentialPhotoDialog(
                             Spacer(Modifier.height(12.dp))
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            EngravedLabel("Partner ID", Color.White.copy(alpha = 0.40f), Modifier.weight(1f))
+                            EngravedLabel("CP ID", Color.White.copy(alpha = 0.40f), Modifier.weight(1f))
                             Text(
-                                partnerId.toString(),
+                                formatPartnerId(partnerId),
                                 color = Color.White.copy(alpha = 0.80f),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
                             )
                         }
                     }
