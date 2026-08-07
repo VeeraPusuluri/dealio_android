@@ -138,16 +138,6 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
             state.loading -> LoadingState()
             state.error != null -> ErrorState(state.error!!, onRetry = { vm.load() })
             else -> LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // The queue opens the screen; the metrics move below it. A count of
-                // leads never told the CP which one needed them today.
-                item {
-                    MoveQueue(
-                        viewer = DealRole.CP,
-                        items = state.moves,
-                        onOpen = { nav.navigate(CpRoutes.dealDetail(it)) },
-                    )
-                }
-
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         StatTile("Earned", formatINRShort(state.totalEarnings), Icons.Outlined.CurrencyRupee, StatusColors.Green, Modifier.weight(1f), onClick = { nav.navigateToCpTab(CpRoutes.EARNINGS) })
@@ -159,6 +149,15 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
                         StatTile("Deals", state.totalDeals.toString(), Icons.Outlined.Apartment, Teal, Modifier.weight(1f), onClick = { nav.navigateToCpTab(CpRoutes.LEADS) })
                         StatTile("Leads", state.leadsCount.toString(), Icons.Outlined.Groups, Teal, Modifier.weight(1f), onClick = { nav.navigateToCpTab(CpRoutes.LEADS) })
                     }
+                }
+
+                // Below the earnings and counts, not above them.
+                item {
+                    MoveQueue(
+                        viewer = DealRole.CP,
+                        items = state.moves,
+                        onOpen = { nav.navigate(CpRoutes.dealDetail(it)) },
+                    )
                 }
 
                 // Due today
