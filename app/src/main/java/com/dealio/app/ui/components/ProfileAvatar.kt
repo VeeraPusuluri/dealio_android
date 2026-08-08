@@ -8,10 +8,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -32,6 +36,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.dealio.app.data.ApiResult
 import com.dealio.app.data.AuthRepository
@@ -126,7 +132,17 @@ fun rememberProfileAvatarState(scope: CoroutineScope): ProfileAvatarState {
 }
 
 /**
- * Round profile picture with a camera badge; tapping either opens the gallery.
+ * Round profile picture with a camera badge.
+ *
+ * The two targets do different things, which is the whole point of having two:
+ * the **picture** opens it full screen, the **badge** opens the gallery to
+ * replace it. Both used to launch the picker, so there was no way to actually
+ * look at the photo you had just set — and tapping your own face to be asked for
+ * a new file is a small hostility.
+ *
+ * With no photo yet there is nothing to view, so the picture falls back to
+ * opening the picker: an empty avatar's only useful action is filling it. Same
+ * rule the CP credential card uses.
  *
  * Falls back to the person's initials rather than a grey silhouette — an empty
  * avatar should still say who it belongs to.
@@ -144,6 +160,7 @@ fun ProfileAvatar(
         uri?.let(state::upload)
     }
     val photo = resolveUrl(state.url)
+    var viewing by remember { mutableStateOf(false) }
 
     Box(modifier.size(size), contentAlignment = Alignment.BottomEnd) {
         Box(
@@ -153,7 +170,9 @@ fun ProfileAvatar(
                 .padding(4.dp)
                 .clip(CircleShape)
                 .background(Brush.linearGradient(listOf(TealBright, Teal)))
-                .clickable(enabled = !state.uploading) { pick.launch("image/*") },
+                .clickable(enabled = !state.uploading) {
+                    if (photo != null) viewing = true else pick.launch("image/*")
+                },
             contentAlignment = Alignment.Center,
         ) {
             when {
@@ -188,6 +207,90 @@ fun ProfileAvatar(
                 Icons.Outlined.PhotoCamera, "Change profile picture",
                 tint = Color.White, modifier = Modifier.size(size / 6.5f),
             )
+        }
+    }
+
+    if (viewing && photo != null) {
+        FullScreenPhoto(
+            url = photo,
+            label = name,
+            onChange = { viewing = false; pick.launch("image/*") },
+            onDismiss = { viewing = false },
+        )
+    }
+}
+
+/**
+ * The profile picture, big.
+ *
+ * Fitted rather than cropped — the avatar everywhere else is a circle with the
+ * edges taken off, so the one place you open it deliberately is the one place
+ * the whole photo should be visible.
+ */
+@Composable
+private fun FullScreenPhoto(
+    url: String,
+    label: String?,
+    onChange: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.94f))
+                // Tapping the backdrop closes, which is what every photo viewer
+                // on the phone already does.
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center,
+        ) {
+            // A column rather than aligned children with inset padding: inside a
+            // Dialog the window reports no system-bar insets, so
+            // systemBarsPadding() adds nothing and a bottom-aligned button sits
+            // half under the navigation bar. Fixed vertical padding and a
+            // weighted image put the controls where they belong on any device.
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    // Bottom clearance is deliberately larger than the top. A
+                    // Dialog with usePlatformDefaultWidth = false fills the
+                    // window, which extends under the navigation bar, and the
+                    // window reports no insets to pad against — so a symmetric
+                    // gap leaves the button under the gesture bar.
+                    .padding(start = 20.dp, end = 20.dp, top = 36.dp, bottom = 72.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(Modifier.fillMaxWidth()) {
+                    Icon(
+                        Icons.Outlined.Close, "Close",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.14f))
+                            .clickable(onClick = onDismiss)
+                            .padding(8.dp)
+                            .size(22.dp),
+                    )
+                }
+                AsyncImage(
+                    model = url,
+                    contentDescription = label,
+                    modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 20.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                Text(
+                    "Change photo",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.14f))
+                        .clickable(onClick = onChange)
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                )
+            }
         }
     }
 }

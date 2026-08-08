@@ -25,6 +25,14 @@ data class OverviewState(
     val revenue: Double = 0.0,
     val recentDeals: List<DealSummary> = emptyList(),
     val builderName: String? = null,
+    /**
+     * The builder's own photo, from the cached session.
+     *
+     * The hero showed initials unconditionally, so a builder could upload a
+     * picture in Settings and never see it anywhere — the CP home has shown
+     * theirs all along.
+     */
+    val avatarUrl: String? = null,
     /** Every deal reduced for the move queue — the whole list, not the recent few. */
     val moves: List<MoveItem> = emptyList(),
 )
@@ -39,7 +47,8 @@ class OverviewViewModel(app: Application) : BuilderViewModel(app) {
     fun load(silent: Boolean = false) {
         if (!silent) _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
-            val name = repo.currentUser?.fullName
+            val user = repo.currentUser
+            val name = user?.fullName
             val projects = repo.getProjects()
             val leads = repo.getLeads()
             val deals = repo.getDeals()
@@ -47,7 +56,7 @@ class OverviewViewModel(app: Application) : BuilderViewModel(app) {
             val firstError = listOf(projects, leads, deals)
                 .filterIsInstance<ApiResult.Error>().firstOrNull()
             if (firstError != null && projects is ApiResult.Error) {
-                _state.update { it.copy(loading = false, error = firstError.message, builderName = name) }
+                _state.update { it.copy(loading = false, error = firstError.message, builderName = name, avatarUrl = user?.avatarUrl) }
                 return@launch
             }
 
@@ -98,6 +107,7 @@ class OverviewViewModel(app: Application) : BuilderViewModel(app) {
                         )
                     },
                     builderName = name,
+                    avatarUrl = user?.avatarUrl,
                 )
             }
         }

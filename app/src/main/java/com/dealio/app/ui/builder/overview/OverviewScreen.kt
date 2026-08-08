@@ -37,10 +37,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.dealio.app.ui.builder.BuilderRoutes
@@ -58,6 +60,7 @@ import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.initialsOf
+import com.dealio.app.ui.builder.resolveUrl
 import com.dealio.app.ui.theme.PortalHeroGradient
 import com.dealio.app.ui.theme.Orange
 import com.dealio.app.ui.theme.Teal
@@ -83,11 +86,28 @@ fun OverviewScreen(nav: NavController, vm: OverviewViewModel = viewModel()) {
         ) {
             Column(Modifier.systemBarsPadding().padding(horizontal = 20.dp, vertical = 18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Tapping opens Settings, where the picture is changed. The
+                    // photo itself was never shown here, so a builder who set one
+                    // saw initials forever; the CP home has shown theirs all along.
                     Box(
-                        Modifier.size(46.dp).background(Teal, RoundedCornerShape(14.dp)),
+                        Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Teal)
+                            .clickable { nav.navigate(BuilderRoutes.SETTINGS) },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(initialsOf(state.builderName), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        val photo = resolveUrl(state.avatarUrl)
+                        if (photo != null) {
+                            AsyncImage(
+                                model = photo,
+                                contentDescription = state.builderName,
+                                modifier = Modifier.size(46.dp),
+                                contentScale = ContentScale.Crop,
+                            )
+                        } else {
+                            Text(initialsOf(state.builderName), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        }
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {

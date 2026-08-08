@@ -58,6 +58,11 @@ import com.dealio.app.ui.theme.TextSecondary
 private data class MoreItem(val label: String, val icon: ImageVector, val route: String)
 
 private val moreItems = listOf(
+    // Settings first. It is where the account lives — name, profile picture,
+    // sign-out — so it is the tile people come to this page looking for, and it
+    // was last of eighteen, below Snagging. Everything after it is a tool; this
+    // one is the account.
+    MoreItem("Settings", Icons.Outlined.Settings, BuilderRoutes.SETTINGS),
     MoreItem("Site Visits", Icons.Outlined.CalendarMonth, BuilderRoutes.MEETINGS),
     MoreItem("Inventory", Icons.Outlined.Grid4x4, BuilderRoutes.UNITS),
     MoreItem("Commissions", Icons.Outlined.CurrencyRupee, BuilderRoutes.COMMISSIONS),
@@ -75,7 +80,6 @@ private val moreItems = listOf(
     MoreItem("Snagging", Icons.Outlined.Handyman, BuilderRoutes.SNAGGING),
     MoreItem("Shortlists", Icons.Outlined.FavoriteBorder, BuilderRoutes.SHORTLISTS),
     MoreItem("Notifications", Icons.Outlined.Notifications, BuilderRoutes.NOTIFICATIONS),
-    MoreItem("Settings", Icons.Outlined.Settings, BuilderRoutes.SETTINGS),
 )
 
 @Composable
