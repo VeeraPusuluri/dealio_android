@@ -7,6 +7,8 @@ import com.dealio.app.data.api.DealSummary
 import com.dealio.app.ui.builder.BuilderViewModel
 import com.dealio.app.ui.flow.MoveItem
 import com.dealio.app.ui.flow.idleDaysSince
+import com.dealio.app.ui.flow.isDealStage
+import com.dealio.app.ui.flow.isLeadStage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,8 +52,14 @@ class OverviewViewModel(app: Application) : BuilderViewModel(app) {
             }
 
             val projectList = (projects as? ApiResult.Success)?.data ?: emptyList()
-            val leadList = (leads as? ApiResult.Success)?.data ?: emptyList()
-            val dealList = (deals as? ApiResult.Success)?.data ?: emptyList()
+            // The two tiles counted the same rows twice — "21 Active Leads" and
+            // "21 Deals" were the same twenty-one people, because /leads and
+            // /deals returned an identical set. Split them on the conversion
+            // stage so the numbers add up to the pipeline instead of doubling it.
+            val leadList = ((leads as? ApiResult.Success)?.data ?: emptyList())
+                .filter { isLeadStage(it.stage) }
+            val dealList = ((deals as? ApiResult.Success)?.data ?: emptyList())
+                .filter { isDealStage(it.status) }
             val booked = dealList.filter { it.status.lowercase() in listOf("booked", "closed") }
             _state.update {
                 it.copy(
@@ -63,7 +71,21 @@ class OverviewViewModel(app: Application) : BuilderViewModel(app) {
                     booked = booked.size,
                     revenue = booked.sumOf { d -> d.dealValue ?: 0.0 },
                     recentDeals = dealList.take(6),
-                    moves = dealList.map { d ->
+                    // The move queue spans the whole pipeline, not just the deals
+                    // half: "Confirm a site visit slot" is owed at Meeting
+                    // Requested, a lead stage. While /leads and /deals returned
+                    // the same rows this could be built from either one; now that
+                    // they partition, building it from deals alone would silently
+                    // drop every lead waiting on the builder.
+                    moves = leadList.map { l ->
+                        MoveItem(
+                            dealId = l.id.toLongOrNull() ?: 0L,
+                            title = l.customerName,
+                            subtitle = l.projectName,
+                            rawStatus = l.stage,
+                            idleDays = l.daysInStage,
+                        )
+                    } + dealList.map { d ->
                         MoveItem(
                             dealId = d.id,
                             title = d.customerName,

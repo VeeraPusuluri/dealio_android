@@ -63,6 +63,37 @@ fun canonicalStage(raw: String?): String? =
 /** Position on the ladder; -1 when unrecognised. */
 fun stageIndex(raw: String?): Int = canonicalStage(raw)?.let { DEAL_STAGES.indexOf(it) } ?: -1
 
+// ─── The lead / deal line ────────────────────────────────────────────────────
+
+/**
+ * A lead and a deal are the same row at different points on the ladder, and the
+ * line between them is Negotiation — the point money enters the conversation.
+ *
+ * This mirrors `CONVERSION_STAGE` in dealStage.ts. The server already partitions
+ * `/leads` and `/deals` on it, so filtering again here is belt-and-braces rather
+ * than the primary defence — but it is what keeps a screen honest when it holds
+ * a mixed list from some other endpoint (the CP has one `/leads` call that still
+ * returns both sides of the line).
+ *
+ * Note the phase table above already flips VISIT → DEAL at exactly this stage.
+ * This names that flip so screens stop re-deriving it with ad-hoc `when` blocks.
+ */
+const val CONVERSION_STAGE = "Negotiation"
+
+private val CONVERSION_INDEX = DEAL_STAGES.indexOf(CONVERSION_STAGE)
+
+/** True once the row has crossed into deal territory. */
+fun isDealStage(raw: String?): Boolean = stageIndex(raw).let { it >= 0 && it >= CONVERSION_INDEX }
+
+/**
+ * True while the row is still a lead.
+ *
+ * The complement of [isDealStage], not a range check, so an unrecognised status
+ * counts as a lead. A row matching neither would vanish from both screens, which
+ * is worse than the duplication this replaced.
+ */
+fun isLeadStage(raw: String?): Boolean = !isDealStage(raw)
+
 // ─── The buyer register ──────────────────────────────────────────────────────
 
 enum class JourneyPhase(val label: String) {

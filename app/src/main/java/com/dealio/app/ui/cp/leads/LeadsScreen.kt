@@ -71,6 +71,44 @@ import com.dealio.app.ui.theme.TextSecondary
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
+/**
+ * Leads | Deals, with counts.
+ *
+ * The counts are the point: before this, both words described the same list, so
+ * "12 leads" and "12 deals" were the same twelve people. Showing the two numbers
+ * side by side is what makes the split legible at a glance.
+ */
+@Composable
+private fun SideSwitch(side: LeadSide, leadCount: Int, dealCount: Int, onPick: (LeadSide) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .background(SurfaceTintTeal, RoundedCornerShape(12.dp))
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        listOf(LeadSide.LEADS to leadCount, LeadSide.DEALS to dealCount).forEach { (s, count) ->
+            val sel = side == s
+            Box(
+                Modifier
+                    .weight(1f)
+                    .background(if (sel) Navy else Color.Transparent, RoundedCornerShape(9.dp))
+                    .clickable { onPick(s) }
+                    .padding(vertical = 9.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "${s.label}  $count",
+                    color = if (sel) Color.White else TextSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Medium,
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun LeadsScreen(nav: NavController, vm: LeadsViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -88,17 +126,27 @@ fun LeadsScreen(nav: NavController, vm: LeadsViewModel = viewModel()) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             PortalHeader(
-                title = "My leads",
-                subtitle = "Everyone you introduced to a project",
+                title = "My pipeline",
+                subtitle = "Everyone you introduced, from first enquiry to close",
                 stats = buildList {
                     if (state.all.isNotEmpty()) {
-                        add("${state.all.size}" to if (state.all.size == 1) "lead" else "leads")
+                        add("${state.leads.size}" to "leads")
+                        add("${state.deals.size}" to "deals")
                         val inPlay = state.all.sumOf { it.estimatedCommission ?: 0.0 }
                         if (inPlay > 0) add(formatINRShort(inPlay) to "in play")
                     }
                 },
                 trailing = { AddLeadButton { showChooser = true } },
             )
+
+            if (state.all.isNotEmpty()) {
+                SideSwitch(
+                    side = state.side,
+                    leadCount = state.leads.size,
+                    dealCount = state.deals.size,
+                    onPick = vm::setSide,
+                )
+            }
 
             Row(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
@@ -126,9 +174,26 @@ fun LeadsScreen(nav: NavController, vm: LeadsViewModel = viewModel()) {
                 state.filtered.isEmpty() && state.statusFilter != "All" -> PortalEmptyState(
                     icon = Icons.Outlined.Groups,
                     title = "Nothing at ${state.statusFilter}",
-                    subtitle = "No lead is sitting at this stage right now.",
-                    actionLabel = "Show all leads",
+                    subtitle = "No one is sitting at this stage right now.",
+                    actionLabel = "Show all",
                     onAction = { vm.setFilter("All") },
+                )
+                // An empty Deals side is not an empty account — it means nothing
+                // has reached Negotiation yet, so it must not offer "add your
+                // first lead" as though the CP had none.
+                state.filtered.isEmpty() && state.side == LeadSide.DEALS -> PortalEmptyState(
+                    icon = Icons.Outlined.Groups,
+                    title = "No deals yet",
+                    subtitle = "A lead becomes a deal once it reaches Negotiation. You have ${state.leads.size} still being worked.",
+                    actionLabel = "Back to leads",
+                    onAction = { vm.setSide(LeadSide.LEADS) },
+                )
+                state.filtered.isEmpty() && state.deals.isNotEmpty() -> PortalEmptyState(
+                    icon = Icons.Outlined.Groups,
+                    title = "No open leads",
+                    subtitle = "Everyone you introduced has moved through to a deal.",
+                    actionLabel = "See your ${state.deals.size} deals",
+                    onAction = { vm.setSide(LeadSide.DEALS) },
                 )
                 state.filtered.isEmpty() -> PortalEmptyState(
                     icon = Icons.Outlined.Groups,

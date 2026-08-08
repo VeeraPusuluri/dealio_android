@@ -2,16 +2,23 @@ package com.dealio.app.ui.builder.pipeline
 
 import com.dealio.app.ui.flow.DEAL_STAGES
 import com.dealio.app.ui.flow.canonicalStage
+import com.dealio.app.ui.flow.isLeadStage
 
 /**
- * Ordered display stages — the canonical ladder itself, not a copy of it.
+ * The columns on the lead board — the ladder up to the conversion point, not the
+ * whole of it.
  *
- * These were two hand-maintained lists that had already drifted: the pipeline
- * filed a loan-sanctioned deal under "Closed" while the deal screen called the
- * same row "Booked", because booking is when money moved and the loan stages sit
- * after it. Aliasing the list means they cannot disagree again.
+ * Derived from the canonical ladder rather than hand-listed. These were once two
+ * hand-maintained lists that had already drifted: the pipeline filed a
+ * loan-sanctioned deal under "Closed" while the deal screen called the same row
+ * "Booked", because booking is when money moved and the loan stages sit after
+ * it. Deriving means they cannot disagree again.
+ *
+ * Everything from Negotiation on is a deal and lives on the Deals screen; the
+ * server no longer returns those rows from `/leads`, so keeping their columns
+ * here would render five that can never fill.
  */
-val LEAD_STAGES = DEAL_STAGES
+val LEAD_STAGES = DEAL_STAGES.filter { isLeadStage(it) }
 
 /** Display label → backend enum/value expected by updateLeadStage. */
 private val STAGE_ENUM = mapOf(

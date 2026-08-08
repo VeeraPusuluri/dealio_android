@@ -8,6 +8,8 @@ import com.dealio.app.ui.builder.BuilderViewModel
 import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.batonOf
 import com.dealio.app.ui.flow.canonicalStage
+import com.dealio.app.ui.flow.isDealStage
+import com.dealio.app.ui.flow.isLeadStage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -73,9 +75,14 @@ class PipelineViewModel(app: Application) : BuilderViewModel(app) {
         viewModelScope.launch {
             when (val r = repo.getLeads()) {
                 is ApiResult.Success -> {
-                    val rows = r.data.map { l ->
-                        LeadRow(l.id.toLongOrNull() ?: 0, l, stageLabel(l.stage))
-                    }
+                    // The server partitions /leads and /deals, so this filter is
+                    // normally a no-op. It is kept because the app ships ahead of
+                    // the backend and behind it: against a deployment that still
+                    // returns every row from /leads, without this the board would
+                    // show booked deals as leads again.
+                    val rows = r.data
+                        .filter { isLeadStage(it.stage) }
+                        .map { l -> LeadRow(l.id.toLongOrNull() ?: 0, l, stageLabel(l.stage)) }
                     _state.update { it.copy(loading = false, rows = rows) }
                 }
                 is ApiResult.Error -> _state.update { it.copy(loading = false, error = r.message) }
@@ -92,11 +99,25 @@ class PipelineViewModel(app: Application) : BuilderViewModel(app) {
         viewModelScope.launch {
             when (val r = repo.updateLeadStage(row.id, stageEnum(toStage))) {
                 is ApiResult.Success -> {
+                    // Crossing into Negotiation converts the lead. The row stops
+                    // being a lead at that moment, so it leaves the board rather
+                    // than sitting in a column the board no longer renders — and
+                    // the toast says where it went, because a card that simply
+                    // vanished would read as a failed save.
+                    val converted = isDealStage(toStage)
                     _state.update { s ->
                         s.copy(
                             updating = false,
-                            toast = "Moved to $toStage",
-                            rows = s.rows.map { if (it.id == row.id) it.copy(stage = toStage) else it },
+                            toast = if (converted) {
+                                "${row.lead.customerName.substringBefore(' ')} is now a deal — see Deals"
+                            } else {
+                                "Moved to $toStage"
+                            },
+                            rows = if (converted) {
+                                s.rows.filterNot { it.id == row.id }
+                            } else {
+                                s.rows.map { if (it.id == row.id) it.copy(stage = toStage) else it }
+                            },
                         )
                     }
                 }

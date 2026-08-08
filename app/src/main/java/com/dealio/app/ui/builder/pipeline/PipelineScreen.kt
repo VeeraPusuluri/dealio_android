@@ -56,6 +56,7 @@ import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.batonOf
 import com.dealio.app.ui.flow.canonicalStage
+import com.dealio.app.ui.flow.isDealStage
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.NavyMid
 import com.dealio.app.ui.theme.Teal
@@ -185,6 +186,10 @@ fun PipelineScreen(nav: NavController, vm: PipelineViewModel = viewModel()) {
                     Text("MOVE TO", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Spacer(Modifier.height(8.dp))
                     next.forEach { ns ->
+                        // Picking one of these takes the lead across the line and
+                        // off this board. Say so on the row itself — the builder
+                        // should know before tapping, not from the toast after.
+                        val converts = isDealStage(ns)
                         Row(
                             Modifier.fillMaxWidth().padding(vertical = 4.dp)
                                 .background(NavyMid.copy(alpha = 0.06f), RoundedCornerShape(12.dp))
@@ -192,7 +197,17 @@ fun PipelineScreen(nav: NavController, vm: PipelineViewModel = viewModel()) {
                                 .padding(horizontal = 14.dp, vertical = 13.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(ns, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                            Column(Modifier.weight(1f)) {
+                                Text(ns, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                if (converts) {
+                                    Text(
+                                        "Converts to a deal",
+                                        color = Teal,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                    )
+                                }
+                            }
                             Icon(Icons.Outlined.ArrowForward, null, tint = Teal, modifier = Modifier.size(18.dp))
                         }
                     }

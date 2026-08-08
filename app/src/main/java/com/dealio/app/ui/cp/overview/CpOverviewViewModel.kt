@@ -11,6 +11,8 @@ import com.dealio.app.ui.cp.CpViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import com.dealio.app.ui.flow.MoveItem
 import com.dealio.app.ui.flow.idleDaysSince
+import com.dealio.app.ui.flow.isDealStage
+import com.dealio.app.ui.flow.isLeadStage
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -77,8 +79,11 @@ class CpOverviewViewModel(app: Application) : CpViewModel(app) {
                     partnerId = profileData?.id?.takeIf { it > 0 },
                     totalEarnings = cp?.totalEarnings ?: 0.0,
                     pendingCommission = cp?.pendingCommission ?: 0.0,
-                    totalDeals = cp?.totalDeals ?: leadList.size,
-                    leadsCount = leadList.size,
+                    // The two tiles read "6 Deals" and "21 Leads" off the same
+                    // list, so the six were also counted among the twenty-one.
+                    // Count each side of the conversion stage once.
+                    totalDeals = cp?.totalDeals ?: leadList.count { isDealStage(it.status) },
+                    leadsCount = leadList.count { isLeadStage(it.status) },
                     moves = leadList.map { l ->
                         MoveItem(
                             dealId = l.id,

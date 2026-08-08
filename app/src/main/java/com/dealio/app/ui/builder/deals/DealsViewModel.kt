@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.dealio.app.data.ApiResult
 import com.dealio.app.data.api.DealSummary
 import com.dealio.app.ui.builder.BuilderViewModel
+import com.dealio.app.ui.flow.isDealStage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,7 +37,10 @@ class DealsViewModel(app: Application) : BuilderViewModel(app) {
         if (!silent) _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             when (val r = repo.getDeals()) {
-                is ApiResult.Success -> _state.update { it.copy(loading = false, all = r.data) }
+                // Mirrors the server's own /deals filter. See PipelineViewModel
+                // for why the app filters a list the backend already filtered.
+                is ApiResult.Success ->
+                    _state.update { it.copy(loading = false, all = r.data.filter { d -> isDealStage(d.status) }) }
                 is ApiResult.Error -> _state.update { it.copy(loading = false, error = r.message) }
             }
         }

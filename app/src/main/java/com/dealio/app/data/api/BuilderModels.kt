@@ -171,6 +171,10 @@ data class Lead(
     val stage: String = "New Lead",
     val notes: String = "",
     val createdAt: String = "",
+    // Already returned by the endpoint; the model just never declared it. It is
+    // days since the row last moved, which is exactly the staleness the move
+    // queue sorts by — the same gap DealSummary.updatedAt filled below.
+    val daysInStage: Int = 0,
     val dealValue: Double = 0.0,
 )
 

@@ -13,6 +13,8 @@ import com.dealio.app.data.api.CpContact
 import com.dealio.app.data.api.CpLead
 import com.dealio.app.data.api.Project
 import com.dealio.app.ui.cp.CpViewModel
+import com.dealio.app.ui.flow.isDealStage
+import com.dealio.app.ui.flow.isLeadStage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,10 +23,20 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * The two sides of the lead/deal line.
+ *
+ * The CP has a single `/cp/{id}/leads` call that returns both — unlike the
+ * builder, whose `/leads` and `/deals` the server now partitions — so the split
+ * happens here, on the same boundary the server uses.
+ */
+enum class LeadSide(val label: String) { LEADS("Leads"), DEALS("Deals") }
+
 data class LeadsState(
     val loading: Boolean = true,
     val error: String? = null,
     val all: List<CpLead> = emptyList(),
+    val side: LeadSide = LeadSide.LEADS,
     val statusFilter: String = "All",
     // Pickers for the "Add lead" form
     val projects: List<Project> = emptyList(),
@@ -38,8 +50,20 @@ data class LeadsState(
     val importing: Boolean = false,
     val importProgress: Int = 0,
 ) {
-    val statuses: List<String> get() = listOf("All") + all.map { it.status }.distinct()
-    val filtered: List<CpLead> get() = if (statusFilter == "All") all else all.filter { it.status == statusFilter }
+    /** Still being worked — pre-Negotiation. */
+    val leads: List<CpLead> get() = all.filter { isLeadStage(it.status) }
+
+    /** Money on the table — Negotiation onwards. */
+    val deals: List<CpLead> get() = all.filter { isDealStage(it.status) }
+
+    /** The side currently on screen. Every list below reads from this, not [all]. */
+    val visible: List<CpLead> get() = if (side == LeadSide.LEADS) leads else deals
+
+    // Chips describe the visible side only — offering "Booked" while the Leads
+    // side is showing would filter to an empty screen the CP cannot explain.
+    val statuses: List<String> get() = listOf("All") + visible.map { it.status }.distinct()
+    val filtered: List<CpLead> get() =
+        if (statusFilter == "All") visible else visible.filter { it.status == statusFilter }
 }
 
 class LeadsViewModel(app: Application) : CpViewModel(app) {
@@ -64,6 +88,13 @@ class LeadsViewModel(app: Application) : CpViewModel(app) {
     }
 
     fun setFilter(f: String) = _state.update { it.copy(statusFilter = f) }
+
+    /**
+     * Switching sides clears the stage filter. The two sides share no stages, so
+     * carrying one over guarantees an empty list — "Negotiation" selected on the
+     * Leads side can never match.
+     */
+    fun setSide(s: LeadSide) = _state.update { it.copy(side = s, statusFilter = "All") }
 
     fun createLead(projectId: Long, name: String, phone: String, email: String, onDone: () -> Unit) {
         _state.update { it.copy(working = true) }
