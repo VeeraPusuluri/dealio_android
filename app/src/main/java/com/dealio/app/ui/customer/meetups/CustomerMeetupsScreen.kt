@@ -243,3 +243,4 @@ private fun Badge(label: String, tint: Color, onImage: Boolean = false) {
             .padding(horizontal = 7.dp, vertical = 3.dp),
     )
 }
+
