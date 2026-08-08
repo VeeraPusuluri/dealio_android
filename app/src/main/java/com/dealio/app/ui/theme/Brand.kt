@@ -27,17 +27,19 @@ val NavyTealGradient: Brush
 // app ships with, and next to the credential card — deep navy, one restrained
 // sheen — it looked like a different product.
 //
-// So the hero is cut from the same material: it stays inside the navy family and
-// lifts only slightly toward slate at the far corner. Depth comes from value
-// rather than from a second hue.
+// It is now literally the sign-in surface: the same NavyDeep → NavyMid →
+// NavyDeep ramp AuthScaffold paints behind the role picker, lit by the same
+// TealBright wash. The user picks a role on that background and every tab of the
+// portal then opens on it, so signing in reads as entering the product rather
+// than crossing into a second one.
+//
+// The ramp is symmetric on purpose — it returns to NavyDeep instead of lifting
+// toward slate at the far end, which is what put a teal cast on the right of the
+// bar and made it a near-match to sign-in rather than a match.
 
-private val HeroBase = Color(0xFF0A1A2B)
-private val HeroMid = Color(0xFF14304A)
-private val HeroLift = Color(0xFF17414F)
-
-/** The surface every portal tab opens on. */
+/** The surface every portal tab opens on — shared with [AuthScaffold]'s hero. */
 val PortalHeroGradient: Brush
-    get() = Brush.linearGradient(listOf(HeroBase, HeroMid, HeroLift))
+    get() = Brush.linearGradient(listOf(NavyDeep, NavyMid, NavyDeep))
 
 /**
  * Eyebrow text on the hero — "Welcome back", tab subtitles.
@@ -47,8 +49,16 @@ val PortalHeroGradient: Brush
  */
 val HeroAccent = Color(0xFF8FBFD0)
 
-/** Corner highlight on the hero — a wash, not a spotlight. */
-val HeroHighlight = Color(0xFF5E9AB0)
+/**
+ * Corner highlight on the hero — a wash, not a spotlight.
+ *
+ * [TealBright], the accent AuthScaffold glows with, so the light on a portal bar
+ * is the same colour as the light on the sign-in screen. It is carried at a much
+ * lower alpha here (see PortalHeader): sign-in washes it across a whole screen,
+ * while the hero is a short band, and neon cyan at sign-in's opacity inside a
+ * 110.dp circle is the corner spotlight this palette exists to avoid.
+ */
+val HeroHighlight = TealBright
 
 /** Bright teal call-to-action gradient. */
 val TealGradient: Brush

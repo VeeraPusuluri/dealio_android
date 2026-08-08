@@ -58,7 +58,7 @@ import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.initialsOf
-import com.dealio.app.ui.theme.NavyTealGradient
+import com.dealio.app.ui.theme.PortalHeroGradient
 import com.dealio.app.ui.theme.Orange
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
@@ -75,7 +75,11 @@ fun OverviewScreen(nav: NavController, vm: OverviewViewModel = viewModel()) {
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp))
-                .background(NavyTealGradient),
+                // The sign-in surface, same as every other portal's hero. This
+                // was NavyTealGradient, which ran to teal at the far end and made
+                // the builder home the odd one out against the card the user had
+                // just signed in on.
+                .background(PortalHeroGradient),
         ) {
             Column(Modifier.systemBarsPadding().padding(horizontal = 20.dp, vertical = 18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

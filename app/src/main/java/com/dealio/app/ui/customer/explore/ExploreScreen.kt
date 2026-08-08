@@ -68,7 +68,7 @@ import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.customer.FeaturedCard
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.ErrorRed
-import com.dealio.app.ui.theme.NavyTealGradient
+import com.dealio.app.ui.theme.PortalHeroGradient
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
@@ -266,7 +266,10 @@ private fun ExploreHero(state: ExploreState, vm: ExploreViewModel, nav: NavContr
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
-            .background(NavyTealGradient),
+            // The sign-in surface — see PortalHeroGradient. The buyer's home is
+            // the first screen after the role picker, so it is the one place the
+            // old navy→teal band was most obviously a different material.
+            .background(PortalHeroGradient),
     ) {
         Column(Modifier.systemBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

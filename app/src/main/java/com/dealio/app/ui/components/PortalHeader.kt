@@ -68,13 +68,18 @@ fun PortalHeaderSurface(
         // Wider and fainter than it was: at a tight radius and a fifth opacity the
         // cyan read as a spotlight aimed at the corner rather than light falling
         // across the surface.
+        //
+        // Fainter again now that HeroHighlight is TealBright rather than a muted
+        // slate-blue. Sign-in carries the same cyan at 0.40, but across a whole
+        // screen; the same alpha in this band would put a hard cyan blob in the
+        // corner. Matching the palette means matching the colour, not the number.
         Box(
             Modifier.matchParentSize().drawBehind {
                 val r = GLOW_RADIUS.toPx()
                 val centre = Offset(size.width - r * 0.55f, r * 0.15f)
                 drawCircle(
                     brush = Brush.radialGradient(
-                        listOf(HeroHighlight.copy(alpha = 0.16f), Color.Transparent),
+                        listOf(HeroHighlight.copy(alpha = 0.10f), Color.Transparent),
                         center = centre,
                         radius = r,
                     ),
