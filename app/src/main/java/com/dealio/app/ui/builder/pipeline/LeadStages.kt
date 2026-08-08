@@ -1,26 +1,17 @@
 package com.dealio.app.ui.builder.pipeline
 
-/** Ordered display stages, mirroring the web BuilderLeads kanban. */
-val LEAD_STAGES = listOf(
-    "New Lead", "Profile Created", "Meeting Requested", "Meeting Confirmed", "Meeting Done",
-    "Negotiation", "Agreement", "Pending Booking", "Booked", "Closed",
-)
+import com.dealio.app.ui.flow.DEAL_STAGES
+import com.dealio.app.ui.flow.canonicalStage
 
-/** Backend value/enum → display label. */
-private val STAGE_MAP = mapOf(
-    "NEW_LEAD" to "New Lead",
-    "PROFILE_CREATED" to "Profile Created", "Profile Created" to "Profile Created",
-    "MEETING_REQUESTED" to "Meeting Requested",
-    "MEETING_CONFIRMED" to "Meeting Confirmed",
-    "MEETING_DONE" to "Meeting Done",
-    "NEGOTIATION" to "Negotiation", "Negotiation" to "Negotiation",
-    "AGREEMENT" to "Agreement", "Agreement" to "Agreement",
-    "PENDING_BOOKING" to "Pending Booking", "Pending Booking" to "Pending Booking",
-    "BOOKED" to "Booked", "Booked" to "Booked",
-    "CLOSED" to "Closed", "Closed" to "Closed",
-    "Loan Application Created" to "Closed", "Loan Sanctioned" to "Closed",
-    "Loan Disbursed" to "Closed", "Registration Done" to "Closed", "Possession Given" to "Closed",
-)
+/**
+ * Ordered display stages — the canonical ladder itself, not a copy of it.
+ *
+ * These were two hand-maintained lists that had already drifted: the pipeline
+ * filed a loan-sanctioned deal under "Closed" while the deal screen called the
+ * same row "Booked", because booking is when money moved and the loan stages sit
+ * after it. Aliasing the list means they cannot disagree again.
+ */
+val LEAD_STAGES = DEAL_STAGES
 
 /** Display label → backend enum/value expected by updateLeadStage. */
 private val STAGE_ENUM = mapOf(
@@ -50,5 +41,14 @@ val NEXT_STAGES = mapOf(
     "Closed" to emptyList(),
 )
 
-fun stageLabel(raw: String): String = STAGE_MAP[raw] ?: raw
+/**
+ * A raw `stage` off the wire, folded onto the canonical ten.
+ *
+ * The enum spellings arrive underscored (`MEETING_REQUESTED`), which the shared
+ * alias table does not carry, so they are unpicked to words first. Anything the
+ * ladder still doesn't recognise is returned untouched — the baton grouping
+ * gathers those into their own section rather than guessing a stage for them.
+ */
+fun stageLabel(raw: String): String = canonicalStage(raw.replace('_', ' ')) ?: raw
+
 fun stageEnum(label: String): String = STAGE_ENUM[label] ?: label

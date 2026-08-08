@@ -53,6 +53,9 @@ import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.TabHeader
 import com.dealio.app.ui.builder.formatINRShort
+import com.dealio.app.ui.flow.DealRole
+import com.dealio.app.ui.flow.batonOf
+import com.dealio.app.ui.flow.canonicalStage
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.NavyMid
 import com.dealio.app.ui.theme.Teal
@@ -71,29 +74,45 @@ fun PipelineScreen(nav: NavController, vm: PipelineViewModel = viewModel()) {
     Column(Modifier.fillMaxSize()) {
         TabHeader("Pipeline", "${state.total} leads across ${LEAD_STAGES.size} stages")
 
-        // Stage tabs
+        // Which cut of the same leads: where they are, or who owes the next move.
+        // Stage answers "what does my funnel look like"; baton answers "what do I
+        // have to do today", which is the question the stage filter never could.
         Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            LEAD_STAGES.forEach { stage ->
-                val selected = state.selectedStage == stage
-                val count = state.counts[stage] ?: 0
-                Row(
-                    Modifier
-                        .background(if (selected) NavyMid else Color.White, RoundedCornerShape(10.dp))
-                        .border(1.dp, if (selected) NavyMid else CardBorder, RoundedCornerShape(10.dp))
-                        .clickable { vm.selectStage(stage) }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(stage, color = if (selected) Color.White else TextSecondary, fontSize = 12.sp,
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
-                    Spacer(Modifier.width(6.dp))
-                    Box(
-                        Modifier.background(if (selected) Color.White.copy(alpha = 0.22f) else Teal.copy(alpha = 0.12f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 6.dp, vertical = 1.dp),
-                    ) { Text("$count", color = if (selected) Color.White else Teal, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+            GroupingPill("By stage", state.grouping == PipelineGrouping.STAGE) {
+                vm.selectGrouping(PipelineGrouping.STAGE)
+            }
+            GroupingPill("By baton", state.grouping == PipelineGrouping.BATON) {
+                vm.selectGrouping(PipelineGrouping.BATON)
+            }
+        }
+
+        if (state.grouping == PipelineGrouping.STAGE) {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                LEAD_STAGES.forEach { stage ->
+                    val selected = state.selectedStage == stage
+                    val count = state.counts[stage] ?: 0
+                    Row(
+                        Modifier
+                            .background(if (selected) NavyMid else Color.White, RoundedCornerShape(10.dp))
+                            .border(1.dp, if (selected) NavyMid else CardBorder, RoundedCornerShape(10.dp))
+                            .clickable { vm.selectStage(stage) }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(stage, color = if (selected) Color.White else TextSecondary, fontSize = 12.sp,
+                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            Modifier.background(if (selected) Color.White.copy(alpha = 0.22f) else Teal.copy(alpha = 0.12f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 1.dp),
+                        ) { Text("$count", color = if (selected) Color.White else Teal, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                    }
                 }
             }
         }
@@ -101,6 +120,25 @@ fun PipelineScreen(nav: NavController, vm: PipelineViewModel = viewModel()) {
         when {
             state.loading -> LoadingState()
             state.error != null -> ErrorState(state.error!!, vm::load)
+            state.grouping == PipelineGrouping.BATON -> {
+                val groups = state.batonGroups
+                if (state.rows.isEmpty()) {
+                    EmptyState(Icons.Outlined.Groups, "No leads yet", "Leads appear here as channel partners refer them.")
+                } else {
+                    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        BATON_GROUPS.forEach { key ->
+                            val rows = groups[key].orEmpty()
+                            if (rows.isNotEmpty()) {
+                                item(key = "header-$key") { BatonHeader(key, rows.size) }
+                                items(rows.size, key = { i -> "$key-${rows[i].id}-$i" }) { i ->
+                                    val row = rows[i]
+                                    LeadCard(row, note = batonNote(row.stage)) { sheetRow = row }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             state.visible.isEmpty() -> EmptyState(Icons.Outlined.Groups, "No leads in ${state.selectedStage}", "Leads in this stage will appear here.")
             else -> LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(state.visible.size) { i ->
@@ -165,7 +203,62 @@ fun PipelineScreen(nav: NavController, vm: PipelineViewModel = viewModel()) {
 }
 
 @Composable
-private fun LeadCard(row: LeadRow, onClick: () -> Unit) {
+private fun GroupingPill(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .background(if (selected) Teal else Color.White, RoundedCornerShape(10.dp))
+            .border(1.dp, if (selected) Teal else CardBorder, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 7.dp),
+    ) {
+        Text(
+            label,
+            color = if (selected) Color.White else TextSecondary,
+            fontSize = 12.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+        )
+    }
+}
+
+@Composable
+private fun BatonHeader(key: String, count: Int) {
+    val (title, blurb) = when (key) {
+        DealRole.BUILDER.name -> "Your move" to "Nothing on these moves until you act"
+        DealRole.CP.name -> "With the channel partner" to "Waiting on the partner who referred them"
+        DealRole.CUSTOMER.name -> "With the buyer" to "Waiting on the buyer"
+        BATON_COMPLETE -> "Complete" to "Nobody owes a move"
+        else -> "Stage not recognised" to "These carry a status the app can't place on the ladder"
+    }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(blurb, color = TextSecondary, fontSize = 11.sp)
+        }
+        Box(
+            Modifier.background(Teal.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+        ) { Text("$count", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+    }
+}
+
+/**
+ * The move this lead is waiting on, phrased as an instruction.
+ *
+ * At Agreement both the partner and the buyer are owed, and the leads payload
+ * carries neither agreement flag — so the card says both are outstanding rather
+ * than implying the one bucket it was filed under is the whole story.
+ */
+private fun batonNote(stage: String): String? {
+    if (canonicalStage(stage) == null) return null
+    val baton = batonOf(stage)
+    if (baton.isComplete) return null
+    val others = baton.holders.drop(1)
+    return baton.action + if (others.isEmpty()) "" else
+        " · also waiting on ${others.joinToString(" and ") { it.name.lowercase() }}"
+}
+
+@Composable
+private fun LeadCard(row: LeadRow, note: String? = null, onClick: () -> Unit) {
     DealioCard(Modifier.clickable { onClick() }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -175,6 +268,10 @@ private fun LeadCard(row: LeadRow, onClick: () -> Unit) {
             if (row.lead.budget > 0) {
                 Text(formatINRShort(row.lead.budget), color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
+        }
+        if (note != null) {
+            Spacer(Modifier.height(6.dp))
+            Text(note, color = Teal, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
         }
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
