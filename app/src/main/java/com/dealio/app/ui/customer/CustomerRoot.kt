@@ -76,7 +76,9 @@ object CustomerRoutes {
 
     fun meetupDetail(id: Long) = "$MEETUP_DETAIL/$id"
     fun projectDetail(id: Long) = "$PROJECT_DETAIL/$id"
-    fun dealDetail(id: Long) = "$DEAL_DETAIL/$id"
+    /** [thread] preselects one of the deal's party threads, as the inbox does. */
+    fun dealDetail(id: Long, thread: String? = null) =
+        "$DEAL_DETAIL/$id" + if (thread == null) "" else "?thread=$thread"
     fun loanApply(projectId: Long? = null, builderId: Long? = null) =
         "$LOAN_APPLY?projectId=${projectId ?: -1}&builderId=${builderId ?: -1}"
 }
@@ -133,9 +135,18 @@ fun CustomerRoot(onLogout: () -> Unit) {
             ) { e -> ProjectDetailScreen(nav, e.arguments?.getLong("id") ?: 0) }
 
             composable(
-                "${CustomerRoutes.DEAL_DETAIL}/{id}",
-                arguments = listOf(navArgument("id") { type = NavType.LongType }),
-            ) { e -> DealDetailScreen(nav, e.arguments?.getLong("id") ?: 0) }
+                "${CustomerRoutes.DEAL_DETAIL}/{id}?thread={thread}",
+                arguments = listOf(
+                    navArgument("id") { type = NavType.LongType },
+                    navArgument("thread") { type = NavType.StringType; nullable = true; defaultValue = null },
+                ),
+            ) { e ->
+                DealDetailScreen(
+                    nav,
+                    e.arguments?.getLong("id") ?: 0,
+                    initialThread = e.arguments?.getString("thread"),
+                )
+            }
 
             composable(
                 "${CustomerRoutes.LOAN_APPLY}?projectId={projectId}&builderId={builderId}",

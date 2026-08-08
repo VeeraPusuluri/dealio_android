@@ -1,32 +1,14 @@
 package com.dealio.app.ui.customer.conversations
 
 import android.app.Application
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.Apartment
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -37,14 +19,12 @@ import com.dealio.app.ui.builder.DealioCard
 import com.dealio.app.ui.builder.EmptyState
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
-import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.customer.CustomerViewModel
-import com.dealio.app.ui.theme.Teal
-import com.dealio.app.ui.theme.TextPrimary
-import com.dealio.app.ui.theme.TextSecondary
-import com.dealio.app.ui.theme.tintBrush
+import com.dealio.app.ui.flow.ConversationInbox
+import com.dealio.app.ui.flow.DealRole
+import com.dealio.app.ui.flow.InboxDeal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -70,6 +50,13 @@ class CustomerConversationsViewModel(app: Application) : CustomerViewModel(app) 
     }
 }
 
+/**
+ * The buyer's inbox — their advisor and their builder as separate rows.
+ *
+ * The buyer is the party the old single row misled most: "Builder & partner
+ * chat" was one line covering two different people, and an unanswered question
+ * to the advisor looked identical to one to the builder.
+ */
 @Composable
 fun CustomerConversationsScreen(nav: NavController, vm: CustomerConversationsViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -78,19 +65,29 @@ fun CustomerConversationsScreen(nav: NavController, vm: CustomerConversationsVie
         when {
             state.loading -> LoadingState(Modifier.padding(inner))
             state.error != null -> ErrorState(state.error!!, onRetry = vm::load, modifier = Modifier.padding(inner))
-            else -> LazyColumn(
-                modifier = Modifier.padding(inner),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                item {
-                    Text(
-                        "${state.deals.size} ${if (state.deals.size == 1) "conversation" else "conversations"}",
-                        color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium,
+            else -> {
+                val deals = state.deals.map { d ->
+                    InboxDeal(
+                        dealId = d.dealId,
+                        title = d.projectName,
+                        subtitle = listOfNotNull(
+                            d.builderName,
+                            d.cpName?.let { "advised by $it" },
+                        ).joinToString(" · "),
+                        rawStatus = d.dealStatus,
+                        hasCp = d.cpName != null,
+                        builderName = d.builderName,
+                        cpName = d.cpName,
                     )
                 }
-                if (state.deals.isEmpty()) {
-                    item {
+
+                ConversationInbox(
+                    viewer = DealRole.CUSTOMER,
+                    deals = deals,
+                    onOpen = { dealId, thread -> nav.navigate(CustomerRoutes.dealDetail(dealId, thread)) },
+                    modifier = Modifier.padding(inner),
+                    contentPadding = PaddingValues(16.dp),
+                    empty = {
                         DealioCard {
                             EmptyState(
                                 Icons.Outlined.ChatBubbleOutline,
@@ -98,30 +95,8 @@ fun CustomerConversationsScreen(nav: NavController, vm: CustomerConversationsVie
                                 "Book a site visit to start chatting with your builder and channel partner.",
                             )
                         }
-                    }
-                } else {
-                    items(state.deals.size) { i ->
-                        val d = state.deals[i]
-                        DealioCard(onClick = { nav.navigate(CustomerRoutes.dealDetail(d.dealId)) }) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(44.dp).background(tintBrush(Teal), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Outlined.Apartment, null, tint = Teal, modifier = Modifier.size(22.dp))
-                                }
-                                Spacer(Modifier.width(12.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(d.projectName, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                                    Spacer(Modifier.height(2.dp))
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Outlined.ChatBubbleOutline, null, tint = TextSecondary, modifier = Modifier.size(12.dp))
-                                        Spacer(Modifier.width(4.dp))
-                                        Text("Builder & partner chat", color = TextSecondary, fontSize = 12.sp)
-                                    }
-                                }
-                                if (d.dealStatus.isNotBlank()) StatusChip(d.dealStatus)
-                            }
-                        }
-                    }
-                }
+                    },
+                )
             }
         }
     }

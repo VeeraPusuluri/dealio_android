@@ -81,7 +81,13 @@ import com.dealio.app.ui.theme.TextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CpDealDetailScreen(nav: NavController, dealId: Long, vm: CpDealDetailViewModel = viewModel()) {
+fun CpDealDetailScreen(
+    nav: NavController,
+    dealId: Long,
+    /** Which party's thread to open on, when arrived at from the inbox. */
+    initialThread: String? = null,
+    vm: CpDealDetailViewModel = viewModel(),
+) {
     LaunchedEffect(dealId) { vm.load(dealId) }
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
@@ -101,7 +107,9 @@ fun CpDealDetailScreen(nav: NavController, dealId: Long, vm: CpDealDetailViewMod
         customerName = d?.customerName,
     )
     var target by remember(dealId) { mutableStateOf<ThreadTarget?>(null) }
-    val selected = target ?: roster.firstOrNull()
+    val selected = target
+        ?: roster.firstOrNull { it.recipientRole == initialThread }
+        ?: roster.firstOrNull()
 
     // Badges come from the deal's own threads. Refreshed when the deal loads and
     // after each send, so a reply that arrives while the screen is open shows up.

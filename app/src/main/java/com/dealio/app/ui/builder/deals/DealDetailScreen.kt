@@ -69,7 +69,13 @@ import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 
 @Composable
-fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel = viewModel()) {
+fun DealDetailScreen(
+    nav: NavController,
+    dealId: Long,
+    /** Which party's thread to open on, when arrived at from the inbox. */
+    initialThread: String? = null,
+    vm: DealDetailViewModel = viewModel(),
+) {
     val state by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     LaunchedEffect(dealId) { vm.load(dealId) }
@@ -92,7 +98,9 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
                     customerName = d.customerName,
                 )
                 var target by remember(dealId) { mutableStateOf<ThreadTarget?>(null) }
-                val selected = target ?: roster.firstOrNull()
+                val selected = target
+                    ?: roster.firstOrNull { it.recipientRole == initialThread }
+                    ?: roster.firstOrNull()
 
                 val threadKeys = roster.map { threadKeyFor(DealRole.BUILDER, it) }
                 LaunchedEffect(d.id, d.messages.size) { vm.refreshUnread(threadKeys) }

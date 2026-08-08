@@ -86,7 +86,9 @@ object CpRoutes {
     const val CONVERSATIONS = "cp_conversations"
     const val LOAN_ASSIST = "cp_loan_assist"
 
-    fun dealDetail(id: Long) = "$DEAL_DETAIL/$id"
+    /** [thread] preselects one of the deal's party threads, as the inbox does. */
+    fun dealDetail(id: Long, thread: String? = null) =
+        "$DEAL_DETAIL/$id" + if (thread == null) "" else "?thread=$thread"
     fun projectDetail(id: Long) = "$PROJECT_DETAIL/$id"
     fun meetupDetail(id: Long) = "$MEETUP_DETAIL/$id"
 
@@ -157,9 +159,18 @@ fun CpRoot(onLogout: () -> Unit) {
             composable(CpRoutes.MORE) { CpMoreScreen(nav, onLogout) }
 
             composable(
-                "${CpRoutes.DEAL_DETAIL}/{id}",
-                arguments = listOf(navArgument("id") { type = NavType.LongType }),
-            ) { e -> CpDealDetailScreen(nav, e.arguments?.getLong("id") ?: 0) }
+                "${CpRoutes.DEAL_DETAIL}/{id}?thread={thread}",
+                arguments = listOf(
+                    navArgument("id") { type = NavType.LongType },
+                    navArgument("thread") { type = NavType.StringType; nullable = true; defaultValue = null },
+                ),
+            ) { e ->
+                CpDealDetailScreen(
+                    nav,
+                    e.arguments?.getLong("id") ?: 0,
+                    initialThread = e.arguments?.getString("thread"),
+                )
+            }
 
             composable(
                 "${CpRoutes.PROJECT_DETAIL}/{id}",

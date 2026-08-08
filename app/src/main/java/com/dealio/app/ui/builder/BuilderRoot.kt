@@ -82,7 +82,9 @@ object BuilderRoutes {
     const val CONVERSATIONS = "conversations"
 
     fun projectDetail(id: Long) = "$PROJECT_DETAIL/$id"
-    fun dealDetail(id: Long) = "$DEAL_DETAIL/$id"
+    /** [thread] preselects one of the deal's party threads, as the inbox does. */
+    fun dealDetail(id: Long, thread: String? = null) =
+        "$DEAL_DETAIL/$id" + if (thread == null) "" else "?thread=$thread"
     fun projectForm(id: Long? = null) = if (id == null) PROJECT_FORM else "$PROJECT_FORM?id=$id"
 }
 
@@ -146,9 +148,18 @@ fun BuilderRoot(onLogout: () -> Unit) {
             }
 
             composable(
-                "${BuilderRoutes.DEAL_DETAIL}/{id}",
-                arguments = listOf(navArgument("id") { type = NavType.LongType }),
-            ) { entry -> DealDetailScreen(nav, entry.arguments?.getLong("id") ?: 0) }
+                "${BuilderRoutes.DEAL_DETAIL}/{id}?thread={thread}",
+                arguments = listOf(
+                    navArgument("id") { type = NavType.LongType },
+                    navArgument("thread") { type = NavType.StringType; nullable = true; defaultValue = null },
+                ),
+            ) { entry ->
+                DealDetailScreen(
+                    nav,
+                    entry.arguments?.getLong("id") ?: 0,
+                    initialThread = entry.arguments?.getString("thread"),
+                )
+            }
 
             composable(BuilderRoutes.MEETINGS) { MeetingsScreen(nav) }
             composable(BuilderRoutes.UNITS) { UnitMatrixScreen(nav) }

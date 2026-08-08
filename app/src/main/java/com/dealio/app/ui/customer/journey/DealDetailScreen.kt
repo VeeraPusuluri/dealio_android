@@ -83,7 +83,13 @@ import com.dealio.app.ui.theme.TextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel = viewModel()) {
+fun DealDetailScreen(
+    nav: NavController,
+    dealId: Long,
+    /** Which party's thread to open on, when arrived at from the inbox. */
+    initialThread: String? = null,
+    vm: DealDetailViewModel = viewModel(),
+) {
     LaunchedEffect(dealId) { vm.load(dealId) }
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
@@ -105,7 +111,9 @@ fun DealDetailScreen(nav: NavController, dealId: Long, vm: DealDetailViewModel =
         cpName = d?.cpName,
     )
     var target by remember(dealId) { mutableStateOf<ThreadTarget?>(null) }
-    val selected = target ?: roster.firstOrNull()
+    val selected = target
+        ?: roster.firstOrNull { it.recipientRole == initialThread }
+        ?: roster.firstOrNull()
 
     // True when the deal is genuinely waiting on the buyer and there is a
     // confirm to make — the one case where the spine should carry the action.
