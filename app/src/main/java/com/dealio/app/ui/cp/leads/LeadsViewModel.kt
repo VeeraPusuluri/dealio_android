@@ -32,6 +32,32 @@ import kotlinx.coroutines.withContext
  */
 enum class LeadSide(val label: String) { LEADS("Leads"), DEALS("Deals") }
 
+/**
+ * Which side the Leads tab should show the next time it is opened.
+ *
+ * The CP home's "Deals" and "Leads" tiles point at the same tab and differ only
+ * in which half of it they mean, so the side has to travel with the navigation.
+ *
+ * It cannot ride as a route argument. The bottom bar matches tabs on
+ * `destination.route`, which for a parameterised route is the pattern rather
+ * than the filled value — the Leads tab would stop highlighting and the bar
+ * would hide itself. And the tab is entered with `launchSingleTop` +
+ * `restoreState`, so the destination is not recreated on a second tap: an
+ * argument would be read once, on first creation, and silently ignored every
+ * time after. Tapping "Deals" would work exactly once per process.
+ *
+ * Cleared as soon as it is applied, so reaching the tab any other way — the
+ * bottom bar, Back — keeps whichever side the CP last chose.
+ */
+object CpLeadsTabRequest {
+    private val _side = MutableStateFlow<LeadSide?>(null)
+    val side: StateFlow<LeadSide?> = _side.asStateFlow()
+
+    fun open(side: LeadSide) { _side.value = side }
+
+    fun clear() { _side.value = null }
+}
+
 data class LeadsState(
     val loading: Boolean = true,
     val error: String? = null,

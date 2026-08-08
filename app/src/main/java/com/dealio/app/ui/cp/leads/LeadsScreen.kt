@@ -114,6 +114,14 @@ fun LeadsScreen(nav: NavController, vm: LeadsViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     RefreshOnResume { vm.load(silent = true) }
 
+    // Arriving from a stat tile on the home screen, which says which half it
+    // meant. Applied and cleared here rather than read as a nav argument — see
+    // CpLeadsTabRequest for why an argument cannot work for this tab.
+    val requestedSide by CpLeadsTabRequest.side.collectAsStateWithLifecycle()
+    LaunchedEffect(requestedSide) {
+        requestedSide?.let { vm.setSide(it); CpLeadsTabRequest.clear() }
+    }
+
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
     var showAddLead by remember { mutableStateOf(false) }

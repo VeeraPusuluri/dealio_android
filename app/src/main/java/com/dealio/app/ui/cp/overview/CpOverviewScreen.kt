@@ -63,6 +63,8 @@ import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.initialsOf
 import com.dealio.app.ui.cp.CpLeadCard
 import com.dealio.app.ui.cp.CpRoutes
+import com.dealio.app.ui.cp.leads.CpLeadsTabRequest
+import com.dealio.app.ui.cp.leads.LeadSide
 import com.dealio.app.ui.cp.navigateToCpTab
 import com.dealio.app.ui.cp.QuickActionTile
 import com.dealio.app.ui.components.PortalHeaderSurface
@@ -146,8 +148,11 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
                 }
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        StatTile("Deals", state.totalDeals.toString(), Icons.Outlined.Apartment, Teal, Modifier.weight(1f), onClick = { nav.navigateToCpTab(CpRoutes.LEADS) })
-                        StatTile("Leads", state.leadsCount.toString(), Icons.Outlined.Groups, Teal, Modifier.weight(1f), onClick = { nav.navigateToCpTab(CpRoutes.LEADS) })
+                        // Both tiles open the same tab, so each says which half of
+                        // it it counted — tapping "Deals" and landing on a list of
+                        // leads is the split failing to survive one tap.
+                        StatTile("Deals", state.totalDeals.toString(), Icons.Outlined.Apartment, Teal, Modifier.weight(1f), onClick = { openCpLeadsTab(nav, LeadSide.DEALS) })
+                        StatTile("Leads", state.leadsCount.toString(), Icons.Outlined.Groups, Teal, Modifier.weight(1f), onClick = { openCpLeadsTab(nav, LeadSide.LEADS) })
                     }
                 }
 
@@ -217,7 +222,7 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
                     ) {
                         SectionLabel("Recent leads")
                         androidx.compose.material3.Text("View all", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.clickable { nav.navigateToCpTab(CpRoutes.LEADS) })
+                            modifier = Modifier.clickable { openCpLeadsTab(nav, LeadSide.LEADS) })
                     }
                 }
                 if (state.recentLeads.isEmpty()) {
@@ -262,4 +267,15 @@ private fun DueRow(title: String, subtitle: String) {
             if (subtitle.isNotBlank()) androidx.compose.material3.Text(subtitle, color = TextSecondary, fontSize = 11.sp)
         }
     }
+}
+
+/**
+ * Open the Leads tab on a chosen side.
+ *
+ * The request is registered before navigating, so it is already in place by the
+ * time the destination composes and reads it.
+ */
+private fun openCpLeadsTab(nav: NavController, side: LeadSide) {
+    CpLeadsTabRequest.open(side)
+    nav.navigateToCpTab(CpRoutes.LEADS)
 }
