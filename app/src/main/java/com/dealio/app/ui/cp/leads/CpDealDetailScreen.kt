@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.EventRepeat
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.Button
@@ -32,6 +33,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -40,6 +42,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,7 +70,9 @@ import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.DealSpine
 import com.dealio.app.ui.flow.PartyRail
 import com.dealio.app.ui.flow.batonOf
+import com.dealio.app.ui.cp.projects.CpBookingSheet
 import com.dealio.app.ui.flow.canonicalStage
+import com.dealio.app.ui.flow.stageIndex
 import com.dealio.app.ui.flow.ThreadTarget
 import com.dealio.app.ui.flow.rosterFor
 import com.dealio.app.ui.flow.threadKeyFor
@@ -94,6 +99,7 @@ fun CpDealDetailScreen(
     var draft by remember { mutableStateOf("") }
     var showFollowUp by remember { mutableStateOf(false) }
     var showCallLog by remember { mutableStateOf(false) }
+    var showBooking by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
 
@@ -222,6 +228,26 @@ fun CpDealDetailScreen(
                     }
                 }
 
+                // Booking the visit is how a lead actually moves — the spine says
+                // "Request a site visit" from New Lead through Meeting Confirmed,
+                // and until now there was nothing here to do it with. The CP had
+                // to leave the lead, open the project and retype the customer's
+                // name and phone. Same gate as the web journey tab.
+                if (stageIndex(d.status) in 0..3) {
+                    item {
+                        Button(
+                            onClick = { showBooking = true }, enabled = !state.working,
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Teal),
+                        ) {
+                            Icon(Icons.Outlined.CalendarMonth, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Schedule site visit", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
                 // Agreeing early is legitimate — the endpoint sets cpAgreed *and*
                 // moves the deal to Agreement — so this stays available. It is
                 // just no longer a full-width primary competing with a spine that
@@ -295,6 +321,26 @@ fun CpDealDetailScreen(
     if (showCallLog && d != null) {
         CallLogDialog(working = state.working, onDismiss = { showCallLog = false }) { outcome, duration, notes ->
             vm.logCall(outcome, duration, notes, null, null); showCallLog = false
+        }
+    }
+    if (showBooking && d != null) {
+        val bookingSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showBooking = false },
+            sheetState = bookingSheetState,
+            containerColor = Color.White,
+        ) {
+            // The customer is fixed on a lead, so the sheet shows them rather
+            // than asking the CP to type a name it already has.
+            CpBookingSheet(
+                projectName = d.projectName,
+                working = state.working,
+                initialName = d.customerName,
+                initialPhone = d.customerPhone,
+                customerLocked = true,
+            ) { _, _, date, time, type, notes ->
+                vm.bookVisit(date, time, type, notes) { showBooking = false }
+            }
         }
     }
 }

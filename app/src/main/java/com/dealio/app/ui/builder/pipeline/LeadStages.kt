@@ -20,20 +20,6 @@ import com.dealio.app.ui.flow.isLeadStage
  */
 val LEAD_STAGES = DEAL_STAGES.filter { isLeadStage(it) }
 
-/** Display label → backend enum/value expected by updateLeadStage. */
-private val STAGE_ENUM = mapOf(
-    "New Lead" to "NEW_LEAD",
-    "Profile Created" to "Profile Created",
-    "Meeting Requested" to "MEETING_REQUESTED",
-    "Meeting Confirmed" to "MEETING_CONFIRMED",
-    "Meeting Done" to "MEETING_DONE",
-    "Negotiation" to "NEGOTIATION",
-    "Agreement" to "Agreement",
-    "Pending Booking" to "Pending Booking",
-    "Booked" to "BOOKED",
-    "Closed" to "CLOSED",
-)
-
 /** Allowed forward transitions from each stage. */
 val NEXT_STAGES = mapOf(
     "New Lead" to listOf("Profile Created", "Meeting Requested", "Negotiation", "Closed"),
@@ -58,4 +44,17 @@ val NEXT_STAGES = mapOf(
  */
 fun stageLabel(raw: String): String = canonicalStage(raw.replace('_', ' ')) ?: raw
 
-fun stageEnum(label: String): String = STAGE_ENUM[label] ?: label
+/**
+ * The value `PATCH /builder/:builderId/leads/:dealId/stage` expects — the
+ * canonical spaced label, unchanged.
+ *
+ * This used to translate the label to SCREAMING_CASE ("Meeting Requested" →
+ * "MEETING_REQUESTED"), a vocabulary the API has never accepted: it keys on the
+ * spaced labels, so four of the ten stages came back
+ * `400 Unknown stage "MEETING_REQUESTED"` and the move silently failed. New
+ * Lead, Meeting Requested, Meeting Confirmed and Meeting Done were all
+ * unreachable from the pipeline board; the six single-word stages worked only
+ * because lower-casing "NEGOTIATION" happens to land on a real key. The web
+ * board carried the identical bug and dropped the map for the same reason.
+ */
+fun stageEnum(label: String): String = canonicalStage(label) ?: label

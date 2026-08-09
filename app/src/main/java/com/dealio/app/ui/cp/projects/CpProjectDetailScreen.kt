@@ -284,14 +284,19 @@ private val bookingVisitTypes = listOf("Site Visit", "Virtual Tour", "Office Mee
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun CpBookingSheet(
+internal fun CpBookingSheet(
     projectName: String,
     working: Boolean,
+    /** Prefilled customer, when the caller already knows who this is (a lead). */
+    initialName: String = "",
+    initialPhone: String = "",
+    /** A lead's customer is fixed — show them, don't offer to retype them. */
+    customerLocked: Boolean = false,
     onConfirm: (name: String, phone: String, date: String, time: String, type: String, notes: String) -> Unit,
 ) {
     val dates = remember { (0..13).map { LocalDate.now().plusDays(it.toLong()) } }
-    var name by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(initialName) }
+    var phone by remember { mutableStateOf(initialPhone) }
     var selectedDate by remember { mutableStateOf(dates.first()) }
     var selectedTime by remember { mutableStateOf(bookingTimeSlots.first()) }
     var selectedType by remember { mutableStateOf(bookingVisitTypes.first()) }
@@ -304,16 +309,31 @@ private fun CpBookingSheet(
 
         SectionLabel("Customer")
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(),
-            label = { Text("Customer name") }, singleLine = true, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors(),
-        )
-        Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = phone, onValueChange = { phone = it.filter(Char::isDigit) }, modifier = Modifier.fillMaxWidth(),
-            label = { Text("Customer phone") }, singleLine = true, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-        )
+        if (customerLocked) {
+            Column(
+                Modifier.fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(12.dp))
+                    .border(1.dp, CardBorder, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                Text(name, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                if (phone.isNotBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(phone, color = TextSecondary, fontSize = 13.sp)
+                }
+            }
+        } else {
+            OutlinedTextField(
+                value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(),
+                label = { Text("Customer name") }, singleLine = true, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors(),
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = phone, onValueChange = { phone = it.filter(Char::isDigit) }, modifier = Modifier.fillMaxWidth(),
+                label = { Text("Customer phone") }, singleLine = true, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            )
+        }
         Spacer(Modifier.height(16.dp))
 
         SectionLabel("Date")

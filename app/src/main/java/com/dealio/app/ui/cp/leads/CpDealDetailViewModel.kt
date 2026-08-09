@@ -118,6 +118,44 @@ class CpDealDetailViewModel(app: Application) : CpViewModel(app) {
         }
     }
 
+    /**
+     * Book a site visit for this lead's customer.
+     *
+     * The CP could already do this from a project screen, but only by retyping
+     * the customer's name and phone — from a lead we know both, so they come
+     * straight off the deal. The booking upserts the deal server-side, which is
+     * what carries it from Profile Created to Meeting Requested, so reload
+     * afterwards to pick up the new stage.
+     */
+    fun bookVisit(date: String, time: String, type: String, notes: String, onDone: () -> Unit) {
+        val deal = _state.value.deal ?: return
+        val builderId = deal.builderId
+        if (builderId == null) {
+            _state.update { it.copy(message = "This lead has no builder attached — open it from the project instead.") }
+            return
+        }
+        _state.update { it.copy(working = true) }
+        viewModelScope.launch {
+            val r = repo.bookVisit(
+                builderId = builderId,
+                projectId = deal.projectId,
+                customerName = deal.customerName,
+                customerPhone = deal.customerPhone,
+                date = date,
+                time = time,
+                type = type,
+                notes = notes.ifBlank { null },
+            )
+            _state.update {
+                it.copy(
+                    working = false,
+                    message = (r as? ApiResult.Error)?.message ?: "Visit requested for ${deal.customerName}.",
+                )
+            }
+            if (r is ApiResult.Success) { onDone(); load(dealId, silent = true) }
+        }
+    }
+
     fun logCall(outcome: String, duration: String, notes: String?, nextDate: String?, nextTime: String?) {
         _state.update { it.copy(working = true) }
         viewModelScope.launch {

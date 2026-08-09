@@ -23,6 +23,11 @@ data class CpLead(
 
 data class CpDealDetail(
     val id: Long = 0,
+    // Already on the wire — /cp/:cpUserId/deals/:dealId spreads the whole Deal
+    // row. Declared here so the screen can book a visit against this deal
+    // without a second round trip to find out which project it belongs to.
+    val projectId: Long? = null,
+    val builderId: Long? = null,
     val status: String = "",
     val dealValue: Double? = null,
     val commissionStatus: String? = null,
