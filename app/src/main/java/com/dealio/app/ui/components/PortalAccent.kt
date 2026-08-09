@@ -2,6 +2,8 @@ package com.dealio.app.ui.components
 
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
+import com.dealio.app.ui.auth.DealioRole
+import com.dealio.app.ui.auth.RoleBuilder
 import com.dealio.app.ui.auth.RoleCp
 import com.dealio.app.ui.auth.RoleCustomer
 import com.dealio.app.ui.auth.onNavy
@@ -45,3 +47,22 @@ val BuilderHeroAccent = Color(0xFF2E5D8E).onNavy()
  * screen's own default, for anything that renders outside a portal.
  */
 val LocalHeroAccent = compositionLocalOf { TealBright }
+
+/**
+ * The tint a role's *sign-in* hero glows with.
+ *
+ * Sign-in and the portal have to agree, or the promise above breaks at the
+ * moment it is made: a builder picked a teal card and landed on a blue home.
+ * Roles with a portal therefore answer with the portal's accent, and the rest
+ * — bank, NRI — keep their own colour lifted for navy, as before.
+ *
+ * The role *pills* deliberately still use [DealioRole.color]: the builder's blue
+ * hero comes from the bank's colour, so painting the pill with it too would put
+ * two identical blues in a picker whose whole job is telling roles apart.
+ */
+fun heroAccentFor(role: DealioRole): Color = when (role.value) {
+    RoleCustomer.value -> CustomerHeroAccent
+    RoleCp.value -> CpHeroAccent
+    RoleBuilder.value -> BuilderHeroAccent
+    else -> role.color.onNavy()
+}

@@ -38,13 +38,13 @@ import com.dealio.app.ui.auth.DealioRole
 import com.dealio.app.ui.auth.RoleCustomer
 import com.dealio.app.ui.auth.SigninRoles
 import com.dealio.app.ui.auth.isSignInOption
-import com.dealio.app.ui.auth.onNavy
 import com.dealio.app.ui.auth.roleFor
 import com.dealio.app.ui.components.AuthScaffold
 import com.dealio.app.ui.components.DealioButton
 import com.dealio.app.ui.components.DemoCodeHint
 import com.dealio.app.ui.components.ErrorText
 import com.dealio.app.ui.components.FieldGroupLabel
+import com.dealio.app.ui.components.heroAccentFor
 import com.dealio.app.ui.components.OtpInput
 import com.dealio.app.ui.components.PhoneField
 import com.dealio.app.ui.components.RoleHeroChip
@@ -86,7 +86,10 @@ fun LoginScreen(
 
     val onDetails = state.step == AuthStep.DETAILS
     val accent = role.color
-    val accentDark = accent.onNavy()
+    // The hero glows in the portal's colour, not simply the role's, so the
+    // surface someone signs in on is the one they land in. Only the hero: the
+    // card's own controls stay on the role's brand colour, which reads on white.
+    val accentDark = heroAccentFor(role)
 
     AuthScaffold(
         eyebrow = if (onDetails) "Sign in" else "Step 2 · Verify",

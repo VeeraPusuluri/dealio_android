@@ -40,7 +40,6 @@ import com.dealio.app.ui.auth.AuthViewModel
 import com.dealio.app.ui.auth.DealioRole
 import com.dealio.app.ui.auth.RoleCustomer
 import com.dealio.app.ui.auth.SignupRoles
-import com.dealio.app.ui.auth.onNavy
 import com.dealio.app.ui.components.AuthScaffold
 import com.dealio.app.ui.components.DealioButton
 import com.dealio.app.ui.components.DemoCodeHint
@@ -51,6 +50,7 @@ import com.dealio.app.ui.components.PhoneField
 import com.dealio.app.ui.components.RoleCardList
 import com.dealio.app.ui.components.RoleHeroChip
 import com.dealio.app.ui.components.dealioFieldColors
+import com.dealio.app.ui.components.heroAccentFor
 import com.dealio.app.ui.findActivity
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.Teal
@@ -94,7 +94,8 @@ fun SignupScreen(
 
     val onDetails = state.step == AuthStep.DETAILS
     val accent = role.color
-    val accentDark = accent.onNavy()
+    // Portal colour on the hero, role colour on the card — see LoginScreen.
+    val accentDark = heroAccentFor(role)
 
     AuthScaffold(
         eyebrow = if (onDetails) "Create account" else "Step 2 · Verify",
