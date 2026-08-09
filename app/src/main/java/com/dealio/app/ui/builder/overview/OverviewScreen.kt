@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -84,7 +84,9 @@ fun OverviewScreen(nav: NavController, vm: OverviewViewModel = viewModel()) {
                 // just signed in on.
                 .background(PortalHeroGradient),
         ) {
-            Column(Modifier.systemBarsPadding().padding(horizontal = 20.dp, vertical = 18.dp)) {
+            // Top-anchored, so only the status bar matters — systemBarsPadding()
+            // also reserved the navigation-bar inset as dead navy under the name.
+            Column(Modifier.statusBarsPadding().padding(horizontal = 20.dp, vertical = 18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Tapping opens Settings, where the picture is changed. The
                     // photo itself was never shown here, so a builder who set one

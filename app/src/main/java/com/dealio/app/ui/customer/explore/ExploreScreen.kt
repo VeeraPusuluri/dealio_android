@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -271,7 +271,8 @@ private fun ExploreHero(state: ExploreState, vm: ExploreViewModel, nav: NavContr
             // old navy→teal band was most obviously a different material.
             .background(PortalHeroGradient),
     ) {
-        Column(Modifier.systemBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
+        // Top-anchored: only the status-bar inset belongs inside the hero.
+        Column(Modifier.statusBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Hi ${state.name.substringBefore(' ')} 👋", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)

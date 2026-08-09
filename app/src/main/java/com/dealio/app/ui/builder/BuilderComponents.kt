@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -49,7 +48,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
+import com.dealio.app.ui.components.PortalHeader
 import com.dealio.app.ui.theme.CardBorder
+import com.dealio.app.ui.theme.DarkStatusBarIcons
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.NavyTealGradient
 import com.dealio.app.ui.theme.Teal
@@ -390,28 +391,22 @@ fun RefreshOnResume(onResume: () -> Unit) {
     }
 }
 
-/** Header for the top-level bottom-nav tabs (handles its own status-bar inset). */
+/**
+ * Header for the top-level bottom-nav tabs (handles its own status-bar inset).
+ *
+ * This was a white bar, which the window draws behind: edge-to-edge leaves the
+ * status bar transparent, so Projects/Pipeline/Deals/More put white under the
+ * light status-bar glyphs and the clock vanished. The home tab never had the
+ * problem because it opens on the navy hero — so this is now that same hero,
+ * which fixes the legibility and ends the white-bar/navy-bar split between the
+ * builder's own tabs at the same time.
+ */
 @Composable
 fun TabHeader(
     title: String,
     subtitle: String? = null,
     trailing: @Composable (() -> Unit)? = null,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.White)
-            .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, color = Navy, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            if (subtitle != null) Text(subtitle, color = TextSecondary, fontSize = 12.sp)
-        }
-        if (trailing != null) trailing()
-    }
-}
+) = PortalHeader(title = title, subtitle = subtitle, trailing = trailing)
 
 /** Standard sub-screen shell: a back-arrow top bar over a body. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -422,6 +417,9 @@ fun SubScreenScaffold(
     actions: @Composable () -> Unit = {},
     body: @Composable (PaddingValues) -> Unit,
 ) {
+    // White top bar behind a transparent status bar: the glyphs have to flip dark
+    // or they are invisible for the whole of every detail screen.
+    DarkStatusBarIcons()
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {

@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -119,8 +119,10 @@ fun AuthScaffold(
                     )
 
                     Column(
+                        // Only the status bar sits over this hero; the footer below
+                        // takes the navigation-bar inset (see navigationBarsPadding).
                         Modifier
-                            .systemBarsPadding()
+                            .statusBarsPadding()
                             .padding(start = 26.dp, end = 26.dp, top = 22.dp, bottom = 52.dp),
                     ) {
                         Row(
