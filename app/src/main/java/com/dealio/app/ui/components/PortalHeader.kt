@@ -31,16 +31,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dealio.app.ui.theme.HeroAccent
-import com.dealio.app.ui.theme.HeroHighlight
 import com.dealio.app.ui.theme.PortalHeroGradient
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TealBright
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 
-/** Radius of the corner glow on the portal hero. */
-private val GLOW_RADIUS = 110.dp
+/**
+ * Width of the hero glow, as a fraction of the bar.
+ *
+ * Sized against the bar rather than fixed in dp: the glow is what carries the
+ * portal's colour, and a 110.dp circle on a 1080px-wide band was a dot in the
+ * corner — readable as a highlight, not as "this portal is orange".
+ */
+private const val GLOW_WIDTH_FRACTION = 0.62f
 
 /**
  * The navy→teal surface every portal tab opens on.
@@ -52,6 +56,7 @@ private val GLOW_RADIUS = 110.dp
 @Composable
 fun PortalHeaderSurface(
     modifier: Modifier = Modifier,
+    accent: Color = LocalHeroAccent.current,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Box(
@@ -60,26 +65,26 @@ fun PortalHeaderSurface(
             .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
             .background(PortalHeroGradient),
     ) {
-        // Soft highlight so the flat gradient reads with a bit of depth. Drawn against
-        // the parent's own size rather than as a 220.dp child — as a sized child it set
-        // a 220.dp floor on the hero, so a short tab (a title with no stat pills) got
-        // the same tall bar as a full one, padded out with dead navy.
+        // The portal's colour, washed across the navy from the top-right — the
+        // same move sign-in makes, and the reason a partner's bar reads warm and
+        // a buyer's reads green while both stay the same deep navy underneath.
         //
-        // Wider and fainter than it was: at a tight radius and a fifth opacity the
-        // cyan read as a spotlight aimed at the corner rather than light falling
-        // across the surface.
+        // Drawn against the parent's own size rather than as a sized child: as a
+        // 220.dp child it set a 220.dp floor on the hero, so a short tab (a title
+        // with no stat pills) got the same tall bar as a full one, padded out
+        // with dead navy.
         //
-        // Fainter again now that HeroHighlight is TealBright rather than a muted
-        // slate-blue. Sign-in carries the same cyan at 0.40, but across a whole
-        // screen; the same alpha in this band would put a hard cyan blob in the
-        // corner. Matching the palette means matching the colour, not the number.
+        // The centre sits just past the corner so the bar only ever shows the
+        // falloff. Sign-in does the same with a 270.dp circle pushed off-screen;
+        // a glow centred *inside* a band this short is a spotlight aimed at the
+        // corner, which is what this palette exists to avoid.
         Box(
             Modifier.matchParentSize().drawBehind {
-                val r = GLOW_RADIUS.toPx()
-                val centre = Offset(size.width - r * 0.55f, r * 0.15f)
+                val r = size.width * GLOW_WIDTH_FRACTION
+                val centre = Offset(size.width * 0.92f, -r * 0.18f)
                 drawCircle(
                     brush = Brush.radialGradient(
-                        listOf(HeroHighlight.copy(alpha = 0.10f), Color.Transparent),
+                        listOf(accent.copy(alpha = 0.34f), Color.Transparent),
                         center = centre,
                         radius = r,
                     ),
@@ -114,13 +119,16 @@ fun PortalHeader(
     stats: List<Pair<String, String>> = emptyList(),
     trailing: (@Composable () -> Unit)? = null,
 ) {
-    PortalHeaderSurface {
+    val accent = LocalHeroAccent.current
+    PortalHeaderSurface(accent = accent) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 if (subtitle != null) {
                     Spacer(Modifier.height(2.dp))
-                    Text(subtitle, color = HeroAccent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    // The portal's own colour, as sign-in tints its eyebrow. This
+                    // was a fixed aqua, which put a teal line on an orange bar.
+                    Text(subtitle, color = accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
             trailing?.invoke()

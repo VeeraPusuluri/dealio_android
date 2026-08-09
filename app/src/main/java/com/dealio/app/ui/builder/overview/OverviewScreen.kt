@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,7 +60,8 @@ import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.initialsOf
 import com.dealio.app.ui.builder.resolveUrl
-import com.dealio.app.ui.theme.PortalHeroGradient
+import com.dealio.app.ui.components.LocalHeroAccent
+import com.dealio.app.ui.components.PortalHeaderSurface
 import com.dealio.app.ui.theme.Orange
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
@@ -72,60 +72,53 @@ fun OverviewScreen(nav: NavController, vm: OverviewViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
     com.dealio.app.ui.builder.RefreshOnResume { vm.load(silent = true) }
 
+    val accent = LocalHeroAccent.current
+
     Column(Modifier.fillMaxSize()) {
-        // ── Navy hero ──
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(bottomStart = 26.dp, bottomEnd = 26.dp))
-                // The sign-in surface, same as every other portal's hero. This
-                // was NavyTealGradient, which ran to teal at the far end and made
-                // the builder home the odd one out against the card the user had
-                // just signed in on.
-                .background(PortalHeroGradient),
-        ) {
-            // Top-anchored, so only the status bar matters — systemBarsPadding()
-            // also reserved the navigation-bar inset as dead navy under the name.
-            Column(Modifier.statusBarsPadding().padding(horizontal = 20.dp, vertical = 18.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Tapping opens Settings, where the picture is changed. The
-                    // photo itself was never shown here, so a builder who set one
-                    // saw initials forever; the CP home has shown theirs all along.
-                    Box(
-                        Modifier
-                            .size(46.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Teal)
-                            .clickable { nav.navigate(BuilderRoutes.SETTINGS) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        val photo = resolveUrl(state.avatarUrl)
-                        if (photo != null) {
-                            AsyncImage(
-                                model = photo,
-                                contentDescription = state.builderName,
-                                modifier = Modifier.size(46.dp),
-                                contentScale = ContentScale.Crop,
-                            )
-                        } else {
-                            Text(initialsOf(state.builderName), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                        }
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("Welcome back", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            state.builderName?.substringBefore(' ') ?: "Builder",
-                            color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold,
+        // ── Hero ──
+        // The shared portal surface rather than a hand-rolled near-match, so the
+        // builder's home carries the same gradient, radius, inset and portal tint
+        // as its own tabs and as the CP home. It used to be its own Box, which is
+        // how it ended up on a different corner radius from everything else.
+        PortalHeaderSurface {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Tapping opens Settings, where the picture is changed. The
+                // photo itself was never shown here, so a builder who set one
+                // saw initials forever; the CP home has shown theirs all along.
+                Box(
+                    Modifier
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Teal)
+                        .clickable { nav.navigate(BuilderRoutes.SETTINGS) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val photo = resolveUrl(state.avatarUrl)
+                    if (photo != null) {
+                        AsyncImage(
+                            model = photo,
+                            contentDescription = state.builderName,
+                            modifier = Modifier.size(46.dp),
+                            contentScale = ContentScale.Crop,
                         )
+                    } else {
+                        Text(initialsOf(state.builderName), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp)
                     }
-                    Box(
-                        Modifier.size(40.dp)
-                            .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                            .clickable { nav.navigate(BuilderRoutes.NOTIFICATIONS) },
-                        contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Outlined.Notifications, "Notifications", tint = Color.White, modifier = Modifier.size(20.dp)) }
                 }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Welcome back", color = accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        state.builderName?.substringBefore(' ') ?: "Builder",
+                        color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold,
+                    )
+                }
+                Box(
+                    Modifier.size(40.dp)
+                        .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                        .clickable { nav.navigate(BuilderRoutes.NOTIFICATIONS) },
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Outlined.Notifications, "Notifications", tint = Color.White, modifier = Modifier.size(20.dp)) }
             }
         }
 

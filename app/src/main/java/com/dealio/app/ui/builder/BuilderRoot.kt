@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.SpaceDashboard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -50,7 +51,9 @@ import com.dealio.app.ui.builder.rera.ReraScreen
 import com.dealio.app.ui.builder.settings.BuilderSettingsScreen
 import com.dealio.app.ui.builder.shortlists.ShortlistsScreen
 import com.dealio.app.ui.builder.units.UnitMatrixScreen
+import com.dealio.app.ui.components.BuilderHeroAccent
 import com.dealio.app.ui.components.FloatingPillNav
+import com.dealio.app.ui.components.LocalHeroAccent
 import com.dealio.app.ui.components.PillTab
 
 object BuilderRoutes {
@@ -104,6 +107,8 @@ fun BuilderRoot(onLogout: () -> Unit) {
     val currentRoute = backStack?.destination?.route
     val showBottomBar = bottomTabs.any { it.route == currentRoute }
 
+    // Every hero below this point is lit builder-blue — see LocalHeroAccent.
+    CompositionLocalProvider(LocalHeroAccent provides BuilderHeroAccent) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -181,5 +186,6 @@ fun BuilderRoot(onLogout: () -> Unit) {
             composable(BuilderRoutes.SNAGGING) { BuilderSnaggingScreen(nav) }
             composable(BuilderRoutes.CONVERSATIONS) { BuilderConversationsScreen(nav) }
         }
+    }
     }
 }

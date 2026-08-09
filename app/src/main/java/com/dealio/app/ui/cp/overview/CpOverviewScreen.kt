@@ -69,7 +69,7 @@ import com.dealio.app.ui.cp.navigateToCpTab
 import com.dealio.app.ui.cp.QuickActionTile
 import com.dealio.app.ui.components.PortalHeaderSurface
 import com.dealio.app.ui.theme.Orange
-import com.dealio.app.ui.theme.HeroAccent
+import com.dealio.app.ui.components.LocalHeroAccent
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TealBright
 import com.dealio.app.ui.theme.TextPrimary
@@ -116,7 +116,7 @@ fun CpOverviewScreen(nav: NavController, vm: CpOverviewViewModel = viewModel()) 
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    androidx.compose.material3.Text("Welcome back", color = HeroAccent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    androidx.compose.material3.Text("Welcome back", color = LocalHeroAccent.current, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     androidx.compose.material3.Text(state.name.substringBefore(' '), color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
                 }
                 Box(

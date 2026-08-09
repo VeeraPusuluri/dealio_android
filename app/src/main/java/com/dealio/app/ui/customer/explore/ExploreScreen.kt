@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -65,10 +64,11 @@ import com.dealio.app.ui.builder.RefreshOnResume
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.customer.CustomerProjectCard
 import com.dealio.app.ui.customer.CustomerRoutes
+import com.dealio.app.ui.components.LocalHeroAccent
+import com.dealio.app.ui.components.PortalHeaderSurface
 import com.dealio.app.ui.customer.FeaturedCard
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.ErrorRed
-import com.dealio.app.ui.theme.PortalHeroGradient
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
@@ -262,61 +262,54 @@ private fun ExploreHero(state: ExploreState, vm: ExploreViewModel, nav: NavContr
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(searchExpanded) { if (searchExpanded) runCatching { focusRequester.requestFocus() } }
 
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
-            // The sign-in surface — see PortalHeroGradient. The buyer's home is
-            // the first screen after the role picker, so it is the one place the
-            // old navy→teal band was most obviously a different material.
-            .background(PortalHeroGradient),
-    ) {
-        // Top-anchored: only the status-bar inset belongs inside the hero.
-        Column(Modifier.statusBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Hi ${state.name.substringBefore(' ')} 👋", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("Find your next home", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                }
-                HeroIconButton(if (searchExpanded) Icons.Outlined.Close else Icons.Outlined.Search, "Search") {
-                    searchExpanded = !searchExpanded
-                    if (!searchExpanded) vm.setQuery("")
-                }
-                Spacer(Modifier.width(8.dp))
-                HeroIconButton(Icons.Outlined.Notifications, "Notifications") { nav.navigate(CustomerRoutes.NOTIFICATIONS) }
+    // The shared portal surface — same gradient, radius, inset and buyer-green
+    // tint as the rest of the customer portal. The buyer's home is the first
+    // screen after the role picker, so it is the one that most has to look like
+    // the card they just signed in on.
+    PortalHeaderSurface {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Hi ${state.name.substringBefore(' ')} 👋", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("Find your next home", color = LocalHeroAccent.current, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
-            AnimatedVisibility(visible = searchExpanded) {
-                Column {
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = state.query,
-                        onValueChange = vm::setQuery,
-                        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                        placeholder = { Text("Search projects, localities…") },
-                        leadingIcon = { Icon(Icons.Outlined.Search, null) },
-                        trailingIcon = {
-                            if (state.query.isNotEmpty()) {
-                                Icon(
-                                    Icons.Outlined.Close,
-                                    "Clear",
-                                    tint = TextSecondary,
-                                    modifier = Modifier.size(18.dp).clickable { vm.setQuery("") },
-                                )
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent,
-                            focusedLeadingIconColor = TextSecondary,
-                            unfocusedLeadingIconColor = TextSecondary,
-                            cursorColor = Teal,
-                        ),
-                    )
-                }
+            HeroIconButton(if (searchExpanded) Icons.Outlined.Close else Icons.Outlined.Search, "Search") {
+                searchExpanded = !searchExpanded
+                if (!searchExpanded) vm.setQuery("")
+            }
+            Spacer(Modifier.width(8.dp))
+            HeroIconButton(Icons.Outlined.Notifications, "Notifications") { nav.navigate(CustomerRoutes.NOTIFICATIONS) }
+        }
+        AnimatedVisibility(visible = searchExpanded) {
+            Column {
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = state.query,
+                    onValueChange = vm::setQuery,
+                    modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+                    placeholder = { Text("Search projects, localities…") },
+                    leadingIcon = { Icon(Icons.Outlined.Search, null) },
+                    trailingIcon = {
+                        if (state.query.isNotEmpty()) {
+                            Icon(
+                                Icons.Outlined.Close,
+                                "Clear",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(18.dp).clickable { vm.setQuery("") },
+                            )
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        focusedLeadingIconColor = TextSecondary,
+                        unfocusedLeadingIconColor = TextSecondary,
+                        cursorColor = Teal,
+                    ),
+                )
             }
         }
     }

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -24,7 +25,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.dealio.app.ui.components.CustomerHeroAccent
 import com.dealio.app.ui.components.FloatingPillNav
+import com.dealio.app.ui.components.LocalHeroAccent
 import com.dealio.app.ui.components.PillTab
 import com.dealio.app.ui.customer.explore.ExploreScreen
 import com.dealio.app.ui.customer.documents.DocumentsScreen
@@ -99,6 +102,8 @@ fun CustomerRoot(onLogout: () -> Unit) {
     val currentRoute = backStack?.destination?.route
     val showBottomBar = tabs.any { it.route == currentRoute }
 
+    // Every hero below this point is lit buyer-green — see LocalHeroAccent.
+    CompositionLocalProvider(LocalHeroAccent provides CustomerHeroAccent) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -179,5 +184,6 @@ fun CustomerRoot(onLogout: () -> Unit) {
                 arguments = listOf(navArgument("id") { type = NavType.LongType }),
             ) { e -> CustomerMeetupDetailScreen(nav, e.arguments?.getLong("id") ?: 0) }
         }
+    }
     }
 }

@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.SpaceDashboard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -24,7 +25,9 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.dealio.app.ui.components.CpHeroAccent
 import com.dealio.app.ui.components.FloatingPillNav
+import com.dealio.app.ui.components.LocalHeroAccent
 import com.dealio.app.ui.components.PillTab
 import com.dealio.app.ui.cp.calllogs.CallLogsScreen
 import com.dealio.app.ui.cp.contacts.ContactsScreen
@@ -128,6 +131,8 @@ fun CpRoot(onLogout: () -> Unit) {
     val currentRoute = backStack?.destination?.route
     val showBottomBar = tabs.any { it.route == currentRoute }
 
+    // Every hero below this point is lit partner-orange — see LocalHeroAccent.
+    CompositionLocalProvider(LocalHeroAccent provides CpHeroAccent) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -212,5 +217,6 @@ fun CpRoot(onLogout: () -> Unit) {
             composable(CpRoutes.CONVERSATIONS) { ConversationsScreen(nav) }
             composable(CpRoutes.LOAN_ASSIST) { CpLoanAssistScreen(nav) }
         }
+    }
     }
 }
