@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.dealio.app.SIGNUP_ENABLED
 import com.dealio.app.ui.auth.AuthStep
 import com.dealio.app.ui.auth.AuthViewModel
 import com.dealio.app.ui.auth.DealioRole
@@ -188,15 +189,20 @@ fun LoginScreen(
             }
         }
 
-        Spacer(Modifier.height(20.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("New to Dealio?", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
-            TextButton(onClick = onGoToSignup) {
-                Text("Create an account", color = Teal, fontWeight = FontWeight.SemiBold)
+        // Self-serve signup is off for now (see SIGNUP_ENABLED). SignupScreen and
+        // its nav route are left intact behind the flag, so restoring the offer
+        // is a one-line change rather than rebuilding the flow.
+        if (SIGNUP_ENABLED) {
+            Spacer(Modifier.height(20.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("New to Dealio?", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                TextButton(onClick = onGoToSignup) {
+                    Text("Create an account", color = Teal, fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }
