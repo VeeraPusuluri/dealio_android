@@ -194,6 +194,13 @@ data class CpDueToday(
 data class ShareLinkResponse(
     val token: String = "",
     val url: String = "",
+    /**
+     * The same link as a QR, PNG data URL, rendered by the backend so this app,
+     * the web app and iOS all print an identical code — and so the APK carries no
+     * QR encoder. Null when the server could not encode it; the flyer simply
+     * omits the code rather than failing.
+     */
+    val qr: String? = null,
     val clickCount: Int = 0,
 )
 

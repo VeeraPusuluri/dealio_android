@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -118,6 +119,12 @@ fun ContentStudioScreen(nav: NavController, vm: CpGrowthViewModel = viewModel())
     SubScreenScaffold("Content Studio", nav) { inner ->
         if (state.loading) { LoadingState(Modifier.padding(inner)); return@SubScreenScaffold }
         val selected = state.projects.firstOrNull { it.id == selectedId }
+
+        // Only once the flyer tab is actually open: the QR is drawn on the poster and
+        // nowhere else, so a CP writing captions never pays for the call.
+        LaunchedEffect(selectedId, mode) {
+            if (mode == "flyer" && selectedId > 0L) vm.loadShareQr(selectedId)
+        }
 
         Column(
             Modifier.fillMaxSize().padding(inner).verticalScroll(rememberScrollState()).padding(16.dp),
@@ -404,6 +411,7 @@ fun ContentStudioScreen(nav: NavController, vm: CpGrowthViewModel = viewModel())
                         profile = state.profile,
                         layer = flyerLayer,
                         onHeroSettled = { heroSettled = true },
+                        qr = state.shareQr[selected.id],
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
@@ -415,7 +423,9 @@ fun ContentStudioScreen(nav: NavController, vm: CpGrowthViewModel = viewModel())
                 }
 
                 val heroUrl = resolveUrl(selected.imageUrl ?: selected.coverUrl)
-                val ready = heroSettled || heroUrl == null
+                // The QR is part of the poster, so capturing before the share-link call
+                // settles would bake a flyer with a hole where the tracked link belongs.
+                val ready = (heroSettled || heroUrl == null) && state.shareQr.containsKey(selected.id)
 
                 /** Renders once, then hands the file to [then]. Shared by all three actions. */
                 fun withFlyer(then: (java.io.File) -> Unit) {
@@ -467,7 +477,7 @@ fun ContentStudioScreen(nav: NavController, vm: CpGrowthViewModel = viewModel())
                 }
 
                 if (!ready) {
-                    Text("Loading the project photo…", color = TextSecondary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                    Text("Building your flyer…", color = TextSecondary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 4.dp))
                 }
 
                 if (draft.isBlank()) {

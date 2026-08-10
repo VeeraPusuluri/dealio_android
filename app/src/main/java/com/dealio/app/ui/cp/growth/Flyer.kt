@@ -4,10 +4,13 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Base64
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,14 +36,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -120,6 +126,8 @@ fun FlyerPreview(
     layer: GraphicsLayer,
     onHeroSettled: () -> Unit,
     modifier: Modifier = Modifier,
+    /** PNG data URL of the CP's tracked share link — see [decodeQr]. */
+    qr: String? = null,
 ) {
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val scale = with(LocalDensity.current) { maxWidth.toPx() } / FLYER_W_PX
@@ -145,7 +153,7 @@ fun FlyerPreview(
                             drawLayer(layer)
                         },
                 ) {
-                    FlyerPoster(template, project, profile, onHeroSettled)
+                    FlyerPoster(template, project, profile, onHeroSettled, decodeQr(qr))
                 }
             }
         }
@@ -224,12 +232,46 @@ fun saveFlyerToGallery(ctx: Context, file: File, displayName: String): Boolean {
 
 // ─── Poster ──────────────────────────────────────────────────────────────────
 
+/**
+ * Decodes the backend's QR data URL into a bitmap, once per distinct string.
+ *
+ * Deliberately synchronous rather than routed through Coil: the poster is captured
+ * the instant the CP taps Share, and an image still loading at that moment would be
+ * baked into the JPEG as a blank square. A data URL is already in memory, so there
+ * is nothing to wait for.
+ */
+@Composable
+private fun decodeQr(dataUrl: String?): ImageBitmap? = remember(dataUrl) {
+    val payload = dataUrl?.substringAfter("base64,", "")?.takeIf { it.isNotBlank() } ?: return@remember null
+    runCatching {
+        val bytes = Base64.decode(payload, Base64.DEFAULT)
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+    }.getOrNull()
+}
+
+/**
+ * A QR on white, sized to [size].
+ *
+ * The white plate is the scanner's quiet zone. The encoder is asked for a 1-module
+ * margin — under the 4 modules a reader wants — so the rest comes from this padding;
+ * without it the code sits flush against the dark footer and most readers refuse it.
+ */
+@Composable
+private fun QrBadge(qr: ImageBitmap, size: androidx.compose.ui.unit.Dp) {
+    Box(
+        Modifier.size(size).clip(RoundedCornerShape(4.dp)).background(Color.White).padding(3.dp),
+    ) {
+        Image(qr, null, Modifier.fillMaxSize())
+    }
+}
+
 @Composable
 private fun FlyerPoster(
     template: FlyerTemplate,
     p: Project,
     profile: CpProfile?,
     onHeroSettled: () -> Unit,
+    qr: ImageBitmap?,
 ) {
     val heroHeight = when (template) {
         FlyerTemplate.Showcase -> 186.dp
@@ -259,9 +301,11 @@ private fun FlyerPoster(
             }
         }
 
+        // Clean gets no QR on purpose: a tracked link resolves to one CP, which is
+        // exactly the detail this template promises not to carry.
         when (template) {
-            FlyerTemplate.Showcase -> VideoBand(p.videoUrl)
-            FlyerTemplate.CoBranded -> ContactBand(profile)
+            FlyerTemplate.Showcase -> VideoBand(p.videoUrl, qr)
+            FlyerTemplate.CoBranded -> ContactBand(profile, qr)
             FlyerTemplate.Clean -> CleanFooter(p)
         }
     }
@@ -406,10 +450,13 @@ private fun FlyerFacts(p: Project, compact: Boolean) {
 
 /** Showcase footer — the walkthrough link, or an invitation to ask for one when there is no video. */
 @Composable
-private fun VideoBand(videoUrl: String?) {
+private fun VideoBand(videoUrl: String?, qr: ImageBitmap?) {
     Row(
         Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(NavyDeep, NavyMid)))
-            .padding(horizontal = 18.dp, vertical = 13.dp),
+            // The QR is taller than the icon it sits beside, so the band trades padding
+            // for it rather than growing — the web poster's footer is a fixed 168 px and
+            // the two are meant to print the same picture.
+            .padding(horizontal = 18.dp, vertical = if (qr != null) 6.dp else 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -434,6 +481,10 @@ private fun VideoBand(videoUrl: String?) {
                 overflow = TextOverflow.Ellipsis,
             )
         }
+        if (qr != null) {
+            Spacer(Modifier.width(10.dp))
+            QrBadge(qr, 44.dp)
+        }
         Spacer(Modifier.width(8.dp))
         DealioMark(onDark = true)
     }
@@ -441,7 +492,7 @@ private fun VideoBand(videoUrl: String?) {
 
 /** Co-branded footer — who to call. The whole point of the template. */
 @Composable
-private fun ContactBand(profile: CpProfile?) {
+private fun ContactBand(profile: CpProfile?, qr: ImageBitmap?) {
     val name = profile?.fullName?.takeIf { it.isNotBlank() } ?: "Your channel partner"
     val phone = profile?.phone?.takeIf { it.isNotBlank() }
     val rera = profile?.cp?.reraNumber?.takeIf { it.isNotBlank() }
@@ -450,7 +501,9 @@ private fun ContactBand(profile: CpProfile?) {
 
     Row(
         Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(NavyDeep, NavyMid)))
-            .padding(horizontal = 16.dp, vertical = 13.dp),
+            // Same trade as VideoBand: the QR is the tallest thing in the row, so the
+            // padding shrinks to hold the band at the web poster's fixed 216 px footer.
+            .padding(horizontal = 16.dp, vertical = if (qr != null) 11.dp else 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(46.dp).clip(RoundedCornerShape(23.dp)).background(Teal), contentAlignment = Alignment.Center) {
@@ -481,6 +534,10 @@ private fun ContactBand(profile: CpProfile?) {
             if (rera != null) {
                 Text("RERA $rera", color = Color.White.copy(alpha = 0.6f), fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+        }
+        if (qr != null) {
+            Spacer(Modifier.width(10.dp))
+            QrBadge(qr, 50.dp)
         }
         Spacer(Modifier.width(8.dp))
         DealioMark(onDark = true)

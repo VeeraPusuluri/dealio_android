@@ -40,6 +40,16 @@ data class CpGrowthState(
     val profile: CpProfile? = null,
     val contacts: List<CpContact> = emptyList(),
     val projects: List<Project> = emptyList(),
+    /**
+     * Share-link QR per project id, as a PNG data URL, populated on demand by
+     * [CpGrowthViewModel.loadShareQr].
+     *
+     * A present key means the fetch settled; a null value means it settled with no QR.
+     * The flyer's export button waits on the key, so the two cases have to be
+     * distinguishable — collapsing them would leave the button disabled forever
+     * whenever the server could not encode a code.
+     */
+    val shareQr: Map<Long, String?> = emptyMap(),
 )
 
 /**
@@ -62,6 +72,22 @@ class CpGrowthViewModel(app: Application) : CpViewModel(app) {
             _state.update {
                 it.copy(loading = false, leads = leads, profile = profile, contacts = contacts, projects = projects)
             }
+        }
+    }
+
+    /**
+     * Fetches (and mints, server-side) the CP's tracked share link for [projectId] and
+     * keeps its QR.
+     *
+     * On demand rather than in [load]: the QR is only drawn on the flyer, so a CP who
+     * never opens the flyer tab never pays for a call per project. Cached by id because
+     * the token is stable — flipping between projects must not re-mint anything.
+     */
+    fun loadShareQr(projectId: Long) {
+        if (_state.value.shareQr.containsKey(projectId)) return
+        viewModelScope.launch {
+            val qr = (repo.getShareLink(projectId) as? ApiResult.Success)?.data?.qr
+            _state.update { it.copy(shareQr = it.shareQr + (projectId to qr)) }
         }
     }
 }
