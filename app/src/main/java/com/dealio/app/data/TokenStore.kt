@@ -47,6 +47,20 @@ class TokenStore(context: Context) {
     }
 
     /**
+     * Remembers a name or email the user just changed on their own profile.
+     *
+     * Same reason as [avatarUrl]: the session payload is only handed out at
+     * sign-in, so an edited name would otherwise show on the screen that saved
+     * it and nowhere else until the next login.
+     */
+    fun updateIdentity(fullName: String?, email: String?) {
+        prefs.edit {
+            putString(KEY_FULL_NAME, fullName)
+            putString(KEY_EMAIL, email)
+        }
+    }
+
+    /**
      * Remembers a picture the user just set.
      *
      * The session payload only arrives at sign-in, so without this a new photo

@@ -20,6 +20,16 @@ interface BuilderApi {
     @POST("builder/ensure")
     suspend fun ensureBuilder(@Body body: EnsureBuilderRequest): Response<ApiEnvelope<EnsureBuilderData>>
 
+    // ── Profile ───────────────────────────────────────────────────────────────
+    @GET("builder/{builderId}/profile")
+    suspend fun getProfile(@Path("builderId") builderId: Long): Response<ApiEnvelope<BuilderProfile>>
+
+    @PATCH("builder/{builderId}/profile")
+    suspend fun updateProfile(
+        @Path("builderId") builderId: Long,
+        @Body body: BuilderProfileUpdateRequest,
+    ): Response<ApiEnvelope<BuilderProfile>>
+
     // ── Projects ──────────────────────────────────────────────────────────────
     @GET("builder/{builderId}/projects")
     suspend fun getProjects(@Path("builderId") builderId: Long): Response<ApiEnvelope<List<Project>>>

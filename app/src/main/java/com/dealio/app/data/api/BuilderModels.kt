@@ -13,6 +13,50 @@ data class EnsureBuilderRequest(
 
 data class EnsureBuilderData(val builderId: Long)
 
+// ─── Builder profile ─────────────────────────────────────────────────────────
+
+/** The signed-in builder's own account + company row (GET /builder/{id}/profile). */
+data class BuilderProfile(
+    val id: Long = 0,
+    val builderId: Long = 0,
+    val fullName: String? = null,
+    val email: String? = null,
+    val phone: String? = null,
+    val avatarUrl: String? = null,
+    val builder: BuilderInfo? = null,
+)
+
+data class BuilderInfo(
+    val companyName: String? = null,
+    val about: String? = null,
+    val website: String? = null,
+    val contactPhone: String? = null,
+    val contactEmail: String? = null,
+    val yearEstablished: Int? = null,
+    val deliveredProjects: Int? = null,
+)
+
+/**
+ * Everything the sheet edits, sent every time.
+ *
+ * The fields are Strings rather than Ints because Gson drops nulls, so a null
+ * would read on the server as "leave this alone" — there would be no way to
+ * clear a field once set. An empty string is sent instead, which the backend
+ * stores as NULL. Phone is absent on purpose: it is the login identity, and
+ * moving it belongs with the OTP that owns it.
+ */
+data class BuilderProfileUpdateRequest(
+    val fullName: String,
+    val email: String,
+    val companyName: String,
+    val about: String,
+    val website: String,
+    val contactPhone: String,
+    val contactEmail: String,
+    val yearEstablished: String,
+    val deliveredProjects: String,
+)
+
 // ─── Project ─────────────────────────────────────────────────────────────────
 
 /**

@@ -7,6 +7,8 @@ import com.dealio.app.data.api.Broadcast
 import com.dealio.app.data.api.BroadcastRequest
 import com.dealio.app.data.api.BuilderApi
 import com.dealio.app.data.api.BuilderNotification
+import com.dealio.app.data.api.BuilderProfile
+import com.dealio.app.data.api.BuilderProfileUpdateRequest
 import com.dealio.app.data.api.Commission
 import com.dealio.app.data.api.DealDetail
 import com.dealio.app.data.api.DealSummary
@@ -59,6 +61,26 @@ class BuilderRepository(context: Context) {
             is ApiResult.Error -> ApiResult.Error(r.message)
         }
     }
+
+    // ── Profile ─────────────────────────────────────────────────────────────
+    suspend fun getProfile(): ApiResult<BuilderProfile> =
+        withBuilder { bid -> call { api.getProfile(bid) } }
+
+    /**
+     * Saves the profile and mirrors the name/email back into [TokenStore], since
+     * the session payload only arrives at sign-in — without this the header and
+     * every other screen would keep showing the old name until the next login.
+     */
+    suspend fun updateProfile(body: BuilderProfileUpdateRequest): ApiResult<BuilderProfile> =
+        withBuilder { bid ->
+            when (val r = call { api.updateProfile(bid, body) }) {
+                is ApiResult.Success -> {
+                    tokenStore.updateIdentity(r.data.fullName, r.data.email)
+                    r
+                }
+                is ApiResult.Error -> r
+            }
+        }
 
     // ── Projects ────────────────────────────────────────────────────────────
     suspend fun getProjects(): ApiResult<List<Project>> =
