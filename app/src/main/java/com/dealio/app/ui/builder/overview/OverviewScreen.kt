@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -58,6 +59,7 @@ import com.dealio.app.ui.flow.MoveQueue
 import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.formatINRShort
+import com.dealio.app.ui.builder.greetingName
 import com.dealio.app.ui.builder.initialsOf
 import com.dealio.app.ui.builder.resolveUrl
 import com.dealio.app.ui.components.LocalHeroAccent
@@ -108,9 +110,18 @@ fun OverviewScreen(nav: NavController, vm: OverviewViewModel = viewModel()) {
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text("Welcome back", color = accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    // Cutting the name at its first space greeted "V Prasad
+                    // Reddy" as "V" and "Sri Sai Constructions" as "Sri". Keep
+                    // more of the name and step the type down so it still fits
+                    // on the one line the header has room for.
+                    val greeting = greetingName(state.builderName)
                     Text(
-                        state.builderName?.substringBefore(' ') ?: "Builder",
-                        color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold,
+                        greeting,
+                        color = Color.White,
+                        fontSize = if (greeting.length > 16) 17.sp else 21.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 Box(

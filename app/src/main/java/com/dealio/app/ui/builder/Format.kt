@@ -105,6 +105,23 @@ fun formatDate(raw: String?): String {
     return "${d.toIntOrNull() ?: d} ${months[mi]} $y"
 }
 
+/**
+ * The name to greet someone by. The first word alone reads fine for "Rajesh
+ * Kumar", but it collapses to a single letter for "V Prasad Reddy" and to
+ * "Sri" for "Sri Sai Constructions" — so keep taking words (up to three)
+ * until there is enough of the name left to recognise.
+ */
+fun greetingName(name: String?, fallback: String = "Builder"): String {
+    val parts = (name ?: "").trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+    if (parts.isEmpty()) return fallback
+    val out = StringBuilder(parts.first())
+    for (word in parts.drop(1).take(2)) {
+        if (out.length >= 16) break
+        out.append(' ').append(word)
+    }
+    return out.toString()
+}
+
 fun initialsOf(name: String?): String {
     val parts = (name ?: "").trim().split(" ").filter { it.isNotBlank() }
     if (parts.isEmpty()) return "B"
