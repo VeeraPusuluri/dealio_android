@@ -46,14 +46,36 @@ class MeetingsViewModel(app: Application) : BuilderViewModel(app) {
 
     fun setFilter(f: String) = _state.update { it.copy(filter = f) }
 
-    fun updateStatus(m: Meeting, status: String) {
+    /**
+     * Answer a visit request.
+     *
+     * [date] and [time] are the slot the builder is committing to — the one they
+     * approved, or the new one they are proposing. Approving with neither falls
+     * back to the slot the customer asked for, because a confirmation the
+     * customer reads as "confirmed for null at null" is worse than no answer;
+     * the other statuses carry no slot at all, so nothing is written over the
+     * one already on the row.
+     */
+    fun updateStatus(
+        m: Meeting,
+        status: String,
+        date: String? = null,
+        time: String? = null,
+        notes: String? = null,
+        done: String = "Meeting $status",
+    ) {
         _state.update { it.copy(working = true) }
-        val body = if (status == "Confirmed")
-            MeetingUpdateRequest(status, confirmedDate = m.preferredDate, confirmedTime = m.preferredTime)
-        else MeetingUpdateRequest(status)
+        val slotDate = date?.takeIf { it.isNotBlank() } ?: m.preferredDate.takeIf { status == "Confirmed" }
+        val slotTime = time?.takeIf { it.isNotBlank() } ?: m.preferredTime.takeIf { status == "Confirmed" }
+        val body = MeetingUpdateRequest(
+            status = status,
+            notes = notes?.trim()?.takeIf { it.isNotBlank() },
+            confirmedDate = slotDate,
+            confirmedTime = slotTime,
+        )
         viewModelScope.launch {
             when (val r = repo.updateMeeting(m.id, body)) {
-                is ApiResult.Success -> { _state.update { it.copy(working = false, toast = "Meeting $status") }; load() }
+                is ApiResult.Success -> { _state.update { it.copy(working = false, toast = done) }; load(silent = true) }
                 is ApiResult.Error -> _state.update { it.copy(working = false, toast = r.message) }
             }
         }
