@@ -72,6 +72,27 @@ object FirebasePhoneAuth {
     }
 
     /**
+     * Warm Firebase up before anyone asks for a code.
+     *
+     * The first touch of [FirebaseAuth] loads the SDK and reads its config, and
+     * `initializeRecaptchaConfig` fetches the app-verification configuration
+     * that [sendCode] would otherwise fetch as part of the send itself. Doing
+     * both while the user is still picking a role and typing takes that work
+     * off the path between the button and the SMS.
+     *
+     * Best-effort and idempotent: if it fails, the send does the work exactly as
+     * it did before. Call off the main thread — the first `getInstance()` reads
+     * from disk.
+     */
+    fun prewarm() {
+        runCatching {
+            val auth = FirebaseAuth.getInstance()
+            applyDebugAppVerification(auth)
+            auth.initializeRecaptchaConfig()
+        }
+    }
+
+    /**
      * Start verification for [e164Phone] (e.g. "+919502320615").
      *
      * [onEvent] may fire more than once: a [PhoneVerification.CodeSent] can be

@@ -54,6 +54,7 @@ import com.dealio.app.ui.components.SignInNotice
 import com.dealio.app.ui.findActivity
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextSecondary
+import kotlinx.coroutines.delay
 
 @Composable
 fun LoginScreen(
@@ -75,6 +76,16 @@ fun LoginScreen(
 
     LaunchedEffect(state.loggedInUser) {
         if (state.loggedInUser != null) onLoggedIn()
+    }
+
+    // Ask the backend about the number once typing settles, so the account
+    // pre-flight is already answered when "Send OTP" is tapped instead of
+    // costing a round trip then. Re-keying on every edit cancels the pending
+    // delay, so this fires on a pause, not on each digit.
+    LaunchedEffect(phone, countryCode, state.step) {
+        if (state.step != AuthStep.DETAILS || phone.length < 8) return@LaunchedEffect
+        delay(400)
+        viewModel.prefetchLookup(phone, countryCode)
     }
 
     fun send(signingInAs: DealioRole = role, isResend: Boolean = false) {

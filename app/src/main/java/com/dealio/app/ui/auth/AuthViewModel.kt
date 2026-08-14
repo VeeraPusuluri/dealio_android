@@ -2,6 +2,7 @@ package com.dealio.app.ui.auth
 
 import android.app.Activity
 import android.app.Application
+import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.dealio.app.data.ApiResult
@@ -11,9 +12,13 @@ import com.dealio.app.data.PhoneVerification
 import com.dealio.app.data.TokenStore
 import com.dealio.app.data.api.ApiClient
 import com.dealio.app.data.api.AuthUser
+import com.dealio.app.data.api.PhoneLookupData
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthProvider
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -63,11 +68,57 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     /** Guards against two credentials being redeemed at once — see [exchange]. */
     private var exchanging = false
 
+    /** The last account pre-flight, reused by [sendOtp] — see [prefetchLookup]. */
+    private var lookup: CachedLookup? = null
+
     private data class PendingSignup(
         val fullName: String,
         val role: String,
         val referralCode: String,
     )
+
+    private class CachedLookup(
+        val key: String,
+        val startedAt: Long,
+        val result: Deferred<ApiResult<PhoneLookupData>>,
+    )
+
+    init {
+        // Firebase's first touch loads the SDK and fetches its app-verification
+        // config — work the send used to pay for. Do it now, while the user is
+        // still picking a role and typing their number.
+        viewModelScope.launch(Dispatchers.IO) { FirebasePhoneAuth.prewarm() }
+    }
+
+    /**
+     * Look the number up, reusing a recent answer for the same one.
+     *
+     * [sendOtp] awaits this; [prefetchLookup] starts it as soon as a plausible
+     * number has been typed, so the round trip is usually already done by the
+     * time the button is pressed.
+     */
+    private fun lookupFor(e164: String): Deferred<ApiResult<PhoneLookupData>> {
+        val cached = lookup
+        if (cached != null &&
+            cached.key == e164 &&
+            SystemClock.elapsedRealtime() - cached.startedAt < LOOKUP_TTL_MS
+        ) {
+            return cached.result
+        }
+        val started = viewModelScope.async { repository.phoneLookup(e164) }
+        lookup = CachedLookup(e164, SystemClock.elapsedRealtime(), started)
+        return started
+    }
+
+    /**
+     * Start the account pre-flight for a number the user is still typing. Costs
+     * one request and saves a full round trip off the send; safe to call on
+     * every keystroke, since a repeat of the same number reuses the first call.
+     */
+    fun prefetchLookup(phone: String, countryCode: String) {
+        if (phone.isBlank()) return
+        lookupFor(toE164(phone, countryCode))
+    }
 
     /**
      * Start Firebase phone verification. Needs the hosting [activity] because
@@ -109,7 +160,12 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
             // spending an SMS — otherwise an unregistered number only finds out
             // after typing a code it can never redeem.
             if (!isSignup) {
-                when (val lookup = repository.phoneLookup(e164)) {
+                // Usually already answered: prefetchLookup started this while the
+                // number was being typed.
+                val preflight = lookupFor(e164).await()
+                // A failure is never reused — the next attempt has to retry it.
+                if (preflight is ApiResult.Error) lookup = null
+                when (preflight) {
                     is ApiResult.Error -> {
                         // A 404 is the one failure that isn't about this number:
                         // the server is up but predates /auth/phone/lookup. An
@@ -120,8 +176,8 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                         // this costs an avoidable SMS, not a security check.
                         // Every other failure fails closed: the token exchange
                         // would not have worked either.
-                        if (lookup.code != 404) {
-                            _state.update { it.copy(loading = false, error = lookup.message) }
+                        if (preflight.code != 404) {
+                            _state.update { it.copy(loading = false, error = preflight.message) }
                             return@launch
                         }
                     }
@@ -129,14 +185,14 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                         // Only enforce roles the picker can actually express. The
                         // backend also has VENDOR/LANDOWNER/REFERRAL, which have no
                         // pill — blocking those would lock them out of the app.
-                        val actual = roleFor(lookup.data.role)
+                        val actual = roleFor(preflight.data.role)
                         val mismatched = actual != null &&
                             role.isNotBlank() &&
                             !actual.value.equals(role, ignoreCase = true)
                         val error = when {
-                            !lookup.data.exists ->
+                            !preflight.data.exists ->
                                 "No account found for this number. Create an account first."
-                            lookup.data.suspended ->
+                            preflight.data.suspended ->
                                 "Account suspended. Please contact support."
                             mismatched ->
                                 "This number is registered as a ${actual!!.label} account."
@@ -284,5 +340,14 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
                 _state.update { s -> s.copy(resendSecondsLeft = (s.resendSecondsLeft - 1).coerceAtLeast(0)) }
             }
         }
+    }
+
+    private companion object {
+        /**
+         * How long a prefetched lookup stays reusable. Long enough to cover the
+         * typing-to-tap gap it exists for, short enough that an account created
+         * or suspended meanwhile isn't remembered wrongly.
+         */
+        const val LOOKUP_TTL_MS = 60_000L
     }
 }
