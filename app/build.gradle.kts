@@ -5,6 +5,14 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+// Backend for release builds, from `dealio.apiBaseUrl` in gradle.properties and
+// overridable with -Pdealio.apiBaseUrl=… . It used to be a literal
+// REPLACE_WITH_BACKEND_DOMAIN, so every release build shipped pointing at a host
+// that does not exist. Read through a provider so the configuration cache
+// invalidates when the value changes.
+val releaseApiBaseUrl: String = providers.gradleProperty("dealio.apiBaseUrl")
+    .getOrElse("https://d2l7qgxnnc8786.cloudfront.net/api/")
+
 android {
     namespace = "com.dealio.app"
     compileSdk = 36
@@ -23,7 +31,7 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"https://d2l7qgxnnc8786.cloudfront.net/api/\"")
         }
         release {
-            buildConfigField("String", "API_BASE_URL", "\"https://REPLACE_WITH_BACKEND_DOMAIN/api/\"")
+            buildConfigField("String", "API_BASE_URL", "\"$releaseApiBaseUrl\"")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
