@@ -15,12 +15,21 @@ class TokenStore(context: Context) {
         .getSharedPreferences("dealio_auth", Context.MODE_PRIVATE)
 
     /**
-     * A token that is present *and* still inside its lifetime. Presence alone
-     * used to be enough, which is how a launch with a week-old token reached the
-     * dashboard and then failed on every request — see [Session].
+     * Whether there is still a session to resume: an access token inside its
+     * lifetime, or an expired one we hold a refresh token for.
+     *
+     * Presence of a token alone used to be enough, which is how a launch with a
+     * week-old token reached the dashboard and then failed on every request —
+     * see [Session]. But an expired access token is not the end of a session
+     * when a 60-day refresh token sits beside it; treating it as one would send
+     * exactly the users this is meant to keep signed in back to the sign-in
+     * screen. Those launches go through, and the first request renews the token.
      */
     val isLoggedIn: Boolean
-        get() = accessToken?.let { !Session.isExpired(it) } == true
+        get() {
+            val access = accessToken ?: return false
+            return !Session.isExpired(access) || !refreshToken.isNullOrBlank()
+        }
 
     /** Raw JWT access token, used to authorize builder/customer API calls. */
     val accessToken: String?
