@@ -2,6 +2,7 @@ package com.dealio.app.data.api
 
 import android.content.Context
 import com.dealio.app.BuildConfig
+import com.dealio.app.data.Session
 import com.dealio.app.data.TokenStore
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -12,32 +13,53 @@ import java.util.concurrent.TimeUnit
 object ApiClient {
 
     /**
-     * Supplies the current JWT for the Authorization header. Wired up in
-     * [init] so the authed builder/customer endpoints work after login.
+     * Holds the JWT for the Authorization header, and is wiped when the server
+     * rejects it. Wired up in [init] so the authed builder/customer endpoints
+     * work after login.
      */
     @Volatile
-    private var tokenProvider: () -> String? = { null }
+    private var tokenStore: TokenStore? = null
 
     /** Call once (from MainActivity) so authed requests carry the JWT. */
     fun init(context: Context) {
-        val store = TokenStore(context.applicationContext)
-        tokenProvider = { store.accessToken }
+        tokenStore = TokenStore(context.applicationContext)
     }
+
+    /**
+     * Sign-in endpoints. Their 401s mean "that code/number is no good", not
+     * "your session is over", so they must never tear the session down — the
+     * Firebase exchange in particular answers 401 for a rejected ID token.
+     */
+    private val SIGN_IN_PATHS = listOf(
+        "auth/login", "auth/signup", "auth/firebase", "auth/phone/lookup",
+    )
 
     private val okHttp: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .addInterceptor { chain ->
-                val token = tokenProvider()
-                val request = if (token.isNullOrBlank()) {
+                val token = tokenStore?.accessToken
+                val authed = !token.isNullOrBlank()
+                val request = if (!authed) {
                     chain.request()
                 } else {
                     chain.request().newBuilder()
                         .addHeader("Authorization", "Bearer $token")
                         .build()
                 }
-                chain.proceed(request)
+                val response = chain.proceed(request)
+
+                // A 401 on a request we signed means the token is spent — expired,
+                // or its session revoked from another device. Ending it here, in
+                // the one place every call passes through, is what stops each
+                // screen from stranding the user on the server's raw message.
+                val signIn = SIGN_IN_PATHS.any { request.url.encodedPath.contains(it) }
+                if (authed && response.code == 401 && !signIn) {
+                    tokenStore?.clear()
+                    Session.end()
+                }
+                response
             }
             .apply {
                 if (BuildConfig.DEBUG) {

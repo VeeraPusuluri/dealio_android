@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,6 +21,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.dealio.app.data.AppLockStore
 import com.dealio.app.data.BuilderStore
+import com.dealio.app.data.Session
 import com.dealio.app.data.TokenStore
 import com.dealio.app.data.promptAppLock
 import com.dealio.app.ui.builder.BuilderRoot
@@ -48,6 +51,26 @@ fun DealioNavHost() {
     // Biometric app-lock: engaged on cold launch and whenever the app returns from
     // the background; a successful prompt clears it.
     var locked by remember { mutableStateOf(appLockStore.enabled && tokenStore.isLoggedIn) }
+
+    // The session dying is not a per-screen error. ApiClient raises it from the
+    // one interceptor every call passes through, and it is handled once, here:
+    // wipe what is left of the session and send the user to sign-in holding an
+    // explanation. Without this the app kept believing it was signed in and each
+    // screen showed "Invalid or expired token" over a Try again that could never
+    // succeed.
+    var signInNotice by remember { mutableStateOf<String?>(null) }
+    val sessionEnded by Session.ended.collectAsState()
+    LaunchedEffect(sessionEnded) {
+        if (!sessionEnded) return@LaunchedEffect
+        tokenStore.clear()
+        BuilderStore(context).clear()
+        // Nothing left to guard, and the lock has no sign-in behind it.
+        locked = false
+        signInNotice = "Your session ended. Please sign in again."
+        navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
+        Session.acknowledge()
+    }
+
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -86,7 +109,9 @@ fun DealioNavHost() {
 
         composable(Routes.LOGIN) {
             LoginScreen(
+                notice = signInNotice,
                 onLoggedIn = {
+                    signInNotice = null
                     navController.navigate(Routes.HOME) {
                         popUpTo(0) { inclusive = true }
                     }

@@ -14,8 +14,13 @@ class TokenStore(context: Context) {
     private val prefs = context.applicationContext
         .getSharedPreferences("dealio_auth", Context.MODE_PRIVATE)
 
+    /**
+     * A token that is present *and* still inside its lifetime. Presence alone
+     * used to be enough, which is how a launch with a week-old token reached the
+     * dashboard and then failed on every request — see [Session].
+     */
     val isLoggedIn: Boolean
-        get() = prefs.getString(KEY_ACCESS_TOKEN, null) != null
+        get() = accessToken?.let { !Session.isExpired(it) } == true
 
     /** Raw JWT access token, used to authorize builder/customer API calls. */
     val accessToken: String?

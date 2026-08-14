@@ -41,7 +41,9 @@ import com.dealio.app.ui.theme.ButtonDisabled
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.FieldFill
 import com.dealio.app.ui.theme.Navy
+import com.dealio.app.ui.theme.Orange
 import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 
 /** Country code + phone number entry, like the web login. */
@@ -246,6 +248,30 @@ fun ErrorText(message: String?) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 12.dp),
+        )
+    }
+}
+
+/**
+ * Why the user is looking at the sign-in screen when they did not ask for it —
+ * an expired session, mostly. Phrased as information rather than an error: they
+ * did nothing wrong, and the fix is the form directly beneath it.
+ */
+@Composable
+fun SignInNotice(message: String?) {
+    if (message.isNullOrBlank()) return
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 20.dp)
+            .background(Orange.copy(alpha = 0.10f), RoundedCornerShape(10.dp))
+            .border(1.dp, Orange.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+    ) {
+        Text(
+            text = message,
+            color = TextPrimary,
+            style = MaterialTheme.typography.bodyMedium,
         )
     }
 }

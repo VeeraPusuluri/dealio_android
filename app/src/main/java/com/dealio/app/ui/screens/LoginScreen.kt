@@ -50,6 +50,7 @@ import com.dealio.app.ui.components.OtpInput
 import com.dealio.app.ui.components.PhoneField
 import com.dealio.app.ui.components.RoleHeroChip
 import com.dealio.app.ui.components.RolePillRow
+import com.dealio.app.ui.components.SignInNotice
 import com.dealio.app.ui.findActivity
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextSecondary
@@ -58,6 +59,8 @@ import com.dealio.app.ui.theme.TextSecondary
 fun LoginScreen(
     onLoggedIn: () -> Unit,
     onGoToSignup: () -> Unit,
+    /** Why the user was sent here, when they did not choose to sign out. */
+    notice: String? = null,
     viewModel: AuthViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -103,6 +106,7 @@ fun LoginScreen(
         heroTrailing = { RoleHeroChip(role = role, accentOnDark = accentDark) },
     ) {
         if (onDetails) {
+            SignInNotice(notice)
             FieldGroupLabel("Sign in as")
             Spacer(Modifier.height(10.dp))
             RolePillRow(
