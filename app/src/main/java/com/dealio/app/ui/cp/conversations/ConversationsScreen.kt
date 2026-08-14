@@ -30,15 +30,20 @@ import com.dealio.app.ui.flow.InboxDeal
  * reply arrived at the same undifferentiated row.
  */
 @Composable
-fun ConversationsScreen(nav: NavController, vm: CpGrowthViewModel = viewModel()) {
+fun ConversationsScreen(
+    nav: NavController,
+    /** Narrows the inbox to one deal — how the deal page's Message button arrives. */
+    dealId: Long? = null,
+    vm: CpGrowthViewModel = viewModel(),
+) {
     val state by vm.state.collectAsStateWithLifecycle()
 
-    SubScreenScaffold("Conversations", nav) { inner ->
+    SubScreenScaffold(if (dealId == null) "Conversations" else "Messages", nav) { inner ->
         if (state.loading) { LoadingState(Modifier.padding(inner)); return@SubScreenScaffold }
 
         // Each referred deal is a conversation; the CP is on every one of them by
         // definition, so the group thread always exists.
-        val deals = state.leads.distinctBy { it.id }.map {
+        val deals = state.leads.distinctBy { it.id }.filter { dealId == null || it.id == dealId }.map {
             InboxDeal(
                 dealId = it.id,
                 title = it.customerName,
@@ -52,7 +57,7 @@ fun ConversationsScreen(nav: NavController, vm: CpGrowthViewModel = viewModel())
         ConversationInbox(
             viewer = DealRole.CP,
             deals = deals,
-            onOpen = { dealId, thread -> nav.navigate(CpRoutes.dealDetail(dealId, thread)) },
+            onOpen = { id, thread -> nav.navigate(CpRoutes.thread(id, thread)) },
             modifier = Modifier.padding(inner),
             contentPadding = PaddingValues(16.dp),
             empty = {

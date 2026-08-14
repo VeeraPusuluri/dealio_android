@@ -28,10 +28,28 @@ fun DarkStatusBarIcons() {
     DisposableEffect(view) {
         val window = view.context.findActivity()?.window ?: return@DisposableEffect onDispose { }
         val controller = WindowCompat.getInsetsController(window, view)
+        darkRequests++
         controller.isAppearanceLightStatusBars = true
-        onDispose { controller.isAppearanceLightStatusBars = false }
+        onDispose {
+            darkRequests--
+            if (darkRequests <= 0) {
+                darkRequests = 0
+                controller.isAppearanceLightStatusBars = false
+            }
+        }
     }
 }
+
+/**
+ * How many composed screens currently want dark icons.
+ *
+ * Navigating from one white-barred screen to another overlaps them, and the one
+ * being left disposes *after* the one arriving has run its effect — so a plain
+ * set-on-enter/clear-on-exit left the incoming screen with white-on-white icons
+ * and no clock. Only the last screen out restores the light default. Single
+ * activity, main thread only, so a plain counter is enough.
+ */
+private var darkRequests = 0
 
 /** Compose hands out a themed ContextWrapper, not the Activity itself. */
 private fun Context.findActivity(): Activity? {

@@ -9,33 +9,25 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.union
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.EventRepeat
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -59,7 +51,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.dealio.app.data.api.CpDealDetail
-import com.dealio.app.data.api.DealMessage
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.InfoRow
 import com.dealio.app.ui.builder.LoadingState
@@ -68,35 +59,29 @@ import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.flow.ActivityLedger
 import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.DealSpine
-import com.dealio.app.ui.flow.PartyRail
 import com.dealio.app.ui.flow.batonOf
+import com.dealio.app.ui.cp.CpRoutes
 import com.dealio.app.ui.cp.projects.CpBookingSheet
 import com.dealio.app.ui.flow.canonicalStage
 import com.dealio.app.ui.flow.stageIndex
-import com.dealio.app.ui.flow.ThreadTarget
 import com.dealio.app.ui.flow.rosterFor
 import com.dealio.app.ui.flow.threadKeyFor
 import com.dealio.app.ui.builder.formatINR
-import com.dealio.app.ui.components.dealioFieldColors
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
-import com.dealio.app.ui.theme.TextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CpDealDetailScreen(
     nav: NavController,
     dealId: Long,
-    /** Which party's thread to open on, when arrived at from the inbox. */
-    initialThread: String? = null,
     vm: CpDealDetailViewModel = viewModel(),
 ) {
     LaunchedEffect(dealId) { vm.load(dealId) }
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    var draft by remember { mutableStateOf("") }
     var showFollowUp by remember { mutableStateOf(false) }
     var showCallLog by remember { mutableStateOf(false) }
     var showBooking by remember { mutableStateOf(false) }
@@ -104,29 +89,18 @@ fun CpDealDetailScreen(
     LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
 
     val d = state.deal
-    // Which of this deal's threads the CP is looking at. Defaults to the builder,
-    // which is what the single composer used to be hardwired to.
+    // Messaging lives in Conversations, not here. This page still wants to know
+    // whether anyone is waiting on a reply, so it keeps the counts — one number
+    // on a button — and hands the actual talking off to the thread screen.
     val roster = rosterFor(
         viewer = DealRole.CP,
         hasCp = true,
         rawStatus = d?.status,
         customerName = d?.customerName,
     )
-    var target by remember(dealId) { mutableStateOf<ThreadTarget?>(null) }
-    val selected = target
-        ?: roster.firstOrNull { it.recipientRole == initialThread }
-        ?: roster.firstOrNull()
-
-    // Badges come from the deal's own threads. Refreshed when the deal loads and
-    // after each send, so a reply that arrives while the screen is open shows up.
     val threadKeys = roster.map { threadKeyFor(DealRole.CP, it) }
-    LaunchedEffect(d?.id, d?.messages?.size) {
-        if (d != null) vm.refreshUnread(threadKeys)
-    }
-    // Opening a thread reads it.
-    LaunchedEffect(selected?.recipientRole, d?.id) {
-        if (d != null && selected != null) vm.markThreadRead(threadKeyFor(DealRole.CP, selected))
-    }
+    LaunchedEffect(d?.id) { if (d != null) vm.refreshUnread(threadKeys) }
+    val unread = threadKeys.sumOf { state.unread[it] ?: 0 }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -137,42 +111,6 @@ fun CpDealDetailScreen(
                 navigationIcon = { IconButton(onClick = { nav.navigateUp() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Navy) } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White, titleContentColor = Navy),
             )
-        },
-        bottomBar = {
-            if (d != null) {
-                Row(
-                    // Whichever is taller — the keyboard when open, the navigation
-                    // bar otherwise. imePadding() alone left the composer sitting
-                    // under the nav bar with the keyboard down.
-                    Modifier.fillMaxWidth().background(Color.White)
-                        .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        value = draft, onValueChange = { draft = it }, modifier = Modifier.weight(1f),
-                        placeholder = {
-                            Text(
-                                if (selected?.isGroup == true) "Message all three…"
-                                else "Message ${selected?.label ?: "the builder"}…",
-                            )
-                        },
-                        shape = RoundedCornerShape(22.dp),
-                        colors = dealioFieldColors(), maxLines = 4,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    IconButton(
-                        onClick = {
-                            vm.sendMessage(draft, selected?.recipientRole ?: "builder"); draft = ""
-                        },
-                        enabled = draft.isNotBlank() && !state.sending,
-                        modifier = Modifier.size(48.dp).background(Teal, RoundedCornerShape(24.dp)),
-                    ) {
-                        if (state.sending) CircularProgressIndicator(Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
-                        else Icon(Icons.AutoMirrored.Filled.Send, "Send", tint = Color.White, modifier = Modifier.size(20.dp))
-                    }
-                }
-            }
         },
     ) { inner ->
         when {
@@ -266,6 +204,23 @@ fun CpDealDetailScreen(
                     }
                 }
 
+                // Messaging is one tap away rather than embedded: this opens the
+                // deal's threads in Conversations, where the party is chosen and
+                // the conversation is actually held.
+                item {
+                    OutlinedButton(
+                        onClick = { nav.navigate(CpRoutes.conversations(d.id)) },
+                        modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Icon(Icons.Outlined.ChatBubbleOutline, null, tint = Teal, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (unread > 0) "Message · $unread new" else "Message",
+                            color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(onClick = { showFollowUp = true }, modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(12.dp)) {
@@ -281,33 +236,6 @@ fun CpDealDetailScreen(
 
                 if (d.events.isNotEmpty()) {
                     item { ActivityLedger(d.events) }
-                }
-
-                item {
-                    PartyRail(
-                        targets = roster,
-                        selected = selected,
-                        onSelect = { target = it },
-                        unreadOf = { state.unread[threadKeyFor(DealRole.CP, it)] ?: 0 },
-                    )
-                }
-
-                // One transcript per thread. The screen used to pour every message
-                // on the deal into a single list, which is also why the CP could
-                // see traffic that was never theirs — now filtered here and, more
-                // importantly, at the source.
-                val thread = selected?.let { threadKeyFor(DealRole.CP, it) }
-                val shown = d.messages.filter { thread == null || it.threadKey == thread }
-                if (shown.isEmpty()) {
-                    item {
-                        Text(
-                            if (selected?.isGroup == true) "No messages in the group thread yet."
-                            else "No messages with ${selected?.label ?: "this party"} yet.",
-                            color = TextSecondary, fontSize = 13.sp,
-                        )
-                    }
-                } else {
-                    items(shown.size) { i -> MessageBubble(shown[i]) }
                 }
             }
         }
@@ -353,19 +281,4 @@ private fun AgreedPill(who: String, agreed: Boolean) {
         color = fg, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
         modifier = Modifier.background(bg, RoundedCornerShape(8.dp)).padding(horizontal = 9.dp, vertical = 4.dp),
     )
-}
-
-@Composable
-private fun MessageBubble(m: DealMessage) {
-    val mine = m.senderRole.equals("cp", true)
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
-        Column(
-            Modifier.background(if (mine) Teal else Color.White, RoundedCornerShape(14.dp))
-                .border(if (mine) 0.dp else 1.dp, if (mine) Teal else CardBorder, RoundedCornerShape(14.dp))
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        ) {
-            if (!mine) Text(m.senderName, color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-            Text(m.message, color = if (mine) Color.White else TextPrimary, fontSize = 13.sp)
-        }
-    }
 }

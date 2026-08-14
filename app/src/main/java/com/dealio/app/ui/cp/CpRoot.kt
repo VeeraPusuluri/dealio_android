@@ -32,6 +32,7 @@ import com.dealio.app.ui.components.PillTab
 import com.dealio.app.ui.cp.calllogs.CallLogsScreen
 import com.dealio.app.ui.cp.contacts.ContactsScreen
 import com.dealio.app.ui.cp.conversations.ConversationsScreen
+import com.dealio.app.ui.cp.conversations.CpThreadScreen
 import com.dealio.app.ui.cp.earnings.EarningsScreen
 import com.dealio.app.ui.cp.loan.CpLoanAssistScreen
 import com.dealio.app.ui.cp.followups.FollowUpsScreen
@@ -87,11 +88,21 @@ object CpRoutes {
     const val COMMUNITY = "cp_community"
     const val JV = "cp_jv"
     const val CONVERSATIONS = "cp_conversations"
+    const val THREAD = "cp_thread"
     const val LOAN_ASSIST = "cp_loan_assist"
 
-    /** [thread] preselects one of the deal's party threads, as the inbox does. */
-    fun dealDetail(id: Long, thread: String? = null) =
-        "$DEAL_DETAIL/$id" + if (thread == null) "" else "?thread=$thread"
+    fun dealDetail(id: Long) = "$DEAL_DETAIL/$id"
+
+    /**
+     * The inbox, optionally narrowed to one deal — which is how the deal page
+     * hands off to it, so "Message" lands on that deal's threads rather than on
+     * the whole list.
+     */
+    fun conversations(dealId: Long? = null) =
+        CONVERSATIONS + if (dealId == null) "" else "?deal=$dealId"
+
+    /** One party's thread on one deal: the only place messages are read and written. */
+    fun thread(dealId: Long, recipientRole: String) = "$THREAD/$dealId?thread=$recipientRole"
     fun projectDetail(id: Long) = "$PROJECT_DETAIL/$id"
     fun meetupDetail(id: Long) = "$MEETUP_DETAIL/$id"
 
@@ -164,18 +175,9 @@ fun CpRoot(onLogout: () -> Unit) {
             composable(CpRoutes.MORE) { CpMoreScreen(nav, onLogout) }
 
             composable(
-                "${CpRoutes.DEAL_DETAIL}/{id}?thread={thread}",
-                arguments = listOf(
-                    navArgument("id") { type = NavType.LongType },
-                    navArgument("thread") { type = NavType.StringType; nullable = true; defaultValue = null },
-                ),
-            ) { e ->
-                CpDealDetailScreen(
-                    nav,
-                    e.arguments?.getLong("id") ?: 0,
-                    initialThread = e.arguments?.getString("thread"),
-                )
-            }
+                "${CpRoutes.DEAL_DETAIL}/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.LongType }),
+            ) { e -> CpDealDetailScreen(nav, e.arguments?.getLong("id") ?: 0) }
 
             composable(
                 "${CpRoutes.PROJECT_DETAIL}/{id}",
@@ -214,7 +216,24 @@ fun CpRoot(onLogout: () -> Unit) {
             composable(CpRoutes.WHATSAPP_BROADCAST) { WhatsAppBroadcastScreen(nav) }
             composable(CpRoutes.COMMUNITY) { CommunityScreen(nav) }
             composable(CpRoutes.JV) { JvScreen(nav) }
-            composable(CpRoutes.CONVERSATIONS) { ConversationsScreen(nav) }
+            composable(
+                "${CpRoutes.CONVERSATIONS}?deal={deal}",
+                arguments = listOf(navArgument("deal") { type = NavType.LongType; defaultValue = -1L }),
+            ) { e -> ConversationsScreen(nav, e.arguments?.getLong("deal")?.takeIf { it > 0 }) }
+
+            composable(
+                "${CpRoutes.THREAD}/{id}?thread={thread}",
+                arguments = listOf(
+                    navArgument("id") { type = NavType.LongType },
+                    navArgument("thread") { type = NavType.StringType; nullable = true; defaultValue = null },
+                ),
+            ) { e ->
+                CpThreadScreen(
+                    nav,
+                    e.arguments?.getLong("id") ?: 0,
+                    recipientRole = e.arguments?.getString("thread"),
+                )
+            }
             composable(CpRoutes.LOAN_ASSIST) { CpLoanAssistScreen(nav) }
         }
     }
