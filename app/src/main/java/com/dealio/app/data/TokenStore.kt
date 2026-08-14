@@ -26,6 +26,22 @@ class TokenStore(context: Context) {
     val accessToken: String?
         get() = prefs.getString(KEY_ACCESS_TOKEN, null)
 
+    /**
+     * The long-lived credential that renews [accessToken]. Opaque — it is not a
+     * JWT and carries no expiry to read; the server is the only judge of whether
+     * it is still good.
+     */
+    val refreshToken: String?
+        get() = prefs.getString(KEY_REFRESH_TOKEN, null)
+
+    /** Store a renewed pair, leaving the cached user untouched. */
+    fun saveTokens(accessToken: String, refreshToken: String) {
+        prefs.edit {
+            putString(KEY_ACCESS_TOKEN, accessToken)
+            putString(KEY_REFRESH_TOKEN, refreshToken)
+        }
+    }
+
     fun save(auth: AuthData) {
         prefs.edit {
             putString(KEY_ACCESS_TOKEN, auth.accessToken)
