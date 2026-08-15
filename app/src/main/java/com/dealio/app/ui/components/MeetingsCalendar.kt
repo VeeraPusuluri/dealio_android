@@ -91,9 +91,17 @@ private val WEEKDAYS = listOf("Su", "Mo", "Tu", "We", "Th", "Fr", "Sa")
 /**
  * Month calendar of meetings with a per-day dot and a selected-day agenda list.
  * Role-agnostic — pass a list of [CalMeeting].
+ *
+ * @param onMeetingClick opens one agenda row. Null leaves the rows inert, which
+ *        is what the builder and CP screens still want — they act on a meeting
+ *        from their own list, not from the calendar.
  */
 @Composable
-fun MeetingsCalendar(meetings: List<CalMeeting>, modifier: Modifier = Modifier) {
+fun MeetingsCalendar(
+    meetings: List<CalMeeting>,
+    modifier: Modifier = Modifier,
+    onMeetingClick: ((CalMeeting) -> Unit)? = null,
+) {
     val today = remember { LocalDate.now() }
     var month by remember { mutableStateOf(YearMonth.from(today)) }
     var selected by remember { mutableStateOf(today) }
@@ -166,7 +174,7 @@ fun MeetingsCalendar(meetings: List<CalMeeting>, modifier: Modifier = Modifier) 
                 Text("Nothing scheduled", color = TextSecondary, fontSize = 13.sp)
             }
         } else {
-            dayMeetings.forEach { m -> AgendaRow(m) }
+            dayMeetings.forEach { m -> AgendaRow(m, onMeetingClick?.let { click -> { click(m) } }) }
         }
     }
 }
@@ -199,8 +207,15 @@ private fun DayCell(date: LocalDate, selected: Boolean, today: Boolean, dots: Li
 }
 
 @Composable
-private fun AgendaRow(m: CalMeeting) {
-    Surface(shape = RoundedCornerShape(12.dp), color = Color.White, border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder), modifier = Modifier.fillMaxWidth()) {
+private fun AgendaRow(m: CalMeeting, onClick: (() -> Unit)? = null) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = Color.White,
+        border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+        modifier = Modifier.fillMaxWidth().then(
+            if (onClick == null) Modifier else Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick),
+        ),
+    ) {
         Row(Modifier.padding(12.dp)) {
             Box(Modifier.width(3.dp).height(40.dp).clip(RoundedCornerShape(2.dp)).background(m.color))
             Spacer(Modifier.width(10.dp))

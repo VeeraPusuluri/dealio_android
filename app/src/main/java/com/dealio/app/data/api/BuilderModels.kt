@@ -342,6 +342,14 @@ data class Meeting(
     val createdAt: String = "",
     val projectName: String = "",
     val cpName: String? = null,
+    // Where the visit is and who to call on the day. Flattened onto the row by
+    // /builder/customer/meetings only — the builder's and CP's own meeting lists
+    // do not send them, so treat every one as absent unless proven otherwise.
+    val projectAddress: String? = null,
+    val projectCity: String? = null,
+    val cpPhone: String? = null,
+    val builderName: String? = null,
+    val builderPhone: String? = null,
 )
 
 // ─── Commissions ─────────────────────────────────────────────────────────────
