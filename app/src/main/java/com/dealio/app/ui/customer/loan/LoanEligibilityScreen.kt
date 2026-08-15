@@ -167,10 +167,11 @@ fun LoanEligibilityScreen(nav: NavController) {
                     else -> GradientButton(
                         text = if (digiState == 1) "Connecting…" else "Connect DigiLocker",
                         onClick = {
-                            if (digiState == 0) {
-                                digiState = 1
-                                scope.launch { delay(2000); digiState = 2 }
-                            }
+                            // Nothing is fetched here yet — the two-second
+                            // "Connecting…" was a stand-in for a DigiLocker call
+                            // that does not exist, so it cost the user two
+                            // seconds to be told something we already knew.
+                            if (digiState == 0) digiState = 2
                         },
                         enabled = digiState == 0,
                     )

@@ -260,10 +260,12 @@ fun ContentStudioScreen(nav: NavController, vm: CpGrowthViewModel = viewModel())
                     icon = if (variants.isEmpty()) Icons.Outlined.AutoAwesome else Icons.Outlined.Refresh,
                     enabled = !generating,
                     onClick = {
+                        // captionVariants is a local pure function — there is
+                        // nothing to wait for. The 450ms here was theatre, to make
+                        // writing captions feel like it cost something.
                         generating = true
                         val next = if (variants.isEmpty()) 0 else seed + 1
                         scope.launch {
-                            delay(450)
                             seed = next
                             variants = captionVariants(selected, offer, platform, next)
                             chosenTone = null

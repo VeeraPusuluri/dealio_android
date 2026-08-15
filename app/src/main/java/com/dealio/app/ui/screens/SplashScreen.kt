@@ -69,11 +69,15 @@ fun SplashScreen(onFinished: () -> Unit) {
     val composition by rememberLottieComposition(
         LottieCompositionSpec.RawRes(R.raw.dealio_splash),
     )
-    // Play through exactly once at native speed.
+    // Play through exactly once, at double speed. The clip is the first thing
+    // between tapping the icon and using the app, and at native speed it held
+    // that gap open for its full length every single launch. Doubling keeps the
+    // whole animation — mark assembling, wordmark building — and halves the wait.
     val progress by animateLottieCompositionAsState(
         composition = composition,
         iterations = 1,
         isPlaying = true,
+        speed = SPLASH_SPEED,
     )
 
     // Fire onFinished at most once — the callback pops the splash off the back
@@ -94,7 +98,7 @@ fun SplashScreen(onFinished: () -> Unit) {
         if (composition != null && progress >= 1f) finishOnce()
     }
     LaunchedEffect(Unit) {
-        delay(3_500)
+        delay(SPLASH_TIMEOUT_MS)
         finishOnce()
     }
 
@@ -145,6 +149,16 @@ fun SplashScreen(onFinished: () -> Unit) {
         )
     }
 }
+
+/** Playback rate for the splash clip. 1f is the exported speed. */
+private const val SPLASH_SPEED = 2f
+
+/**
+ * Safety net for a composition that never loads, so the app cannot be stuck on
+ * the splash. Not the normal exit — that is the clip finishing, which at
+ * [SPLASH_SPEED] happens well inside this.
+ */
+private const val SPLASH_TIMEOUT_MS = 1_800L
 
 /** "REAL ESTATE · MADE SIMPLE", with the separator in the brand cyan. */
 private fun taglineText(): AnnotatedString = buildAnnotatedString {
