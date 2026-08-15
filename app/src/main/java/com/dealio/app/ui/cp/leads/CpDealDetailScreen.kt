@@ -16,12 +16,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.EventRepeat
 import androidx.compose.material.icons.outlined.Phone
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,8 +59,10 @@ import com.dealio.app.ui.flow.DealSpine
 import com.dealio.app.ui.flow.batonOf
 import com.dealio.app.ui.cp.CpRoutes
 import com.dealio.app.ui.cp.projects.CpBookingSheet
+import com.dealio.app.ui.flow.StageActionCard
+import com.dealio.app.ui.flow.StageTarget
 import com.dealio.app.ui.flow.canonicalStage
-import com.dealio.app.ui.flow.stageIndex
+import com.dealio.app.ui.flow.stageActionFor
 import com.dealio.app.ui.flow.rosterFor
 import com.dealio.app.ui.flow.threadKeyFor
 import com.dealio.app.ui.builder.formatINR
@@ -166,22 +165,25 @@ fun CpDealDetailScreen(
                     }
                 }
 
-                // Booking the visit is how a lead actually moves — the spine says
-                // "Request a site visit" from New Lead through Meeting Confirmed,
-                // and until now there was nothing here to do it with. The CP had
-                // to leave the lead, open the project and retype the customer's
-                // name and phone. Same gate as the web journey tab.
-                if (stageIndex(d.status) in 0..3) {
-                    item {
-                        Button(
-                            onClick = { showBooking = true }, enabled = !state.working,
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Teal),
-                        ) {
-                            Icon(Icons.Outlined.CalendarMonth, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Schedule site visit", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                // What the CP may do at this stage, from the one table all three
+                // portals read. Booking used to be offered on a `stageIndex in
+                // 0..3` gate, which included Meeting Requested and Meeting
+                // Confirmed — so a CP was invited to schedule a visit that was
+                // already requested, and one the builder had already confirmed.
+                // At both of those stages the website gives a CP no action at
+                // all, only who they are waiting on, and now so does this.
+                item {
+                    StageActionCard(
+                        rawStatus = d.status,
+                        viewer = DealRole.CP,
+                        enabled = !state.working,
+                    ) { target ->
+                        when (target) {
+                            StageTarget.REQUEST_VISIT -> showBooking = true
+                            StageTarget.LOG_FOLLOW_UP -> showFollowUp = true
+                            StageTarget.AGREE -> vm.agree()
+                            StageTarget.CP_COMMISSIONS -> nav.navigate(CpRoutes.EARNINGS)
+                            else -> Unit
                         }
                     }
                 }
@@ -189,8 +191,10 @@ fun CpDealDetailScreen(
                 // Agreeing early is legitimate — the endpoint sets cpAgreed *and*
                 // moves the deal to Agreement — so this stays available. It is
                 // just no longer a full-width primary competing with a spine that
-                // says the deal is waiting on someone else.
-                if (!d.cpAgreed && !ownsAgree) {
+                // says the deal is waiting on someone else, and it stands down
+                // entirely once the stage card is the one offering to agree.
+                val stageOffersAgree = stageActionFor(d.status, DealRole.CP).cta?.target == StageTarget.AGREE
+                if (!d.cpAgreed && !ownsAgree && !stageOffersAgree) {
                     item {
                         OutlinedButton(
                             onClick = vm::agree, enabled = !state.working,

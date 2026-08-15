@@ -63,10 +63,13 @@ import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.InfoRow
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SectionLabel
+import com.dealio.app.ui.customer.CustomerRoutes
 import androidx.compose.material3.OutlinedButton
 import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.DealSpine
 import com.dealio.app.ui.flow.PartyRail
+import com.dealio.app.ui.flow.StageActionCard
+import com.dealio.app.ui.flow.StageTarget
 import com.dealio.app.ui.flow.batonOf
 import com.dealio.app.ui.flow.ThreadTarget
 import com.dealio.app.ui.flow.rosterFor
@@ -205,6 +208,25 @@ fun DealDetailScreen(
                         onAction = if (ownsConfirm) ({ vm.confirm() }) else null,
                         onNudge = { vm.nudge() },
                     )
+                }
+
+                // What the buyer may do at this stage, from the table all three
+                // portals read — in the buyer's register, and never a second
+                // booking: once the visit is requested or confirmed the only
+                // thing offered is the visit itself, on the Visits screen.
+                item {
+                    StageActionCard(
+                        rawStatus = d.dealStatus,
+                        viewer = DealRole.CUSTOMER,
+                        enabled = !state.working,
+                    ) { target ->
+                        when (target) {
+                            StageTarget.CUSTOMER_VISITS -> nav.navigate(CustomerRoutes.VISITS)
+                            StageTarget.CUSTOMER_PROJECT -> nav.navigate(CustomerRoutes.projectDetail(d.projectId))
+                            StageTarget.CUSTOMER_LOAN -> nav.navigate(CustomerRoutes.loanApply(d.projectId))
+                            else -> Unit
+                        }
+                    }
                 }
 
                 if (d.customerConfirmed) {

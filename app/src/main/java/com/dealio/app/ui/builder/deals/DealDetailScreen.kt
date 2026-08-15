@@ -54,10 +54,13 @@ import com.dealio.app.ui.flow.DEAL_STAGES
 import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.DealSpine
 import com.dealio.app.ui.flow.PartyRail
+import com.dealio.app.ui.flow.StageActionCard
+import com.dealio.app.ui.flow.StageTarget
 import com.dealio.app.ui.flow.ThreadTarget
 import com.dealio.app.ui.flow.canonicalStage
 import com.dealio.app.ui.flow.rosterFor
 import com.dealio.app.ui.flow.threadKeyFor
+import com.dealio.app.ui.builder.BuilderRoutes
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.builder.formatINRShort
@@ -136,6 +139,23 @@ fun DealDetailScreen(
                         customerConfirmed = d.customerConfirmed,
                         onNudge = { vm.nudge() },
                     )
+
+                    // What the builder may do at this stage, from the table all
+                    // three portals read. It matters most around the visit: the
+                    // slot the CP is waiting on is confirmed on the meetings
+                    // screen, and nothing on this page said so.
+                    StageActionCard(
+                        rawStatus = d.status,
+                        viewer = DealRole.BUILDER,
+                        enabled = !state.working,
+                    ) { target ->
+                        when (target) {
+                            StageTarget.BUILDER_MEETINGS -> nav.navigate(BuilderRoutes.MEETINGS)
+                            StageTarget.BUILDER_SHORTLISTS -> nav.navigate(BuilderRoutes.SHORTLISTS)
+                            StageTarget.BUILDER_COMMISSIONS -> nav.navigate(BuilderRoutes.COMMISSIONS)
+                            else -> Unit
+                        }
+                    }
 
                     DealioCard {
                         SectionLabel("Advance")
