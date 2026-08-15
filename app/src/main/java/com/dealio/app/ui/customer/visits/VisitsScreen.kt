@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -112,7 +113,12 @@ fun VisitsScreen(nav: NavController, vm: VisitsViewModel = viewModel()) {
         when {
             state.loading -> LoadingState(Modifier.padding(inner))
             state.error != null -> ErrorState(state.error!!, onRetry = { vm.load() }, modifier = Modifier.padding(inner))
-            else -> Column(Modifier.padding(inner).fillMaxSize()) {
+            // Only the top inset. CustomerRoot's shell has already reserved the
+            // floating nav's height, so taking this Scaffold's bottom inset too
+            // reserved it twice — a dead band above the nav that the list was
+            // clipped against, cutting the last visit in half with empty space
+            // beneath it. The sibling tabs (Journey, Saved) never took it.
+            else -> Column(Modifier.fillMaxSize().padding(top = inner.calculateTopPadding())) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Spacer(Modifier.weight(1f))
                     ListCalendarToggle(calendar = calendar, onChange = { calendar = it })
@@ -186,7 +192,7 @@ private fun VisitCard(m: Meeting, onClick: () -> Unit, onRate: (Int) -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.Place, null, tint = TextSecondary, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(5.dp))
-                Text(it, color = TextSecondary, fontSize = 12.sp, maxLines = 1)
+                Text(it, color = TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         if (!m.cpName.isNullOrBlank()) {
