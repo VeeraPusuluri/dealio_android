@@ -68,6 +68,7 @@ import com.dealio.app.data.api.CpProfileUpdateRequest
 import com.dealio.app.ui.builder.DealioCard
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.InfoRow
+import com.dealio.app.data.TokenStore
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.components.AppLockToggleRow
@@ -101,10 +102,30 @@ data class CpProfileState(
     val sendingOtp: Boolean = false,
     val otpSent: Boolean = false,
     val verifyingOtp: Boolean = false,
+    /**
+     * Name and picture as of the last time this screen loaded, read straight out
+     * of prefs so the credential can be drawn on the first frame.
+     *
+     * The photo lives behind `GET /cp/:id/profile`, so the card could not know
+     * its own URL until that call returned and the whole page sat under a
+     * spinner until then — every single open, for a picture that had not changed
+     * since the last one. Coil already keeps the bytes on disk; this supplies the
+     * URL that lets it use them.
+     */
+    val cachedName: String? = null,
+    val cachedPhoto: String? = null,
+    val cachedTier: String? = null,
 )
 
 class CpProfileViewModel(app: Application) : CpViewModel(app) {
-    private val _state = MutableStateFlow(CpProfileState())
+    private val tokenStore = TokenStore(app)
+    private val _state = MutableStateFlow(
+        CpProfileState(
+            cachedName = tokenStore.user()?.fullName,
+            cachedPhoto = tokenStore.avatarUrl,
+            cachedTier = tokenStore.cpTier,
+        ),
+    )
     val state: StateFlow<CpProfileState> = _state.asStateFlow()
 
     init { load() }
@@ -113,7 +134,23 @@ class CpProfileViewModel(app: Application) : CpViewModel(app) {
         if (!silent) _state.update { it.copy(loading = true, error = null) }
         viewModelScope.launch {
             when (val r = repo.getProfile()) {
-                is ApiResult.Success -> _state.update { it.copy(loading = false, profile = r.data) }
+                is ApiResult.Success -> {
+                    // Keep the local copy current, so the next open draws this
+                    // picture immediately instead of waiting for this call again.
+                    // The backend keeps ChannelPartner.photoUrl and User.avatarUrl
+                    // in step, so either is the same person's face.
+                    r.data.cp?.photoUrl?.takeIf { it.isNotBlank() }?.let { tokenStore.avatarUrl = it }
+                    r.data.cp?.tier?.takeIf { it.isNotBlank() }?.let { tokenStore.cpTier = it }
+                    _state.update {
+                        it.copy(
+                            loading = false,
+                            profile = r.data,
+                            cachedName = r.data.fullName ?: it.cachedName,
+                            cachedPhoto = r.data.cp?.photoUrl ?: it.cachedPhoto,
+                            cachedTier = r.data.cp?.tier ?: it.cachedTier,
+                        )
+                    }
+                }
                 is ApiResult.Error -> _state.update { it.copy(loading = false, error = r.message) }
             }
         }
@@ -212,6 +249,27 @@ fun CpProfileScreen(nav: NavController, vm: CpProfileViewModel = viewModel()) {
 
     SubScreenScaffold("Profile", nav) { inner ->
         when {
+            // With a cached face and tier there is no reason to show a spinner
+            // where the credential goes — draw it from the local copy and let the
+            // stats and documents arrive underneath.
+            state.loading && state.cachedPhoto != null -> Column(
+                Modifier.fillMaxSize().padding(inner).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                CpCredentialCard(
+                    name = state.cachedName ?: "Partner",
+                    tier = state.cachedTier ?: "Silver",
+                    photoUrl = state.cachedPhoto,
+                    phone = null,
+                    city = null,
+                    reraNumber = null,
+                    authorizedBuilders = emptyList(),
+                    partnerId = null,
+                    uploadingPhoto = false,
+                    onChangePhoto = { photoPicker.launch("image/*") },
+                )
+                LoadingState()
+            }
             state.loading -> LoadingState(Modifier.padding(inner))
             state.error != null -> ErrorState(state.error!!, onRetry = { vm.load() }, modifier = Modifier.padding(inner))
             else -> {

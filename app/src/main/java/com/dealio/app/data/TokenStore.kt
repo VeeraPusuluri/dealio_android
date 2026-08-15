@@ -111,6 +111,18 @@ class TokenStore(context: Context) {
         get() = prefs.getString(KEY_PREFERRED_CITY, null)
         set(value) = prefs.edit { putString(KEY_PREFERRED_CITY, value) }
 
+    /**
+     * The channel partner's tier, remembered locally.
+     *
+     * Only so the credential card can be drawn from cache before
+     * `GET /cp/:id/profile` answers. Without it the card would have to guess a
+     * tier for that first frame, and printing "Silver" on a Gold partner's
+     * credential is worse than waiting.
+     */
+    var cpTier: String?
+        get() = prefs.getString(KEY_CP_TIER, null)
+        set(value) = prefs.edit { putString(KEY_CP_TIER, value) }
+
     fun clear() {
         prefs.edit { clear() }
     }
@@ -125,5 +137,6 @@ class TokenStore(context: Context) {
         const val KEY_EMAIL = "email"
         const val KEY_AVATAR_URL = "avatar_url"
         const val KEY_PREFERRED_CITY = "preferred_city"
+        const val KEY_CP_TIER = "cp_tier"
     }
 }
