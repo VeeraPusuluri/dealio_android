@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.union
@@ -26,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.Button
@@ -35,7 +35,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -58,7 +57,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.dealio.app.data.api.CustomerDeal
-import com.dealio.app.data.api.DealMessage
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.InfoRow
 import com.dealio.app.ui.builder.LoadingState
@@ -67,7 +65,6 @@ import com.dealio.app.ui.customer.CustomerRoutes
 import androidx.compose.material3.OutlinedButton
 import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.DealSpine
-import com.dealio.app.ui.flow.PartyRail
 import com.dealio.app.ui.flow.StageActionCard
 import com.dealio.app.ui.flow.StageTarget
 import com.dealio.app.ui.flow.batonOf
@@ -77,7 +74,6 @@ import com.dealio.app.ui.flow.threadKeyFor
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.formatINR
 import com.dealio.app.ui.builder.resolveUrl
-import com.dealio.app.ui.components.dealioFieldColors
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.Teal
@@ -97,7 +93,6 @@ fun DealDetailScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
-    var draft by remember { mutableStateOf("") }
 
     LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
 
@@ -125,6 +120,9 @@ fun DealDetailScreen(
         showConfirmFor(d)
 
     val threadKeys = roster.map { threadKeyFor(DealRole.CUSTOMER, it) }
+    // One number on one button, the way the CP page does it — the page keeps the
+    // counts but hands the actual talking off to the thread screen.
+    val unread = threadKeys.sumOf { state.unread[it] ?: 0 }
     LaunchedEffect(d?.dealId, d?.messages?.size) {
         if (d != null) vm.refreshUnread(threadKeys)
     }
@@ -143,45 +141,6 @@ fun DealDetailScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = androidx.compose.ui.graphics.Color.White, titleContentColor = Navy),
             )
-        },
-        bottomBar = {
-            if (d != null) {
-                Row(
-                    // Whichever is taller — the keyboard when open, the navigation
-                    // bar otherwise. imePadding() alone left the composer sitting
-                    // under the nav bar with the keyboard down.
-                    Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Color.White)
-                        .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        value = draft,
-                        onValueChange = { draft = it },
-                        modifier = Modifier.weight(1f),
-                        placeholder = {
-                            Text(
-                                if (selected?.isGroup == true) "Message everyone…"
-                                else "Message ${selected?.label ?: "the builder"}…",
-                            )
-                        },
-                        shape = RoundedCornerShape(22.dp),
-                        colors = dealioFieldColors(),
-                        maxLines = 4,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    IconButton(
-                        onClick = {
-                            vm.sendMessage(draft, selected?.recipientRole ?: "builder"); draft = ""
-                        },
-                        enabled = draft.isNotBlank() && !state.sending,
-                        modifier = Modifier.size(48.dp).background(Teal, RoundedCornerShape(24.dp)),
-                    ) {
-                        if (state.sending) CircularProgressIndicator(Modifier.size(20.dp), color = androidx.compose.ui.graphics.Color.White, strokeWidth = 2.dp)
-                        else Icon(Icons.AutoMirrored.Filled.Send, "Send", tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(20.dp))
-                    }
-                }
-            }
         },
     ) { inner ->
         when {
@@ -287,28 +246,25 @@ fun DealDetailScreen(
                     }
                 }
 
-                // Conversation — one thread at a time.
-                item { SectionLabel("Conversation") }
+                // Messaging is one tap away rather than embedded: this opens
+                // the deal's threads in Conversations, where the party is chosen
+                // and the conversation is actually held. The buyer's page used to
+                // carry the whole thread plus a composer pinned to the bottom,
+                // which is why this screen — alone among the three — could not
+                // show anything else down there.
                 item {
-                    PartyRail(
-                        targets = roster,
-                        selected = selected,
-                        onSelect = { target = it },
-                        unreadOf = { state.unread[threadKeyFor(DealRole.CUSTOMER, it)] ?: 0 },
-                    )
-                }
-                val thread = selected?.let { threadKeyFor(DealRole.CUSTOMER, it) }
-                val shown = d.messages.filter { thread == null || it.threadKey == thread }
-                if (shown.isEmpty()) {
-                    item {
+                    OutlinedButton(
+                        onClick = { nav.navigate(CustomerRoutes.CONVERSATIONS) },
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Icon(Icons.Outlined.ChatBubbleOutline, null, tint = Teal, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(
-                            if (selected?.isGroup == true) "No messages here yet — everyone can see this one."
-                            else "No messages with ${selected?.label ?: "this party"} yet.",
-                            color = TextSecondary, fontSize = 13.sp,
+                            if (unread > 0) "Message · $unread new" else "Message",
+                            color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                         )
                     }
-                } else {
-                    items(shown.size) { i -> MessageBubble(shown[i]) }
                 }
             }
         }
@@ -340,24 +296,5 @@ private fun DealActions(d: CustomerDeal, working: Boolean, onAccept: () -> Unit,
             onClick = onConfirm, enabled = !working,
             modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(12.dp),
         ) { Text("Confirm deal", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
-    }
-}
-
-@Composable
-private fun MessageBubble(m: DealMessage) {
-    val mine = m.senderRole.equals("customer", true)
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
-        Column(
-            Modifier
-                .background(
-                    if (mine) Teal else androidx.compose.ui.graphics.Color.White,
-                    RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomStart = if (mine) 14.dp else 2.dp, bottomEnd = if (mine) 2.dp else 14.dp),
-                )
-                .border(if (mine) 0.dp else 1.dp, if (mine) Teal else CardBorder, RoundedCornerShape(14.dp))
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        ) {
-            if (!mine) Text(m.senderName, color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-            Text(m.message, color = if (mine) androidx.compose.ui.graphics.Color.White else TextPrimary, fontSize = 13.sp)
-        }
     }
 }
