@@ -105,7 +105,10 @@ fun BuilderRoot(onLogout: () -> Unit) {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
-    val showBottomBar = bottomTabs.any { it.route == currentRoute }
+    // The nav stays up on nested pages — see the note in CustomerRoot. No
+    // builder screen pins its own bar at the bottom (the deal composer scrolls
+    // with the page), so there is nothing here to stand down for.
+    val showBottomBar = currentRoute != null
 
     // Every hero below this point is lit builder-blue — see LocalHeroAccent.
     CompositionLocalProvider(LocalHeroAccent provides BuilderHeroAccent) {

@@ -110,6 +110,9 @@ object CpRoutes {
     fun meetupForm(id: Long? = null) = "$MEETUP_FORM?id=${id ?: -1}"
 }
 
+/** Nested routes that pin their own bar at the bottom — see [showBottomBar]. */
+private val BOTTOM_OWNING_ROUTES = listOf(CpRoutes.THREAD)
+
 private val tabs = listOf(
     PillTab(CpRoutes.HOME, "Home", Icons.Filled.SpaceDashboard, Icons.Outlined.SpaceDashboard),
     PillTab(CpRoutes.LEADS, "Leads", Icons.Outlined.Groups, Icons.Outlined.Groups),
@@ -140,7 +143,12 @@ fun CpRoot(onLogout: () -> Unit) {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
-    val showBottomBar = tabs.any { it.route == currentRoute }
+    // The nav stays up on nested pages — see the note in CustomerRoot. The
+    // thread screen is the exception: its composer is pinned to the bottom and
+    // rides the keyboard, so the tabs stand down rather than stack under it.
+    val showBottomBar = currentRoute?.let { route ->
+        BOTTOM_OWNING_ROUTES.none { route.startsWith(it) }
+    } ?: false
 
     // Every hero below this point is lit partner-orange — see LocalHeroAccent.
     CompositionLocalProvider(LocalHeroAccent provides CpHeroAccent) {

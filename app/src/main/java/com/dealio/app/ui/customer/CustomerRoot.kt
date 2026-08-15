@@ -86,6 +86,9 @@ object CustomerRoutes {
         "$LOAN_APPLY?projectId=${projectId ?: -1}&builderId=${builderId ?: -1}"
 }
 
+/** Nested routes that pin their own bar at the bottom — see [showBottomBar]. */
+private val BOTTOM_OWNING_ROUTES = listOf(CustomerRoutes.PROJECT_DETAIL)
+
 private val tabs = listOf(
     PillTab(CustomerRoutes.EXPLORE, "Explore", Icons.Filled.Explore, Icons.Outlined.Explore),
     PillTab(CustomerRoutes.VISITS, "Visits", Icons.Outlined.CalendarMonth, Icons.Outlined.CalendarMonth),
@@ -100,7 +103,16 @@ fun CustomerRoot(onLogout: () -> Unit) {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
-    val showBottomBar = tabs.any { it.route == currentRoute }
+    // The nav stays up on nested pages. It used to be shown only on the five tab
+    // routes, so opening anything — a project, a deal, a visit — took the tabs
+    // away and left Back as the only way to reach another section.
+    //
+    // The exception is a screen that owns the bottom of the display itself: the
+    // project page pins its "Book a site visit" bar there, and stacking a second
+    // bar under it would put two competing controls in the same thumb zone.
+    val showBottomBar = currentRoute?.let { route ->
+        BOTTOM_OWNING_ROUTES.none { route.startsWith(it) }
+    } ?: false
 
     // Every hero below this point is lit buyer-green — see LocalHeroAccent.
     CompositionLocalProvider(LocalHeroAccent provides CustomerHeroAccent) {
