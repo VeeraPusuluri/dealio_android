@@ -46,7 +46,6 @@ import com.dealio.app.ui.builder.RefreshOnResume
 import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.formatINRShort
-import com.dealio.app.ui.builder.pipeline.stageLabel
 import com.dealio.app.ui.components.PortalEmptyState
 import com.dealio.app.ui.components.PortalHeader
 import com.dealio.app.ui.customer.CustomerRoutes
@@ -151,10 +150,14 @@ private fun DealCard(d: CustomerDeal, onClick: () -> Unit) {
                 }
             }
             Spacer(Modifier.width(8.dp))
-            // The API sends the stage either display-cased ("New Lead") or as the
-            // raw enum ("NEW_LEAD") depending on how it was last written; normalise
-            // so the chip never shows SHOUTING_SNAKE_CASE.
-            StatusChip(stageLabel(d.dealStatus))
+            // The buyer's phase, not the sales stage. This chip used to read the
+            // raw status — "New Lead", "Pending Booking" — which is the sales
+            // team's ladder shown to the person buying the home, and it sat
+            // directly above a track drawn in the buyer's own register saying
+            // something else. Every other buyer surface already translates
+            // (the deal page's spine, the headline, the notification copy);
+            // this list was the one that did not.
+            StatusChip(phase.label)
         }
 
         Spacer(Modifier.height(16.dp))

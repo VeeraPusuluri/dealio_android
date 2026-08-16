@@ -42,6 +42,7 @@ import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.StatusChip
+import com.dealio.app.ui.customer.journey.phaseFor
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.titleCase
@@ -153,7 +154,10 @@ private fun DealRow(d: CustomerDeal, onClick: () -> Unit) {
                 Text(d.projectName, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 if ((d.dealValue ?: 0.0) > 0) Text(formatINRShort(d.dealValue), color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
-            StatusChip(d.dealStatus)
+            // The buyer's phase, not the raw sales stage — the same translation
+            // the journey list and the deal page make. This row was showing
+            // "Pending Booking" to the person doing the booking.
+            StatusChip(phaseFor(d.dealStatus).label)
         }
     }
 }
