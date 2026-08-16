@@ -26,7 +26,6 @@ import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CurrencyRupee
 import androidx.compose.material.icons.outlined.KingBed
-import androidx.compose.material.icons.outlined.LocationCity
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Tune
@@ -37,15 +36,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +56,7 @@ import com.dealio.app.ui.builder.EmptyState
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.RefreshOnResume
+import com.dealio.app.ui.builder.greetingName
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.customer.CustomerProjectCard
 import com.dealio.app.ui.customer.CustomerRoutes
@@ -82,7 +78,7 @@ fun ExploreScreen(nav: NavController, vm: ExploreViewModel = viewModel()) {
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 16.dp),
+        contentPadding = PaddingValues(bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         // ── Navy hero with search (scrolls with the list) ──
@@ -92,6 +88,15 @@ fun ExploreScreen(nav: NavController, vm: ExploreViewModel = viewModel()) {
             state.loading -> item { LoadingState(Modifier.height(220.dp)) }
             state.error != null -> item { ErrorState(state.error!!, onRetry = { vm.load() }, modifier = Modifier.height(220.dp)) }
             else -> {
+                // City is the first cut a buyer makes and the one they change most,
+                // so it sits on the surface as a rail rather than two taps deep in
+                // the filter sheet with budget and configuration. Below two cities
+                // there is nothing to switch between — "All cities | Hyderabad" is
+                // a control whose two settings return the same list.
+                if (state.cities.size > 1) {
+                    item { CityRail(state, vm) }
+                }
+
                 // Featured carousel
                 if (state.showFeatured) {
                     item { SectionLabel("Featured", Modifier.padding(horizontal = 16.dp)) }
@@ -117,12 +122,20 @@ fun ExploreScreen(nav: NavController, vm: ExploreViewModel = viewModel()) {
                         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        SectionLabel(
-                            if (state.selectedCity != null) "Homes in ${state.selectedCity}" else "All homes",
-                            Modifier.weight(1f),
-                        )
-                        if (state.filtered.isNotEmpty()) {
-                            Text("${state.filtered.size}", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Column(Modifier.weight(1f)) {
+                            SectionLabel(
+                                if (state.selectedCity != null) "Homes in ${state.selectedCity}" else "All homes",
+                            )
+                            // The count used to be a bare "5" floating between the
+                            // heading and the Filters button, which reads as an
+                            // unlabelled number rather than as how many results.
+                            if (state.filtered.isNotEmpty()) {
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    if (state.filtered.size == 1) "1 home" else "${state.filtered.size} homes",
+                                    color = TextSecondary, fontSize = 12.sp,
+                                )
+                            }
                         }
                         Spacer(Modifier.width(10.dp))
                         FiltersButton(activeCount = state.activeFilterCount) { showFilters = true }
@@ -205,12 +218,7 @@ private fun FilterSheet(state: ExploreState, vm: ExploreViewModel, onDismiss: ()
                 }
             }
 
-            FilterGroup("City") {
-                FilterChip("All", Icons.Outlined.LocationCity, state.selectedCity == null) { vm.setCity(null) }
-                state.cities.forEach { c ->
-                    FilterChip(c, Icons.Outlined.LocationCity, state.selectedCity == c) { vm.setCity(c) }
-                }
-            }
+            // City is not repeated here — the rail above the list owns it.
 
             if (state.bhkOptions.isNotEmpty()) {
                 FilterGroup("Configuration") {
@@ -258,10 +266,6 @@ private fun FilterGroup(title: String, content: @Composable () -> Unit) {
 
 @Composable
 private fun ExploreHero(state: ExploreState, vm: ExploreViewModel, nav: NavController) {
-    var searchExpanded by remember { mutableStateOf(false) }
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(searchExpanded) { if (searchExpanded) runCatching { focusRequester.requestFocus() } }
-
     // The shared portal surface — same gradient, radius, inset and buyer-green
     // tint as the rest of the customer portal. The buyer's home is the first
     // screen after the role picker, so it is the one that most has to look like
@@ -269,50 +273,75 @@ private fun ExploreHero(state: ExploreState, vm: ExploreViewModel, nav: NavContr
     PortalHeaderSurface {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Hi ${state.name.substringBefore(' ')} 👋", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("Hi ${greetingName(state.name, "there")} 👋", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text("Find your next home", color = LocalHeroAccent.current, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
-            HeroIconButton(if (searchExpanded) Icons.Outlined.Close else Icons.Outlined.Search, "Search") {
-                searchExpanded = !searchExpanded
-                if (!searchExpanded) vm.setQuery("")
-            }
-            Spacer(Modifier.width(8.dp))
             HeroIconButton(Icons.Outlined.Notifications, "Notifications") { nav.navigate(CustomerRoutes.NOTIFICATIONS) }
         }
-        AnimatedVisibility(visible = searchExpanded) {
-            Column {
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = state.query,
-                    onValueChange = vm::setQuery,
-                    modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
-                    placeholder = { Text("Search projects, localities…") },
-                    leadingIcon = { Icon(Icons.Outlined.Search, null) },
-                    trailingIcon = {
-                        if (state.query.isNotEmpty()) {
-                            Icon(
-                                Icons.Outlined.Close,
-                                "Clear",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(18.dp).clickable { vm.setQuery("") },
-                            )
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedLeadingIconColor = TextSecondary,
-                        unfocusedLeadingIconColor = TextSecondary,
-                        cursorColor = Teal,
-                    ),
-                )
-            }
+        // Search sits in the bar rather than behind an icon that toggles it open.
+        // This screen exists to find a home, and the hero was otherwise a quarter
+        // of the display carrying a greeting and two buttons.
+        Spacer(Modifier.height(14.dp))
+        OutlinedTextField(
+            value = state.query,
+            onValueChange = vm::setQuery,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Search projects, localities…", fontSize = 14.sp) },
+            leadingIcon = { Icon(Icons.Outlined.Search, null, modifier = Modifier.size(19.dp)) },
+            trailingIcon = {
+                if (state.query.isNotEmpty()) {
+                    Icon(
+                        Icons.Outlined.Close,
+                        "Clear",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(18.dp).clickable { vm.setQuery("") },
+                    )
+                }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(14.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent,
+                focusedLeadingIconColor = TextSecondary,
+                unfocusedLeadingIconColor = TextSecondary,
+                focusedPlaceholderColor = TextSecondary,
+                unfocusedPlaceholderColor = TextSecondary,
+                cursorColor = Teal,
+            ),
+        )
+    }
+}
+
+/** Horizontal city switch — "All" plus every city the catalogue actually has. */
+@Composable
+private fun CityRail(state: ExploreState, vm: ExploreViewModel) {
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        CityChip("All cities", state.selectedCity == null) { vm.setCity(null) }
+        state.cities.forEach { c ->
+            CityChip(c, state.selectedCity == c) { vm.setCity(c) }
         }
     }
+}
+
+@Composable
+private fun CityChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Text(
+        label,
+        color = if (selected) Color.White else TextSecondary,
+        fontSize = 12.sp,
+        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+        modifier = Modifier
+            .background(if (selected) Teal else Color.White, RoundedCornerShape(20.dp))
+            .border(1.dp, if (selected) Teal else CardBorder, RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    )
 }
 
 @Composable

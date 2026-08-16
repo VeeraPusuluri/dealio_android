@@ -45,9 +45,15 @@ data class ExploreState(
     val hasActiveFilters: Boolean
         get() = selectedCity != null || selectedBhk != null || selectedBudget != null || query.isNotBlank()
 
-    /** Number of active facet filters (city/BHK/budget), excluding the search query. */
+    /**
+     * Filters the Filters button speaks for — BHK and budget.
+     *
+     * City is deliberately not counted: it has its own rail above the list, so
+     * badging the button "Filters (1)" for a choice the buyer can already see
+     * made would point them at a sheet to find something that is not hidden.
+     */
     val activeFilterCount: Int
-        get() = listOfNotNull(selectedCity, selectedBhk, selectedBudget).size
+        get() = listOfNotNull(selectedBhk, selectedBudget).size
 
     /** BHK chip options actually present in the catalogue (4+ collapsed to 4). */
     val bhkOptions: List<Int>
@@ -143,7 +149,8 @@ class ExploreViewModel(app: Application) : CustomerViewModel(app) {
     fun setQuery(q: String) = _state.update { it.copy(query = q) }
     fun setBhk(bhk: Int?) = _state.update { it.copy(selectedBhk = if (it.selectedBhk == bhk) null else bhk) }
     fun setBudget(b: BudgetBucket?) = _state.update { it.copy(selectedBudget = if (it.selectedBudget == b) null else b) }
+    /** Clears what the sheet owns. The city rail keeps its own selection. */
     fun clearFacetFilters() = _state.update {
-        it.copy(selectedCity = null, selectedBhk = null, selectedBudget = null)
+        it.copy(selectedBhk = null, selectedBudget = null)
     }
 }

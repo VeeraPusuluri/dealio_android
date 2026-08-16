@@ -106,6 +106,23 @@ fun formatDate(raw: String?): String {
 }
 
 /**
+ * YYYY-MM-DD → "Oct 2027". Null when there is no usable date.
+ *
+ * The browse card compares possession across projects, where the day of the
+ * month is noise — "1 Oct 2027" beside "15 Dec 2026" invites a comparison of
+ * two digits that mean nothing. The web card reduces it the same way.
+ */
+fun monthYear(raw: String?): String? {
+    if (raw.isNullOrBlank()) return null
+    val parts = raw.take(10).split("-")
+    if (parts.size != 3) return raw
+    val mi = parts[1].toIntOrNull()?.minus(1) ?: return raw
+    val months = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    if (mi !in months.indices) return raw
+    return "${months[mi]} ${parts[0]}"
+}
+
+/**
  * The name to greet someone by. The first word alone reads fine for "Rajesh
  * Kumar", but it collapses to a single letter for "V Prasad Reddy" and to
  * "Sri" for "Sri Sai Constructions" — so keep taking words (up to three)
