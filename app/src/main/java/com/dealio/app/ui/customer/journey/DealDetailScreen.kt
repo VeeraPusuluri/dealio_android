@@ -1,6 +1,8 @@
 package com.dealio.app.ui.customer.journey
 
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -112,6 +114,10 @@ fun DealDetailScreen(
         ?: roster.firstOrNull { it.recipientRole == initialThread }
         ?: roster.firstOrNull()
 
+    val pickAgreement = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { vm.uploadSignedAgreement(it) }
+    }
+
     // True when the deal is genuinely waiting on the buyer and there is a
     // confirm to make — the one case where the spine should carry the action.
     val ownsConfirm = d != null &&
@@ -182,6 +188,10 @@ fun DealDetailScreen(
                             StageTarget.CUSTOMER_VISITS -> nav.navigate(CustomerRoutes.VISITS)
                             StageTarget.CUSTOMER_PROJECT -> nav.navigate(CustomerRoutes.projectDetail(d.projectId))
                             StageTarget.CUSTOMER_LOAN -> nav.navigate(CustomerRoutes.loanApply(d.projectId))
+                            // Any document type: buyers send back a scan, a photo
+                            // of the signed pages, or the PDF they were sent.
+                            StageTarget.UPLOAD_SIGNED_AGREEMENT ->
+                                pickAgreement.launch(arrayOf("application/pdf", "image/*"))
                             else -> Unit
                         }
                     }

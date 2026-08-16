@@ -95,6 +95,25 @@ class DealDetailViewModel(app: Application) : BuilderViewModel(app) {
         }
     }
 
+    /**
+     * Countersign the signed agreement.
+     *
+     * Deliberately not `updateStatus("Pending Booking")`: that route moves the
+     * deal whether or not the buyer ever sent a signed copy, and does not tell
+     * the CP or the buyer that it was accepted. The 400 this can return — "no
+     * signed agreement has been submitted yet" — is the answer, so it is
+     * surfaced rather than swallowed.
+     */
+    fun acceptAgreement() {
+        _state.update { it.copy(working = true) }
+        viewModelScope.launch {
+            when (val r = repo.acceptAgreement(dealId)) {
+                is ApiResult.Success -> { _state.update { it.copy(working = false, toast = "Agreement accepted") }; load(dealId) }
+                is ApiResult.Error -> _state.update { it.copy(working = false, toast = r.message) }
+            }
+        }
+    }
+
     fun markSold() {
         _state.update { it.copy(working = true) }
         viewModelScope.launch {

@@ -11,6 +11,7 @@ import com.dealio.app.data.api.CustomerDeal
 import com.dealio.app.data.api.CustomerMeetup
 import com.dealio.app.data.api.CustomerMeetupFeed
 import com.dealio.app.data.api.CustomerMessageRequest
+import com.dealio.app.data.api.DealDocument
 import com.dealio.app.data.api.MeetupRsvpRequest
 import com.dealio.app.data.api.LoanApplicationRequest
 import com.dealio.app.data.api.Meeting
@@ -25,6 +26,9 @@ import com.dealio.app.data.api.SavedProjectResult
 import com.dealio.app.data.api.Shortlist
 import com.dealio.app.data.api.ShortlistRequest
 import com.google.gson.Gson
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Response
 import java.io.IOException
 
@@ -131,6 +135,27 @@ class CustomerRepository(context: Context) {
 
     suspend fun sendDealMessage(dealId: Long, recipientRole: String, message: String): ApiResult<Any> =
         call { api.sendDealMessage(dealId, CustomerMessageRequest(phone, recipientRole, message)) }
+
+    /**
+     * Submits the buyer's signed agreement.
+     *
+     * The route lives under `builder/customer/...` rather than `portal/...`
+     * — it is the builder controller's, addressed to the customer — and the
+     * phone travels as a form field beside the file rather than in a JSON body,
+     * because the request is multipart.
+     */
+    suspend fun uploadSignedAgreement(
+        dealId: Long,
+        bytes: ByteArray,
+        fileName: String,
+        mime: String,
+    ): ApiResult<DealDocument> {
+        val filePart = MultipartBody.Part.createFormData(
+            "file", fileName, bytes.toRequestBody(mime.toMediaTypeOrNull()),
+        )
+        val phonePart = phone.toRequestBody("text/plain".toMediaTypeOrNull())
+        return call { api.uploadSignedAgreement(dealId, filePart, phonePart) }
+    }
 
     // ── Saved projects (bookmarks) ────────────────────────────────────────────
     suspend fun getSavedProjects(): ApiResult<List<Project>> = call { api.getSavedProjects() }

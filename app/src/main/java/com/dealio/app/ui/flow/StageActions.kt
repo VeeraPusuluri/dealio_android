@@ -57,11 +57,15 @@ enum class StageTarget {
     LOG_FOLLOW_UP,
     /** CP: agree to the deal terms. */
     AGREE,
+    /** Customer: pick and submit the signed agreement. */
+    UPLOAD_SIGNED_AGREEMENT,
 
     // ── Elsewhere in the app ──
     BUILDER_MEETINGS,
     BUILDER_SHORTLISTS,
     BUILDER_COMMISSIONS,
+    /** Builder: countersign the buyer's signed agreement, in place. */
+    BUILDER_ACCEPT_AGREEMENT,
     CP_COMMISSIONS,
     CUSTOMER_VISITS,
     /** The buyer shortlists a unit on the deal's project page. */
@@ -156,9 +160,24 @@ private val STAGE_ACTIONS: Map<String, Map<DealRole, StageAction>> = mapOf(
         DealRole.BUILDER to wait("Share a pricing quote and negotiate terms with the customer."),
     ),
     "Agreement" to mapOf(
-        DealRole.CUSTOMER to wait("The agreement is ready. Confirm acceptance and upload your signed copy."),
+        // The buyer's half of this stage is two moves — confirm, then send the
+        // signed copy — and the confirm already sits on the spine. This is the
+        // other half, and without it the deal cannot leave Agreement at all:
+        // the builder's accept-agreement returns 400 until a signed document
+        // exists on the row.
+        DealRole.CUSTOMER to act(
+            "The agreement is ready. Confirm acceptance and upload your signed copy.",
+            "Upload signed copy", StageTarget.UPLOAD_SIGNED_AGREEMENT,
+        ),
         DealRole.CP to wait("Agreement shared — awaiting the customer's signature."),
-        DealRole.BUILDER to wait("Once the customer uploads the signed agreement, countersign to proceed."),
+        // The website's countersign, which is a different move from advancing
+        // the stage: it refuses until the buyer has actually sent a signed copy,
+        // and it is what tells the CP and the buyer the agreement was accepted.
+        // The Advance control below it would do neither.
+        DealRole.BUILDER to act(
+            "Once the customer uploads the signed agreement, countersign to proceed.",
+            "Countersign agreement", StageTarget.BUILDER_ACCEPT_AGREEMENT,
+        ),
     ),
     "Pending Booking" to mapOf(
         DealRole.CUSTOMER to wait("Your signed agreement was accepted — the booking is being confirmed."),

@@ -121,6 +121,20 @@ interface BuilderApi {
         @Body body: MessageRequest,
     ): Response<ApiEnvelope<Any>>
 
+    /**
+     * Countersign the buyer's signed agreement, moving the deal to Pending Booking.
+     *
+     * Not the same as advancing through `/status`: this one refuses with a 400
+     * unless the customer has actually submitted a signed agreement, and it is
+     * what tells the CP and the buyer the agreement was accepted. Advancing the
+     * status instead moves the deal without either check.
+     */
+    @PATCH("builder/{builderId}/deals/{dealId}/accept-agreement")
+    suspend fun acceptAgreement(
+        @Path("builderId") builderId: Long,
+        @Path("dealId") dealId: Long,
+    ): Response<ApiEnvelope<Any>>
+
     @PATCH("builder/{builderId}/deals/{dealId}/mark-sold")
     suspend fun markDealSold(
         @Path("builderId") builderId: Long,

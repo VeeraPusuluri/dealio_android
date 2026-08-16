@@ -55,6 +55,7 @@ import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.DealSpine
 import com.dealio.app.ui.flow.PartyRail
 import com.dealio.app.ui.flow.StageActionCard
+import com.dealio.app.ui.flow.stageActionFor
 import com.dealio.app.ui.flow.StageTarget
 import com.dealio.app.ui.flow.ThreadTarget
 import com.dealio.app.ui.flow.canonicalStage
@@ -153,6 +154,7 @@ fun DealDetailScreen(
                             StageTarget.BUILDER_MEETINGS -> nav.navigate(BuilderRoutes.MEETINGS)
                             StageTarget.BUILDER_SHORTLISTS -> nav.navigate(BuilderRoutes.SHORTLISTS)
                             StageTarget.BUILDER_COMMISSIONS -> nav.navigate(BuilderRoutes.COMMISSIONS)
+                            StageTarget.BUILDER_ACCEPT_AGREEMENT -> vm.acceptAgreement()
                             else -> Unit
                         }
                     }
@@ -162,7 +164,20 @@ fun DealDetailScreen(
                         Spacer(Modifier.height(8.dp))
                         val idx = DEAL_STAGES.indexOf(canonicalStage(d.status))
                         val next = if (idx in 0 until DEAL_STAGES.lastIndex) DEAL_STAGES[idx + 1] else null
-                        if (next != null) {
+                        // When the stage card above already offers the proper move
+                        // for this stage, the generic advance is not a second way
+                        // to do it — it is a way to do it *without* the checks that
+                        // move carries. At Agreement it would move the deal to
+                        // Pending Booking with no signed copy on the row and nobody
+                        // told, so it stands down and leaves the countersign to it.
+                        val stageOwnsAdvance =
+                            stageActionFor(d.status, DealRole.BUILDER).cta?.target == StageTarget.BUILDER_ACCEPT_AGREEMENT
+                        if (stageOwnsAdvance) {
+                            Text(
+                                "Countersign the agreement above to move this deal on.",
+                                color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp,
+                            )
+                        } else if (next != null) {
                             ActionButton("Advance to $next", Navy, enabled = !state.working) { vm.updateStatus(next) }
                         } else {
                             Text("This deal is complete.", color = TextSecondary, fontSize = 13.sp)

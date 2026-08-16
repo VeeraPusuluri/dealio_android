@@ -1,10 +1,14 @@
 package com.dealio.app.data.api
 
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.PATCH
+import retrofit2.http.Part
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -102,6 +106,21 @@ interface CustomerApi {
 
     @POST("portal/customer/deals/{dealId}/messages")
     suspend fun sendDealMessage(@Path("dealId") dealId: Long, @Body body: CustomerMessageRequest): Response<ApiEnvelope<Any>>
+
+    /**
+     * The buyer's half of Agreement: submit the countersigned copy.
+     *
+     * The builder's `accept-agreement` refuses with a 400 until a signed
+     * agreement exists on the deal, so without this the deal cannot leave
+     * Agreement from the app at all.
+     */
+    @Multipart
+    @POST("builder/customer/deals/{dealId}/signed-agreement")
+    suspend fun uploadSignedAgreement(
+        @Path("dealId") dealId: Long,
+        @Part file: MultipartBody.Part,
+        @Part("phone") phone: RequestBody,
+    ): Response<ApiEnvelope<DealDocument>>
 
     // ── Saved projects (bookmarks) ────────────────────────────────────────────
     // The caller is read from the token, so no phone travels in the request.
