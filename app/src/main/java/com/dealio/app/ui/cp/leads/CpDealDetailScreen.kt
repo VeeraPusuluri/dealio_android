@@ -62,6 +62,8 @@ import com.dealio.app.ui.cp.projects.CpBookingSheet
 import com.dealio.app.ui.flow.StageActionCard
 import com.dealio.app.ui.flow.StageTarget
 import com.dealio.app.ui.flow.canonicalStage
+import com.dealio.app.ui.flow.stageIndex
+import com.dealio.app.ui.flow.DEAL_STAGES
 import com.dealio.app.ui.flow.stageActionFor
 import com.dealio.app.ui.flow.rosterFor
 import com.dealio.app.ui.flow.threadKeyFor
@@ -194,7 +196,13 @@ fun CpDealDetailScreen(
                 // says the deal is waiting on someone else, and it stands down
                 // entirely once the stage card is the one offering to agree.
                 val stageOffersAgree = stageActionFor(d.status, DealRole.CP).cta?.target == StageTarget.AGREE
-                if (!d.cpAgreed && !ownsAgree && !stageOffersAgree) {
+                // Only while the deal has not yet reached Agreement. The endpoint
+                // behind this button *sets* the stage to Agreement, so on a Booked
+                // or Closed deal it is not an early agreement — it is a button that
+                // drags a completed sale back into paperwork. It was offered on
+                // every stage the stage card did not claim, Closed included.
+                val beforeAgreement = stageIndex(d.status) < DEAL_STAGES.indexOf("Agreement")
+                if (!d.cpAgreed && !ownsAgree && !stageOffersAgree && beforeAgreement) {
                     item {
                         OutlinedButton(
                             onClick = vm::agree, enabled = !state.working,
