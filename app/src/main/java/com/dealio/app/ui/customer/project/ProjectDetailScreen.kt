@@ -140,6 +140,8 @@ import com.dealio.app.ui.theme.NavyDeep
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TealBright
 import com.dealio.app.ui.theme.TextPrimary
+import com.dealio.app.ui.flow.UnitMatrixGrid
+import com.dealio.app.ui.flow.unitsOf
 import com.dealio.app.ui.theme.TextSecondary
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -417,6 +419,22 @@ internal fun LazyListScope.projectDetailSections(
                         orderedConfigurations(p.configurations!!).forEach { cfg -> SpecTile(cfg) }
                     }
                 }
+            }
+        }
+    }
+
+    // The live inventory board, read-only in both portals that render this.
+    //
+    // A configuration answers "what shapes are on sale"; this answers "what is
+    // actually left", which is the question a buyer asks after a site visit and
+    // the one a partner is asked on every call. It is the same grid the buyer
+    // picks their unit from on the deal page and the same one the builder reads
+    // under Inventory, so all three are looking at one board.
+    val inventory = unitsOf(p)
+    if (inventory.isNotEmpty()) {
+        item {
+            Section("Unit availability") {
+                UnitMatrixGrid(inventory)
             }
         }
     }

@@ -114,13 +114,6 @@ interface BuilderApi {
         @Body body: StatusRequest,
     ): Response<ApiEnvelope<Any>>
 
-    @POST("builder/{builderId}/deals/{dealId}/messages")
-    suspend fun sendDealMessage(
-        @Path("builderId") builderId: Long,
-        @Path("dealId") dealId: Long,
-        @Body body: MessageRequest,
-    ): Response<ApiEnvelope<Any>>
-
     /**
      * Countersign the buyer's signed agreement, moving the deal to Pending Booking.
      *

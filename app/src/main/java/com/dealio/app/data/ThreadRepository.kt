@@ -2,39 +2,51 @@ package com.dealio.app.data
 
 import com.dealio.app.data.api.ApiClient
 import com.dealio.app.data.api.ApiEnvelope
+import com.dealio.app.data.api.Conversation
+import com.dealio.app.data.api.ConversationMessage
+import com.dealio.app.data.api.ConversationTranscript
 import com.dealio.app.data.api.NudgeResult
-import com.dealio.app.data.api.ThreadReadRequest
-import com.dealio.app.data.api.ThreadRef
-import com.dealio.app.data.api.ThreadSummary
-import com.dealio.app.data.api.ThreadSummaryRequest
+import com.dealio.app.data.api.OpenConversationRequest
+import com.dealio.app.data.api.SendConversationMessageRequest
 import com.google.gson.Gson
 import retrofit2.Response
 import java.io.IOException
 
 /**
- * Unread counts per deal thread, and the read markers that clear them.
+ * Conversations, for whichever portal is asking.
  *
- * Role-agnostic — the backend resolves the caller from the token and authorizes
- * each (dealId, threadKey) pair itself, so all three portals share this.
+ * Role-agnostic by design — the backend resolves the caller from the token and
+ * decides which conversations they may hold, so the builder, CP and customer
+ * shells all share this one repository rather than each carrying a messaging
+ * client of their own.
  */
 class ThreadRepository {
     private val api = ApiClient.threadApi
     private val gson = Gson()
 
-    /** Unread counts for the given threads. Unauthorized pairs are simply absent. */
-    suspend fun summaries(threads: List<ThreadRef>): ApiResult<List<ThreadSummary>> {
-        if (threads.isEmpty()) return ApiResult.Success(emptyList())
-        return call { api.getSummaries(ThreadSummaryRequest(threads)) }
-    }
+    /** The inbox: conversations that have actually been opened. */
+    suspend fun list(): ApiResult<List<Conversation>> = call { api.list() }
+
+    /** Everyone this user could talk to — what the "+" picker offers. */
+    suspend fun candidates(): ApiResult<List<Conversation>> = call { api.candidates() }
+
+    /** Open or resume a conversation. Safe to call twice; the key is the identity. */
+    suspend fun open(key: String): ApiResult<Conversation> =
+        call { api.open(OpenConversationRequest(key)) }
+
+    suspend fun messages(conversationId: Long): ApiResult<ConversationTranscript> =
+        call { api.messages(conversationId) }
+
+    suspend fun send(conversationId: Long, message: String): ApiResult<ConversationMessage> =
+        call { api.send(conversationId, SendConversationMessageRequest(message)) }
 
     /**
-     * Mark one thread read up to now.
+     * Mark one conversation read up to now.
      *
      * Best-effort by design: a failure here costs a stale badge, never a lost
      * message, so callers fire it without surfacing errors.
      */
-    suspend fun markRead(dealId: Long, threadKey: String): ApiResult<Any> =
-        call { api.markRead(ThreadReadRequest(dealId, threadKey)) }
+    suspend fun markRead(conversationId: Long): ApiResult<Any> = call { api.markRead(conversationId) }
 
     /**
      * Nudge whoever the deal is waiting on.

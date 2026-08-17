@@ -20,6 +20,9 @@ import androidx.compose.material.icons.outlined.Grid4x4
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,7 +43,10 @@ import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.SubScreenScaffold
-import com.dealio.app.ui.builder.availableUnitsOrDerived
+import com.dealio.app.ui.flow.UnitMatrixGrid
+import com.dealio.app.ui.flow.tallyOf
+import com.dealio.app.ui.flow.unitsOf
+import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,9 +72,19 @@ class UnitsViewModel(app: Application) : BuilderViewModel(app) {
     }
 }
 
+/**
+ * The builder's inventory, project by project — and, on tap, the actual matrix.
+ *
+ * This screen used to be four numbers per project and a link to the project
+ * page. The numbers came from the hand-maintained `availableUnits`/`bookedUnits`
+ * counters, so a builder could read "18 available" without being able to say
+ * *which* eighteen — and nothing in the app ever drew the matrix the buyer is
+ * now picking from. Expanding a card renders the same grid the buyer sees.
+ */
 @Composable
 fun UnitMatrixScreen(nav: NavController, vm: UnitsViewModel = viewModel()) {
     val state by vm.state.collectAsStateWithLifecycle()
+    var expanded by remember { mutableStateOf<Long?>(null) }
     SubScreenScaffold("Inventory", nav) { pad ->
         when {
             state.loading -> LoadingState(Modifier.padding(pad))
@@ -77,7 +93,12 @@ fun UnitMatrixScreen(nav: NavController, vm: UnitsViewModel = viewModel()) {
             else -> LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(state.projects.size) { i ->
                     val p = state.projects[i]
-                    InventoryCard(p) { nav.navigate(BuilderRoutes.projectDetail(p.id)) }
+                    InventoryCard(
+                        p = p,
+                        expanded = expanded == p.id,
+                        onToggle = { expanded = if (expanded == p.id) null else p.id },
+                        onOpenProject = { nav.navigate(BuilderRoutes.projectDetail(p.id)) },
+                    )
                 }
             }
         }
@@ -85,28 +106,47 @@ fun UnitMatrixScreen(nav: NavController, vm: UnitsViewModel = viewModel()) {
 }
 
 @Composable
-private fun InventoryCard(p: Project, onClick: () -> Unit) {
-    val total = (p.totalUnits ?: 0).coerceAtLeast(1)
-    val available = p.availableUnitsOrDerived() ?: 0
-    val booked = p.bookedUnits ?: 0
-    val sold = p.soldUnits ?: 0
-    DealioCard(Modifier.clickable { onClick() }) {
+private fun InventoryCard(
+    p: Project,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onOpenProject: () -> Unit,
+) {
+    // Counted off the matrix where there is one — the stored counters drift the
+    // moment anyone edits units directly, and this screen is where that shows.
+    val tally = tallyOf(p)
+    val total = tally.total.coerceAtLeast(1)
+    DealioCard(Modifier.clickable { onToggle() }) {
         Text(p.name, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text(p.configurations?.joinToString(", ")?.ifBlank { "—" } ?: "—", color = TextSecondary, fontSize = 12.sp)
         Spacer(Modifier.height(10.dp))
         // Stacked bar
         Row(Modifier.fillMaxWidth().height(10.dp)) {
-            if (sold > 0) Box(Modifier.weight(sold.toFloat()).fillMaxWidth().height(10.dp).background(StatusColors.Green, RoundedCornerShape(2.dp)))
-            if (booked > 0) Box(Modifier.weight(booked.toFloat()).fillMaxWidth().height(10.dp).background(StatusColors.Amber, RoundedCornerShape(2.dp)))
-            val avail = (p.totalUnits ?: 0) - sold - booked
-            if (avail > 0) Box(Modifier.weight(avail.toFloat()).fillMaxWidth().height(10.dp).background(Color(0xFFE3E9F1), RoundedCornerShape(2.dp)))
+            if (tally.sold > 0) Box(Modifier.weight(tally.sold.toFloat()).fillMaxWidth().height(10.dp).background(StatusColors.Green, RoundedCornerShape(2.dp)))
+            if (tally.booked > 0) Box(Modifier.weight(tally.booked.toFloat()).fillMaxWidth().height(10.dp).background(StatusColors.Amber, RoundedCornerShape(2.dp)))
+            if (tally.available > 0) Box(Modifier.weight(tally.available.toFloat()).fillMaxWidth().height(10.dp).background(Color(0xFFE3E9F1), RoundedCornerShape(2.dp)))
         }
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             LegendItem("Total", total.toString(), TextPrimary)
-            LegendItem("Available", available.toString(), TextSecondary)
-            LegendItem("Booked", booked.toString(), StatusColors.Amber)
-            LegendItem("Sold", sold.toString(), StatusColors.Green)
+            LegendItem("Available", tally.available.toString(), TextSecondary)
+            LegendItem("Booked", tally.booked.toString(), StatusColors.Amber)
+            LegendItem("Sold", tally.sold.toString(), StatusColors.Green)
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            if (expanded) "Hide unit matrix" else "Show unit matrix",
+            color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+        )
+        if (expanded) {
+            Spacer(Modifier.height(12.dp))
+            UnitMatrixGrid(unitsOf(p))
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "Open project to edit",
+                color = TextSecondary, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clickable { onOpenProject() },
+            )
         }
     }
 }

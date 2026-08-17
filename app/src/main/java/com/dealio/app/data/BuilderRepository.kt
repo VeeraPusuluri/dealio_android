@@ -153,13 +153,6 @@ class BuilderRepository(context: Context) {
     suspend fun acceptAgreement(dealId: Long): ApiResult<Any> =
         withBuilder { bid -> call { api.acceptAgreement(bid, dealId) } }
 
-    suspend fun sendDealMessage(
-        dealId: Long,
-        message: String,
-        recipientRole: String = "cp",
-    ): ApiResult<Any> =
-        withBuilder { bid -> call { api.sendDealMessage(bid, dealId, MessageRequest(message, recipientRole)) } }
-
     suspend fun markDealSold(dealId: Long): ApiResult<Any> =
         withBuilder { bid -> call { api.markDealSold(bid, dealId) } }
 

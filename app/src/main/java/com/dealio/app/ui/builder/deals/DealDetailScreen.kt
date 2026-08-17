@@ -20,18 +20,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.Call
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,20 +50,14 @@ import com.dealio.app.ui.flow.ActivityLedger
 import com.dealio.app.ui.flow.DEAL_STAGES
 import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.DealSpine
-import com.dealio.app.ui.flow.PartyRail
 import com.dealio.app.ui.flow.StageActionCard
 import com.dealio.app.ui.flow.stageActionFor
 import com.dealio.app.ui.flow.StageTarget
-import com.dealio.app.ui.flow.ThreadTarget
 import com.dealio.app.ui.flow.canonicalStage
-import com.dealio.app.ui.flow.rosterFor
-import com.dealio.app.ui.flow.threadKeyFor
 import com.dealio.app.ui.builder.BuilderRoutes
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.builder.formatINRShort
-import com.dealio.app.ui.components.dealioFieldColors
-import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
@@ -76,8 +67,6 @@ import com.dealio.app.ui.theme.TextSecondary
 fun DealDetailScreen(
     nav: NavController,
     dealId: Long,
-    /** Which party's thread to open on, when arrived at from the inbox. */
-    initialThread: String? = null,
     vm: DealDetailViewModel = viewModel(),
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
@@ -90,27 +79,6 @@ fun DealDetailScreen(
             state.error != null -> ErrorState(state.error!!, { vm.load(dealId) }, Modifier.padding(pad))
             state.deal != null -> {
                 val d = state.deal!!
-                var message by remember { mutableStateOf("") }
-                // Which thread the builder is looking at. Pre-booking with a CP
-                // attached the private customer pair is withheld, so the roster
-                // offers the group instead — matching the backend exactly.
-                val roster = rosterFor(
-                    viewer = DealRole.BUILDER,
-                    hasCp = d.cpName != null,
-                    rawStatus = d.status,
-                    cpName = d.cpName,
-                    customerName = d.customerName,
-                )
-                var target by remember(dealId) { mutableStateOf<ThreadTarget?>(null) }
-                val selected = target
-                    ?: roster.firstOrNull { it.recipientRole == initialThread }
-                    ?: roster.firstOrNull()
-
-                val threadKeys = roster.map { threadKeyFor(DealRole.BUILDER, it) }
-                LaunchedEffect(d.id, d.messages.size) { vm.refreshUnread(threadKeys) }
-                LaunchedEffect(selected?.recipientRole, d.id) {
-                    if (selected != null) vm.markThreadRead(threadKeyFor(DealRole.BUILDER, selected))
-                }
                 Column(
                     Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -267,65 +235,21 @@ fun DealDetailScreen(
                         DealioCard { ActivityLedger(d.events) }
                     }
 
-                    // Messages — one thread at a time. The backend only returns
-                    // threads this builder is party to; the rail picks between them.
-                    DealioCard {
-                        SectionLabel("Conversation")
-                        Spacer(Modifier.height(8.dp))
-                        PartyRail(
-                            targets = roster,
-                            selected = selected,
-                            onSelect = { target = it },
-                            unreadOf = { state.unread[threadKeyFor(DealRole.BUILDER, it)] ?: 0 },
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        val thread = selected?.let { threadKeyFor(DealRole.BUILDER, it) }
-                        val shown = d.messages.filter { thread == null || it.threadKey == thread }
-                        if (shown.isEmpty()) {
-                            Text(
-                                if (selected?.isGroup == true) "No messages in the group thread yet."
-                                else "No messages with ${selected?.label ?: "this party"} yet.",
-                                color = TextSecondary, fontSize = 13.sp,
-                            )
-                        } else {
-                            shown.forEach { m ->
-                                val mine = m.senderRole.equals("builder", true)
-                                Column(
-                                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                    horizontalAlignment = if (mine) Alignment.End else Alignment.Start,
-                                ) {
-                                    Text("${m.senderName} · ${m.senderRole}", color = TextSecondary, fontSize = 10.sp)
-                                    Spacer(Modifier.height(2.dp))
-                                    Box(
-                                        Modifier
-                                            .background(if (mine) Teal.copy(alpha = 0.14f) else CardBorder.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    ) { Text(m.message, color = TextPrimary, fontSize = 13.sp) }
-                                }
-                            }
-                        }
-                        Spacer(Modifier.height(10.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedTextField(
-                                value = message, onValueChange = { message = it },
-                                modifier = Modifier.weight(1f),
-                                placeholder = {
-                                    Text(
-                                        if (selected?.isGroup == true) "Message all three…"
-                                        else "Message ${selected?.label ?: "…"}",
-                                    )
-                                },
-                                singleLine = true, shape = RoundedCornerShape(12.dp), colors = dealioFieldColors(),
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Box(
-                                Modifier.size(48.dp).background(Navy, RoundedCornerShape(12.dp))
-                                    .clickable(enabled = !state.sending && message.isNotBlank()) {
-                                        vm.sendMessage(message, selected?.recipientRole ?: "cp"); message = ""
-                                    },
-                                contentAlignment = Alignment.Center,
-                            ) { Icon(Icons.AutoMirrored.Outlined.Send, "Send", tint = Color.White, modifier = Modifier.size(20.dp)) }
-                        }
+                    // Messaging is one tap away rather than embedded, the way the
+                    // CP page already does it. The party rail and composer that
+                    // used to sit here were wedged between the commission figures
+                    // and the activity ledger, and they belonged to a model where
+                    // a conversation was part of a deal. It is not: the buyer and
+                    // the partner on this deal are the same people on every other
+                    // one, and there is one conversation with each of them.
+                    OutlinedButton(
+                        onClick = { nav.navigate(BuilderRoutes.CONVERSATIONS) },
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Icon(Icons.Outlined.ChatBubbleOutline, null, tint = Teal, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Message", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                     Spacer(Modifier.height(20.dp))
                 }

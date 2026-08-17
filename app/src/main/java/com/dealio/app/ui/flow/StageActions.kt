@@ -59,6 +59,8 @@ enum class StageTarget {
     AGREE,
     /** Customer: pick and submit the signed agreement. */
     UPLOAD_SIGNED_AGREEMENT,
+    /** Customer: choose an actual unit off the project's matrix and shortlist it. */
+    PICK_UNIT,
 
     // ── Elsewhere in the app ──
     BUILDER_MEETINGS,
@@ -132,9 +134,15 @@ private val STAGE_ACTIONS: Map<String, Map<DealRole, StageAction>> = mapOf(
         ),
     ),
     "Meeting Done" to mapOf(
+        // The stage the website puts the unit picker on, and for the same
+        // reason: a buyer can only name the flat they want once they have
+        // stood in it. Before this the app sent them to the project page,
+        // where all they could shortlist was a *configuration* — "2 BHK" —
+        // so the builder received an expression of interest with nothing in
+        // it to reserve. It now opens the project's actual matrix.
         DealRole.CUSTOMER to act(
-            "Your site visit is done — shortlist the unit you liked and request a price.",
-            "Shortlist a unit", StageTarget.CUSTOMER_PROJECT,
+            "Your site visit is done — pick the unit you liked and we'll ask the builder for a price.",
+            "Pick your unit", StageTarget.PICK_UNIT,
         ),
         // The web routes to the follow-ups list; the Android deal screen already
         // carries the follow-up dialog, so the CP logs it without leaving.

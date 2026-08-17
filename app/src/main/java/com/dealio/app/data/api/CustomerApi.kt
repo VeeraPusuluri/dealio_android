@@ -104,9 +104,6 @@ interface CustomerApi {
     @PATCH("portal/customer/deals/{dealId}/accept-negotiation")
     suspend fun acceptNegotiation(@Path("dealId") dealId: Long, @Body body: PhoneRequest): Response<ApiEnvelope<Any>>
 
-    @POST("portal/customer/deals/{dealId}/messages")
-    suspend fun sendDealMessage(@Path("dealId") dealId: Long, @Body body: CustomerMessageRequest): Response<ApiEnvelope<Any>>
-
     /**
      * The buyer's half of Agreement: submit the countersigned copy.
      *

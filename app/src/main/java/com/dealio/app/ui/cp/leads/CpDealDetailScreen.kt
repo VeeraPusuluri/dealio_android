@@ -62,11 +62,8 @@ import com.dealio.app.ui.cp.projects.CpBookingSheet
 import com.dealio.app.ui.flow.StageActionCard
 import com.dealio.app.ui.flow.StageTarget
 import com.dealio.app.ui.flow.canonicalStage
-import com.dealio.app.ui.flow.stageIndex
 import com.dealio.app.ui.flow.DEAL_STAGES
 import com.dealio.app.ui.flow.stageActionFor
-import com.dealio.app.ui.flow.rosterFor
-import com.dealio.app.ui.flow.threadKeyFor
 import com.dealio.app.ui.builder.formatINR
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.Navy
@@ -90,18 +87,6 @@ fun CpDealDetailScreen(
     LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
 
     val d = state.deal
-    // Messaging lives in Conversations, not here. This page still wants to know
-    // whether anyone is waiting on a reply, so it keeps the counts — one number
-    // on a button — and hands the actual talking off to the thread screen.
-    val roster = rosterFor(
-        viewer = DealRole.CP,
-        hasCp = true,
-        rawStatus = d?.status,
-        customerName = d?.customerName,
-    )
-    val threadKeys = roster.map { threadKeyFor(DealRole.CP, it) }
-    LaunchedEffect(d?.id) { if (d != null) vm.refreshUnread(threadKeys) }
-    val unread = threadKeys.sumOf { state.unread[it] ?: 0 }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -197,11 +182,21 @@ fun CpDealDetailScreen(
                 // entirely once the stage card is the one offering to agree.
                 val stageOffersAgree = stageActionFor(d.status, DealRole.CP).cta?.target == StageTarget.AGREE
                 // Only while the deal has not yet reached Agreement. The endpoint
-                // behind this button *sets* the stage to Agreement, so on a Booked
-                // or Closed deal it is not an early agreement — it is a button that
-                // drags a completed sale back into paperwork. It was offered on
-                // every stage the stage card did not claim, Closed included.
-                val beforeAgreement = stageIndex(d.status) < DEAL_STAGES.indexOf("Agreement")
+                // behind this button *sets* the stage to Agreement, so on a deal
+                // that is booked or handed over it is not an early agreement — it
+                // is a button that drags a completed sale back into paperwork.
+                //
+                // Stated as "is a stage we recognise, and is before Agreement",
+                // never as `stageIndex(...) < AGREEMENT_INDEX`. stageIndex returns
+                // **-1** for a status no alias covers, and -1 is less than every
+                // index, so the previous form quietly re-offered the button on
+                // exactly the rows most likely to be carrying an unrecognised
+                // status — the old ones, deep in the pipeline. An unknown stage
+                // now withholds the shortcut rather than assuming the earliest
+                // one; the proper Agree action on the spine is unaffected.
+                val stage = canonicalStage(d.status)
+                val beforeAgreement =
+                    stage != null && DEAL_STAGES.indexOf(stage) < DEAL_STAGES.indexOf("Agreement")
                 if (!d.cpAgreed && !ownsAgree && !stageOffersAgree && beforeAgreement) {
                     item {
                         OutlinedButton(
@@ -216,20 +211,20 @@ fun CpDealDetailScreen(
                     }
                 }
 
-                // Messaging is one tap away rather than embedded: this opens the
-                // deal's threads in Conversations, where the party is chosen and
-                // the conversation is actually held.
+                // Messaging is one tap away rather than embedded: this opens
+                // Conversations, where the person is chosen and the conversation
+                // is actually held. It carries no unread count any more, because
+                // a conversation is no longer *this deal's* — the buyer and the
+                // builder here are the same people on every other deal, with one
+                // shared thread each.
                 item {
                     OutlinedButton(
-                        onClick = { nav.navigate(CpRoutes.conversations(d.id)) },
+                        onClick = { nav.navigate(CpRoutes.conversations()) },
                         modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(12.dp),
                     ) {
                         Icon(Icons.Outlined.ChatBubbleOutline, null, tint = Teal, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(
-                            if (unread > 0) "Message · $unread new" else "Message",
-                            color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                        )
+                        Text("Message", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
 

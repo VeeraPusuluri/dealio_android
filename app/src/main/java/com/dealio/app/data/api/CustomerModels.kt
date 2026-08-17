@@ -21,7 +21,6 @@ data class CustomerDeal(
     val tenureMonths: Int? = null,
     val interestRate: Double? = null,
     val dealDocuments: List<DealDocument> = emptyList(),
-    val messages: List<DealMessage> = emptyList(),
 )
 
 // ─── Available channel partner (for booking) ─────────────────────────────────

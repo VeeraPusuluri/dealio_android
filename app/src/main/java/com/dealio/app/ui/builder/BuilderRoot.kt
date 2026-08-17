@@ -29,6 +29,8 @@ import com.dealio.app.ui.builder.ai.AiAssistantScreen
 import com.dealio.app.ui.builder.analytics.AnalyticsScreen
 import com.dealio.app.ui.builder.broadcast.BroadcastScreen
 import com.dealio.app.ui.builder.conversations.BuilderConversationsScreen
+import com.dealio.app.ui.flow.ConversationScreen
+import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.builder.demandletters.DemandLettersScreen
 import com.dealio.app.ui.builder.documents.BuilderDocumentsScreen
 import com.dealio.app.ui.builder.possession.BuilderPossessionScreen
@@ -55,6 +57,8 @@ import com.dealio.app.ui.components.BuilderHeroAccent
 import com.dealio.app.ui.components.FloatingPillNav
 import com.dealio.app.ui.components.LocalHeroAccent
 import com.dealio.app.ui.components.PillTab
+import com.dealio.app.ui.navigation.FollowPendingDeepLink
+import com.dealio.app.ui.navigation.Portal
 
 object BuilderRoutes {
     const val HOME = "home"
@@ -83,11 +87,15 @@ object BuilderRoutes {
     const val POSSESSION = "possession"
     const val SNAGGING = "snagging"
     const val CONVERSATIONS = "conversations"
+    // Deliberately not "conversation": BOTTOM_OWNING_ROUTES matches by prefix,
+    // and that spelling is a prefix of the inbox route above — which would have
+    // hidden the tab bar on the list as well as on the thread.
+    const val CONVERSATION = "builder_thread"
 
     fun projectDetail(id: Long) = "$PROJECT_DETAIL/$id"
-    /** [thread] preselects one of the deal's party threads, as the inbox does. */
-    fun dealDetail(id: Long, thread: String? = null) =
-        "$DEAL_DETAIL/$id" + if (thread == null) "" else "?thread=$thread"
+    fun dealDetail(id: Long) = "$DEAL_DETAIL/$id"
+    /** One conversation: the only place messages are read and written. */
+    fun conversation(id: Long) = "$CONVERSATION/$id"
     fun projectForm(id: Long? = null) = if (id == null) PROJECT_FORM else "$PROJECT_FORM?id=$id"
 }
 
@@ -99,16 +107,24 @@ private val bottomTabs = listOf(
     PillTab(BuilderRoutes.MORE, "More", Icons.Filled.GridView, Icons.Outlined.GridView),
 )
 
+/** Nested routes that pin their own bar at the bottom — see [showBottomBar]. */
+private val BOTTOM_OWNING_ROUTES = listOf(BuilderRoutes.CONVERSATION)
+
 /** The builder app shell: floating pill navigation + nested route host. */
 @Composable
 fun BuilderRoot(onLogout: () -> Unit) {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
-    // The nav stays up on nested pages — see the note in CustomerRoot. No
-    // builder screen pins its own bar at the bottom (the deal composer scrolls
-    // with the page), so there is nothing here to stand down for.
-    val showBottomBar = currentRoute != null
+    // The nav stays up on nested pages — see the note in CustomerRoot. The
+    // conversation screen is the exception: its composer is pinned to the bottom
+    // and rides the keyboard, so the tabs stand down rather than stack under it.
+    val showBottomBar = currentRoute?.let { route ->
+        BOTTOM_OWNING_ROUTES.none { route.startsWith(it) }
+    } ?: false
+
+    // A notification tapped in the tray lands here, on the screen it is about.
+    FollowPendingDeepLink(nav, Portal.BUILDER)
 
     // Every hero below this point is lit builder-blue — see LocalHeroAccent.
     CompositionLocalProvider(LocalHeroAccent provides BuilderHeroAccent) {
@@ -156,17 +172,10 @@ fun BuilderRoot(onLogout: () -> Unit) {
             }
 
             composable(
-                "${BuilderRoutes.DEAL_DETAIL}/{id}?thread={thread}",
-                arguments = listOf(
-                    navArgument("id") { type = NavType.LongType },
-                    navArgument("thread") { type = NavType.StringType; nullable = true; defaultValue = null },
-                ),
+                "${BuilderRoutes.DEAL_DETAIL}/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.LongType }),
             ) { entry ->
-                DealDetailScreen(
-                    nav,
-                    entry.arguments?.getLong("id") ?: 0,
-                    initialThread = entry.arguments?.getString("thread"),
-                )
+                DealDetailScreen(nav, entry.arguments?.getLong("id") ?: 0)
             }
 
             composable(BuilderRoutes.MEETINGS) { MeetingsScreen(nav) }
@@ -188,6 +197,12 @@ fun BuilderRoot(onLogout: () -> Unit) {
             composable(BuilderRoutes.POSSESSION) { BuilderPossessionScreen(nav) }
             composable(BuilderRoutes.SNAGGING) { BuilderSnaggingScreen(nav) }
             composable(BuilderRoutes.CONVERSATIONS) { BuilderConversationsScreen(nav) }
+            composable(
+                "${BuilderRoutes.CONVERSATION}/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.LongType }),
+            ) { e ->
+                ConversationScreen(nav, DealRole.BUILDER, e.arguments?.getLong("id") ?: 0)
+            }
         }
     }
     }

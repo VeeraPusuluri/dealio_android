@@ -29,10 +29,13 @@ import com.dealio.app.ui.components.CpHeroAccent
 import com.dealio.app.ui.components.FloatingPillNav
 import com.dealio.app.ui.components.LocalHeroAccent
 import com.dealio.app.ui.components.PillTab
+import com.dealio.app.ui.navigation.FollowPendingDeepLink
+import com.dealio.app.ui.navigation.Portal
 import com.dealio.app.ui.cp.calllogs.CallLogsScreen
 import com.dealio.app.ui.cp.contacts.ContactsScreen
 import com.dealio.app.ui.cp.conversations.ConversationsScreen
-import com.dealio.app.ui.cp.conversations.CpThreadScreen
+import com.dealio.app.ui.flow.ConversationScreen
+import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.cp.earnings.EarningsScreen
 import com.dealio.app.ui.cp.loan.CpLoanAssistScreen
 import com.dealio.app.ui.cp.followups.FollowUpsScreen
@@ -94,15 +97,17 @@ object CpRoutes {
     fun dealDetail(id: Long) = "$DEAL_DETAIL/$id"
 
     /**
-     * The inbox, optionally narrowed to one deal — which is how the deal page
-     * hands off to it, so "Message" lands on that deal's threads rather than on
-     * the whole list.
+     * The inbox.
+     *
+     * It used to take an optional deal id, so the deal page could narrow it to
+     * "this deal's threads". A conversation is no longer about a deal, so there
+     * is nothing to narrow to — the deal page's Message button opens the same
+     * inbox everyone else sees.
      */
-    fun conversations(dealId: Long? = null) =
-        CONVERSATIONS + if (dealId == null) "" else "?deal=$dealId"
+    fun conversations() = CONVERSATIONS
 
-    /** One party's thread on one deal: the only place messages are read and written. */
-    fun thread(dealId: Long, recipientRole: String) = "$THREAD/$dealId?thread=$recipientRole"
+    /** One conversation: the only place messages are read and written. */
+    fun conversation(id: Long) = "$THREAD/$id"
     fun projectDetail(id: Long) = "$PROJECT_DETAIL/$id"
     fun meetupDetail(id: Long) = "$MEETUP_DETAIL/$id"
 
@@ -149,6 +154,9 @@ fun CpRoot(onLogout: () -> Unit) {
     val showBottomBar = currentRoute?.let { route ->
         BOTTOM_OWNING_ROUTES.none { route.startsWith(it) }
     } ?: false
+
+    // A notification tapped in the tray lands here, on the screen it is about.
+    FollowPendingDeepLink(nav, Portal.CP)
 
     // Every hero below this point is lit partner-orange — see LocalHeroAccent.
     CompositionLocalProvider(LocalHeroAccent provides CpHeroAccent) {
@@ -224,23 +232,13 @@ fun CpRoot(onLogout: () -> Unit) {
             composable(CpRoutes.WHATSAPP_BROADCAST) { WhatsAppBroadcastScreen(nav) }
             composable(CpRoutes.COMMUNITY) { CommunityScreen(nav) }
             composable(CpRoutes.JV) { JvScreen(nav) }
-            composable(
-                "${CpRoutes.CONVERSATIONS}?deal={deal}",
-                arguments = listOf(navArgument("deal") { type = NavType.LongType; defaultValue = -1L }),
-            ) { e -> ConversationsScreen(nav, e.arguments?.getLong("deal")?.takeIf { it > 0 }) }
+            composable(CpRoutes.CONVERSATIONS) { ConversationsScreen(nav) }
 
             composable(
-                "${CpRoutes.THREAD}/{id}?thread={thread}",
-                arguments = listOf(
-                    navArgument("id") { type = NavType.LongType },
-                    navArgument("thread") { type = NavType.StringType; nullable = true; defaultValue = null },
-                ),
+                "${CpRoutes.THREAD}/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.LongType }),
             ) { e ->
-                CpThreadScreen(
-                    nav,
-                    e.arguments?.getLong("id") ?: 0,
-                    recipientRole = e.arguments?.getString("thread"),
-                )
+                ConversationScreen(nav, DealRole.CP, e.arguments?.getLong("id") ?: 0)
             }
             composable(CpRoutes.LOAN_ASSIST) { CpLoanAssistScreen(nav) }
         }

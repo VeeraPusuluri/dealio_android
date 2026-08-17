@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.dealio.app.data.ApiResult
 import com.dealio.app.data.ThreadRepository
 import com.dealio.app.data.api.DealDetail
-import com.dealio.app.data.api.ThreadRef
 import com.dealio.app.ui.builder.BuilderViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,13 +21,14 @@ data class DealDetailState(
     val loading: Boolean = true,
     val error: String? = null,
     val deal: DealDetail? = null,
-    val sending: Boolean = false,
     val working: Boolean = false,
     val toast: String? = null,
-    /** Unread count per threadKey, for the party rail's badges. */
-    val unread: Map<String, Int> = emptyMap(),
 )
 
+// Messaging is deliberately absent. A conversation is between the builder and a
+// person, not about this deal, so it lives entirely in Conversations — this page
+// links there and keeps to the deal. ThreadRepository is still here for the
+// nudge, which genuinely is about a stalled transaction.
 class DealDetailViewModel(app: Application) : BuilderViewModel(app) {
 
     private val _state = MutableStateFlow(DealDetailState())
@@ -36,17 +36,6 @@ class DealDetailViewModel(app: Application) : BuilderViewModel(app) {
 
     private var dealId: Long = 0
     private val threads = ThreadRepository()
-
-    /** Refresh the rail's unread badges. Keys come from the screen, which owns the roster. */
-    fun refreshUnread(threadKeys: List<String>) {
-        if (threadKeys.isEmpty()) return
-        viewModelScope.launch {
-            val r = threads.summaries(threadKeys.map { ThreadRef(dealId, it) })
-            if (r is ApiResult.Success) {
-                _state.update { s -> s.copy(unread = r.data.associate { it.threadKey to it.unreadCount }) }
-            }
-        }
-    }
 
     /** Nudge whoever the deal is waiting on; the cooldown reply is worth showing. */
     fun nudge() {
@@ -63,13 +52,6 @@ class DealDetailViewModel(app: Application) : BuilderViewModel(app) {
                 )
             }
         }
-    }
-
-    /** Optimistic: clear the badge now, since a failed mark costs only a stale badge. */
-    fun markThreadRead(threadKey: String) {
-        if (_state.value.unread[threadKey].let { it == null || it == 0 }) return
-        _state.update { it.copy(unread = it.unread - threadKey) }
-        viewModelScope.launch { threads.markRead(dealId, threadKey) }
     }
 
     fun load(id: Long) {
@@ -120,17 +102,6 @@ class DealDetailViewModel(app: Application) : BuilderViewModel(app) {
             when (val r = repo.markDealSold(dealId)) {
                 is ApiResult.Success -> { _state.update { it.copy(working = false, toast = "Unit marked sold") }; load(dealId) }
                 is ApiResult.Error -> _state.update { it.copy(working = false, toast = r.message) }
-            }
-        }
-    }
-
-    fun sendMessage(text: String, recipientRole: String = "cp") {
-        if (text.isBlank()) return
-        _state.update { it.copy(sending = true) }
-        viewModelScope.launch {
-            when (val r = repo.sendDealMessage(dealId, text.trim(), recipientRole)) {
-                is ApiResult.Success -> { _state.update { it.copy(sending = false) }; load(dealId) }
-                is ApiResult.Error -> _state.update { it.copy(sending = false, toast = r.message) }
             }
         }
     }

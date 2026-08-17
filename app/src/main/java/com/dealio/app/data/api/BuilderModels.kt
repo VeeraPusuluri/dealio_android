@@ -111,6 +111,16 @@ data class Project(
     val clubhouseAreaSqft: Int? = null,
     val towers: Int? = null,
     val floorsPerTower: Int? = null,
+    /**
+     * The project's actual inventory, unit by unit.
+     *
+     * Nullable and often absent: it is a Json column the project wizard fills
+     * in, and projects created before it existed carry only `totalUnits` and
+     * `configurations`. [com.dealio.app.ui.flow.unitsOf] synthesizes a grid from
+     * those so a buyer is never shown an empty board — the same fallback the
+     * website uses, producing the same unit ids.
+     */
+    val unitMatrix: List<UnitRow>? = null,
     val specifications: Specifications? = null,
     val paymentPlans: List<PaymentPlan>? = null,
     val locationAdvantages: List<LocationAdvantage>? = null,
@@ -266,7 +276,6 @@ data class DealDetail(
     val cpTier: String? = null,
     val commissionPercent: Double? = null,
     val commissionAmount: Double? = null,
-    val messages: List<DealMessage> = emptyList(),
     val dealDocuments: List<DealDocument> = emptyList(),
     val events: List<DealEvent> = emptyList(),
     val paymentSchedule: List<PaymentInstallment>? = null,
@@ -394,6 +403,28 @@ data class UnitDetails(
     val price: String? = null,
     val facing: String? = null,
     val status: String? = null,
+)
+
+/**
+ * One flat in a project's unit matrix.
+ *
+ * The wire shape the project wizard writes and the website's unit picker reads,
+ * mirrored field for field — `id` is the unit's name ("A-703") and is what
+ * travels on a shortlist, a pricing request and a booking. Everything but the
+ * id is optional because the matrix is hand-entered Json and older rows are
+ * sparse; the UI degrades to whatever is present rather than refusing to draw.
+ */
+data class UnitRow(
+    val id: String = "",
+    val tower: String? = null,
+    val floor: Int? = null,
+    val unit: Int? = null,
+    val bhk: String? = null,
+    val areaSqft: Int? = null,
+    /** "Available" | "Booked" | "Sold" | "Hold", loosely — see unitStatusOf(). */
+    val status: String? = null,
+    val price: Double? = null,
+    val facing: String? = null,
 )
 
 // ─── Broadcasts ──────────────────────────────────────────────────────────────

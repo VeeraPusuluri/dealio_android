@@ -133,9 +133,6 @@ class CustomerRepository(context: Context) {
     suspend fun acceptNegotiation(dealId: Long): ApiResult<Any> =
         call { api.acceptNegotiation(dealId, PhoneRequest(phone)) }
 
-    suspend fun sendDealMessage(dealId: Long, recipientRole: String, message: String): ApiResult<Any> =
-        call { api.sendDealMessage(dealId, CustomerMessageRequest(phone, recipientRole, message)) }
-
     /**
      * Submits the buyer's signed agreement.
      *

@@ -7,8 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.dealio.app.data.ApiResult
 import com.dealio.app.data.ThreadRepository
 import com.dealio.app.data.api.CustomerDeal
-import com.dealio.app.data.api.ThreadRef
+import com.dealio.app.data.api.Project
+import com.dealio.app.data.api.UnitRow
 import com.dealio.app.ui.customer.CustomerViewModel
+import com.dealio.app.ui.flow.unitsOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,12 +24,23 @@ data class DealDetailState(
     val error: String? = null,
     val deal: CustomerDeal? = null,
     val working: Boolean = false,
-    val sending: Boolean = false,
     val message: String? = null,
-    /** Unread count per threadKey, for the party rail's badges. */
-    val unread: Map<String, Int> = emptyMap(),
+    // ── The unit picker ──
+    /** Open when the buyer is choosing a flat off the project's matrix. */
+    val picking: Boolean = false,
+    val loadingUnits: Boolean = false,
+    val units: List<UnitRow> = emptyList(),
+    /** The project behind the matrix — carries the builderId a shortlist needs. */
+    val project: Project? = null,
+    val pickedUnit: UnitRow? = null,
+    /** The unit already shortlisted, once one is. */
+    val shortlistedUnitId: String? = null,
 )
 
+// Messaging is deliberately absent. A conversation is between the buyer and a
+// person, not about this deal, so it lives entirely in Conversations — this page
+// links there and keeps to the deal. ThreadRepository is still here for the
+// nudge, which genuinely is about a stalled transaction.
 class DealDetailViewModel(app: Application) : CustomerViewModel(app) {
 
     private val _state = MutableStateFlow(DealDetailState())
@@ -35,17 +48,6 @@ class DealDetailViewModel(app: Application) : CustomerViewModel(app) {
 
     private var dealId: Long = 0
     private val threads = ThreadRepository()
-
-    /** Refresh the rail's unread badges. Keys come from the screen, which owns the roster. */
-    fun refreshUnread(threadKeys: List<String>) {
-        if (threadKeys.isEmpty()) return
-        viewModelScope.launch {
-            val r = threads.summaries(threadKeys.map { ThreadRef(dealId, it) })
-            if (r is ApiResult.Success) {
-                _state.update { s -> s.copy(unread = r.data.associate { it.threadKey to it.unreadCount }) }
-            }
-        }
-    }
 
     /** Nudge whoever the deal is waiting on; the cooldown reply is worth showing. */
     fun nudge() {
@@ -62,13 +64,6 @@ class DealDetailViewModel(app: Application) : CustomerViewModel(app) {
                 )
             }
         }
-    }
-
-    /** Optimistic: clear the badge now, since a failed mark costs only a stale badge. */
-    fun markThreadRead(threadKey: String) {
-        if (_state.value.unread[threadKey].let { it == null || it == 0 }) return
-        _state.update { it.copy(unread = it.unread - threadKey) }
-        viewModelScope.launch { threads.markRead(dealId, threadKey) }
     }
 
     fun load(id: Long, silent: Boolean = false) {
@@ -88,6 +83,97 @@ class DealDetailViewModel(app: Application) : CustomerViewModel(app) {
 
     fun confirm() = act { repo.confirmDeal(dealId) }
     fun acceptNegotiation() = act { repo.acceptNegotiation(dealId) }
+
+    // ─── The unit picker ─────────────────────────────────────────────────────
+    //
+    // Naming an actual flat is the move the app was missing. The buyer could
+    // shortlist a *configuration* from the project page — "2 BHK" — which told
+    // the builder what shape of home they wanted and gave them nothing to
+    // reserve. The website has always picked off the project's unit matrix, and
+    // it is the unit id that the shortlist, the pricing request and eventually
+    // the booking all travel on.
+
+    /**
+     * Open the picker, loading the project's matrix behind it.
+     *
+     * The project is fetched rather than taken off the deal because the deal
+     * payload carries a project *name* and no inventory — and because the
+     * project row is also where the builderId a shortlist needs lives.
+     */
+    fun startPickingUnit() {
+        val projectId = _state.value.deal?.projectId ?: return
+        _state.update { it.copy(picking = true, loadingUnits = true, pickedUnit = null) }
+        viewModelScope.launch {
+            when (val r = repo.getProject(projectId)) {
+                is ApiResult.Success -> _state.update {
+                    it.copy(
+                        loadingUnits = false,
+                        project = r.data,
+                        // Sold and booked units stay in the list: a buyer needs
+                        // to see the whole board, including what has gone. The
+                        // grid refuses to select them.
+                        units = unitsOf(r.data),
+                    )
+                }
+                is ApiResult.Error -> _state.update {
+                    it.copy(loadingUnits = false, picking = false, message = r.message)
+                }
+            }
+        }
+    }
+
+    fun stopPickingUnit() = _state.update { it.copy(picking = false) }
+
+    fun pickUnit(unit: UnitRow) = _state.update { it.copy(pickedUnit = unit) }
+
+    /**
+     * Shortlist the picked unit against this deal's project.
+     *
+     * `unitDetails` mirrors the shape the website sends so a shortlist made in
+     * the app renders identically in the builder's queue — same keys, same
+     * strings, no second format for the same record.
+     */
+    fun shortlistPickedUnit() {
+        val s = _state.value
+        val unit = s.pickedUnit ?: return
+        val deal = s.deal ?: return
+        val builderId = s.project?.builderId
+        if (builderId == null) {
+            _state.update { it.copy(message = "This project has no builder attached yet.") }
+            return
+        }
+        _state.update { it.copy(working = true) }
+        viewModelScope.launch {
+            val r = repo.shortlistUnit(
+                builderId = builderId,
+                projectId = deal.projectId,
+                cpId = null,
+                unitId = unit.id,
+                details = mapOf(
+                    "unitNumber" to unit.id,
+                    "tower" to unit.tower,
+                    "floor" to unit.floor?.toString(),
+                    "bhkType" to unit.bhk,
+                    "carpetArea" to unit.areaSqft?.let { "$it sqft" },
+                    "facing" to unit.facing,
+                    "status" to unit.status,
+                ),
+            )
+            _state.update {
+                it.copy(
+                    working = false,
+                    picking = r is ApiResult.Error,
+                    shortlistedUnitId = if (r is ApiResult.Success) unit.id else it.shortlistedUnitId,
+                    message = when (r) {
+                        is ApiResult.Success ->
+                            "Unit ${unit.id} shortlisted. The builder will review it and share a price."
+                        is ApiResult.Error -> r.message
+                    },
+                )
+            }
+            if (r is ApiResult.Success) load(dealId, silent = true)
+        }
+    }
 
     /**
      * Submits the signed agreement the buyer picked.
@@ -132,16 +218,6 @@ class DealDetailViewModel(app: Application) : CustomerViewModel(app) {
         viewModelScope.launch {
             val r = block()
             _state.update { it.copy(working = false, message = (r as? ApiResult.Error)?.message ?: "Done!") }
-            if (r is ApiResult.Success) load(dealId, silent = true)
-        }
-    }
-
-    fun sendMessage(text: String, recipientRole: String = "builder") {
-        if (text.isBlank()) return
-        _state.update { it.copy(sending = true) }
-        viewModelScope.launch {
-            val r = repo.sendDealMessage(dealId, recipientRole, text.trim())
-            _state.update { it.copy(sending = false, message = (r as? ApiResult.Error)?.message) }
             if (r is ApiResult.Success) load(dealId, silent = true)
         }
     }

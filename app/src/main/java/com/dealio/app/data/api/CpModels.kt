@@ -41,7 +41,6 @@ data class CpDealDetail(
     val cpTier: String? = null,
     val commissionPercent: Double? = null,
     val commissionAmount: Double? = null,
-    val messages: List<DealMessage> = emptyList(),
     val dealDocuments: List<DealDocument> = emptyList(),
     val events: List<DealEvent> = emptyList(),
 )

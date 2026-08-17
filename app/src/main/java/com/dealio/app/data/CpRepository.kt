@@ -73,13 +73,6 @@ class CpRepository(context: Context) {
     // ── Deal ──────────────────────────────────────────────────────────────────
     suspend fun getDeal(dealId: Long): ApiResult<CpDealDetail> = call { api.getDeal(cpUserId, dealId) }
     suspend fun agreeDeal(dealId: Long): ApiResult<Any> = call { api.agreeDeal(cpUserId, dealId) }
-    suspend fun sendDealMessage(
-        dealId: Long,
-        message: String,
-        recipientRole: String = "builder",
-    ): ApiResult<Any> =
-        call { api.sendDealMessage(cpUserId, dealId, CpMessageRequest(message, recipientRole)) }
-
     // ── Commissions ───────────────────────────────────────────────────────────
     suspend fun getCommissions(): ApiResult<List<CpCommission>> = call { api.getCommissions(cpUserId) }
 

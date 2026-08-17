@@ -29,11 +29,15 @@ import com.dealio.app.ui.components.CustomerHeroAccent
 import com.dealio.app.ui.components.FloatingPillNav
 import com.dealio.app.ui.components.LocalHeroAccent
 import com.dealio.app.ui.components.PillTab
+import com.dealio.app.ui.navigation.FollowPendingDeepLink
+import com.dealio.app.ui.navigation.Portal
 import com.dealio.app.ui.customer.explore.ExploreScreen
 import com.dealio.app.ui.customer.documents.DocumentsScreen
 import com.dealio.app.ui.customer.journey.DealDetailScreen
 import com.dealio.app.ui.customer.journey.JourneyScreen
 import com.dealio.app.ui.customer.conversations.CustomerConversationsScreen
+import com.dealio.app.ui.flow.ConversationScreen
+import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.customer.finance.CustomerInvestmentsScreen
 import com.dealio.app.ui.customer.finance.CustomerTopupScreen
 import com.dealio.app.ui.customer.handover.CustomerPossessionScreen
@@ -69,6 +73,10 @@ object CustomerRoutes {
     const val INVESTMENTS = "c_investments"
     const val CONTACT = "c_contact"
     const val CONVERSATIONS = "c_conversations"
+    // Deliberately not "c_conversation": BOTTOM_OWNING_ROUTES matches by prefix,
+    // and that spelling is a prefix of the inbox route above — which would have
+    // hidden the tab bar on the list as well as on the thread.
+    const val CONVERSATION = "c_thread"
     const val POSSESSION = "c_possession"
     const val SNAGGING = "c_snagging"
     const val PROPERTY = "c_property"
@@ -79,15 +87,16 @@ object CustomerRoutes {
 
     fun meetupDetail(id: Long) = "$MEETUP_DETAIL/$id"
     fun projectDetail(id: Long) = "$PROJECT_DETAIL/$id"
-    /** [thread] preselects one of the deal's party threads, as the inbox does. */
-    fun dealDetail(id: Long, thread: String? = null) =
-        "$DEAL_DETAIL/$id" + if (thread == null) "" else "?thread=$thread"
+    fun dealDetail(id: Long) = "$DEAL_DETAIL/$id"
+    /** One conversation: the only place messages are read and written. */
+    fun conversation(id: Long) = "$CONVERSATION/$id"
     fun loanApply(projectId: Long? = null, builderId: Long? = null) =
         "$LOAN_APPLY?projectId=${projectId ?: -1}&builderId=${builderId ?: -1}"
 }
 
 /** Nested routes that pin their own bar at the bottom — see [showBottomBar]. */
-private val BOTTOM_OWNING_ROUTES = listOf(CustomerRoutes.PROJECT_DETAIL)
+private val BOTTOM_OWNING_ROUTES =
+    listOf(CustomerRoutes.PROJECT_DETAIL, CustomerRoutes.CONVERSATION)
 
 private val tabs = listOf(
     PillTab(CustomerRoutes.EXPLORE, "Explore", Icons.Filled.Explore, Icons.Outlined.Explore),
@@ -113,6 +122,9 @@ fun CustomerRoot(onLogout: () -> Unit) {
     val showBottomBar = currentRoute?.let { route ->
         BOTTOM_OWNING_ROUTES.none { route.startsWith(it) }
     } ?: false
+
+    // A notification tapped in the tray lands here, on the screen it is about.
+    FollowPendingDeepLink(nav, Portal.CUSTOMER)
 
     // Every hero below this point is lit buyer-green — see LocalHeroAccent.
     CompositionLocalProvider(LocalHeroAccent provides CustomerHeroAccent) {
@@ -152,17 +164,10 @@ fun CustomerRoot(onLogout: () -> Unit) {
             ) { e -> ProjectDetailScreen(nav, e.arguments?.getLong("id") ?: 0) }
 
             composable(
-                "${CustomerRoutes.DEAL_DETAIL}/{id}?thread={thread}",
-                arguments = listOf(
-                    navArgument("id") { type = NavType.LongType },
-                    navArgument("thread") { type = NavType.StringType; nullable = true; defaultValue = null },
-                ),
+                "${CustomerRoutes.DEAL_DETAIL}/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.LongType }),
             ) { e ->
-                DealDetailScreen(
-                    nav,
-                    e.arguments?.getLong("id") ?: 0,
-                    initialThread = e.arguments?.getString("thread"),
-                )
+                DealDetailScreen(nav, e.arguments?.getLong("id") ?: 0)
             }
 
             composable(
@@ -184,6 +189,12 @@ fun CustomerRoot(onLogout: () -> Unit) {
             composable(CustomerRoutes.INVESTMENTS) { CustomerInvestmentsScreen(nav) }
             composable(CustomerRoutes.CONTACT) { CustomerContactScreen(nav) }
             composable(CustomerRoutes.CONVERSATIONS) { CustomerConversationsScreen(nav) }
+            composable(
+                "${CustomerRoutes.CONVERSATION}/{id}",
+                arguments = listOf(navArgument("id") { type = NavType.LongType }),
+            ) { e ->
+                ConversationScreen(nav, DealRole.CUSTOMER, e.arguments?.getLong("id") ?: 0)
+            }
             composable(CustomerRoutes.POSSESSION) { CustomerPossessionScreen(nav) }
             composable(CustomerRoutes.SNAGGING) { CustomerSnaggingScreen(nav) }
             composable(CustomerRoutes.PROPERTY) { PropertyScreen(nav) }

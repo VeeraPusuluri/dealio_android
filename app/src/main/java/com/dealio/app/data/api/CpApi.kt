@@ -133,9 +133,6 @@ interface CpApi {
     @PATCH("cp/{cpUserId}/deals/{dealId}/agree")
     suspend fun agreeDeal(@Path("cpUserId") cpUserId: Long, @Path("dealId") dealId: Long): Response<ApiEnvelope<Any>>
 
-    @POST("cp/{cpUserId}/deals/{dealId}/messages")
-    suspend fun sendDealMessage(@Path("cpUserId") cpUserId: Long, @Path("dealId") dealId: Long, @Body body: CpMessageRequest): Response<ApiEnvelope<Any>>
-
     // ── Commissions ───────────────────────────────────────────────────────────
     @GET("cp/{cpUserId}/commissions")
     suspend fun getCommissions(@Path("cpUserId") cpUserId: Long): Response<ApiEnvelope<List<CpCommission>>>

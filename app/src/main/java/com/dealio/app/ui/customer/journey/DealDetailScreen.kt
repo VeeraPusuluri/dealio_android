@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
@@ -22,7 +23,9 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -36,6 +39,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -58,6 +63,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.dealio.app.data.api.CustomerDeal
+import com.dealio.app.data.api.UnitRow
 import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.InfoRow
 import com.dealio.app.ui.builder.LoadingState
@@ -68,10 +74,9 @@ import com.dealio.app.ui.flow.DealRole
 import com.dealio.app.ui.flow.DealSpine
 import com.dealio.app.ui.flow.StageActionCard
 import com.dealio.app.ui.flow.StageTarget
+import com.dealio.app.ui.flow.PickedUnitRow
+import com.dealio.app.ui.flow.UnitMatrixGrid
 import com.dealio.app.ui.flow.batonOf
-import com.dealio.app.ui.flow.ThreadTarget
-import com.dealio.app.ui.flow.rosterFor
-import com.dealio.app.ui.flow.threadKeyFor
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.formatINR
 import com.dealio.app.ui.builder.resolveUrl
@@ -86,8 +91,6 @@ import com.dealio.app.ui.theme.TextSecondary
 fun DealDetailScreen(
     nav: NavController,
     dealId: Long,
-    /** Which party's thread to open on, when arrived at from the inbox. */
-    initialThread: String? = null,
     vm: DealDetailViewModel = viewModel(),
 ) {
     LaunchedEffect(dealId) { vm.load(dealId) }
@@ -98,21 +101,6 @@ fun DealDetailScreen(
     LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
 
     val d = state.deal
-    // The buyer's two counterparties, plus the group. Pre-booking with an advisor
-    // attached the private builder pair is withheld and the group stands in for
-    // it — the same rule the backend applies, so the rail never offers a thread
-    // the server would refuse.
-    val roster = rosterFor(
-        viewer = DealRole.CUSTOMER,
-        hasCp = d?.cpName != null,
-        rawStatus = d?.dealStatus,
-        builderName = d?.builderName,
-        cpName = d?.cpName,
-    )
-    var target by remember(dealId) { mutableStateOf<ThreadTarget?>(null) }
-    val selected = target
-        ?: roster.firstOrNull { it.recipientRole == initialThread }
-        ?: roster.firstOrNull()
 
     val pickAgreement = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { vm.uploadSignedAgreement(it) }
@@ -123,17 +111,6 @@ fun DealDetailScreen(
     val ownsConfirm = d != null &&
         batonOf(d.dealStatus, d.cpAgreed, d.customerConfirmed).heldBy(DealRole.CUSTOMER) &&
         showConfirmFor(d)
-
-    val threadKeys = roster.map { threadKeyFor(DealRole.CUSTOMER, it) }
-    // One number on one button, the way the CP page does it — the page keeps the
-    // counts but hands the actual talking off to the thread screen.
-    val unread = threadKeys.sumOf { state.unread[it] ?: 0 }
-    LaunchedEffect(d?.dealId, d?.messages?.size) {
-        if (d != null) vm.refreshUnread(threadKeys)
-    }
-    LaunchedEffect(selected?.recipientRole, d?.dealId) {
-        if (d != null && selected != null) vm.markThreadRead(threadKeyFor(DealRole.CUSTOMER, selected))
-    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -187,6 +164,10 @@ fun DealDetailScreen(
                         when (target) {
                             StageTarget.CUSTOMER_VISITS -> nav.navigate(CustomerRoutes.VISITS)
                             StageTarget.CUSTOMER_PROJECT -> nav.navigate(CustomerRoutes.projectDetail(d.projectId))
+                            // Served in place rather than by navigating: the buyer
+                            // is choosing a flat *on this deal*, and the project
+                            // page has no idea which deal sent them.
+                            StageTarget.PICK_UNIT -> vm.startPickingUnit()
                             StageTarget.CUSTOMER_LOAN -> nav.navigate(CustomerRoutes.loanApply(d.projectId))
                             // Any document type: buyers send back a scan, a photo
                             // of the signed pages, or the PDF they were sent.
@@ -256,11 +237,10 @@ fun DealDetailScreen(
                 }
 
                 // Messaging is one tap away rather than embedded: this opens
-                // the deal's threads in Conversations, where the party is chosen
-                // and the conversation is actually held. The buyer's page used to
-                // carry the whole thread plus a composer pinned to the bottom,
-                // which is why this screen — alone among the three — could not
-                // show anything else down there.
+                // Conversations, where the person is chosen and the conversation
+                // is actually held. It carries no unread count any more, because
+                // a conversation is no longer *this deal's* — the advisor here is
+                // the same advisor on every other one, with one shared thread.
                 item {
                     OutlinedButton(
                         onClick = { nav.navigate(CustomerRoutes.CONVERSATIONS) },
@@ -269,13 +249,106 @@ fun DealDetailScreen(
                     ) {
                         Icon(Icons.Outlined.ChatBubbleOutline, null, tint = Teal, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(
-                            if (unread > 0) "Message · $unread new" else "Message",
-                            color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                        )
+                        Text("Message", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
+        }
+    }
+
+    if (state.picking) {
+        val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = vm::stopPickingUnit,
+            sheetState = sheet,
+            containerColor = androidx.compose.ui.graphics.Color.White,
+        ) {
+            UnitPickerSheet(
+                projectName = d?.projectName ?: "this project",
+                units = state.units,
+                loading = state.loadingUnits,
+                working = state.working,
+                picked = state.pickedUnit,
+                onPick = vm::pickUnit,
+                onConfirm = vm::shortlistPickedUnit,
+            )
+        }
+    }
+}
+
+/**
+ * The buyer's unit picker — the whole board, with only what's free selectable.
+ *
+ * Sold and booked units are shown rather than filtered out. A grid with the
+ * taken flats missing looks like a smaller building, and a buyer who was told
+ * on site that "the seventh floor has gone" needs to see that reflected here or
+ * they will not trust the rest of it.
+ */
+@Composable
+private fun UnitPickerSheet(
+    projectName: String,
+    units: List<UnitRow>,
+    loading: Boolean,
+    working: Boolean,
+    picked: UnitRow?,
+    onPick: (UnitRow) -> Unit,
+    onConfirm: () -> Unit,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 24.dp),
+    ) {
+        Text("Pick your unit", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(2.dp))
+        Text(projectName, color = TextSecondary, fontSize = 12.sp)
+        Spacer(Modifier.height(14.dp))
+
+        // The grid scrolls inside a bounded box rather than the sheet scrolling
+        // as a whole. A real tower is 50-odd floors, so with one scroll region
+        // the buyer had to travel the entire building *past* the unit they had
+        // just tapped to reach the button that shortlists it.
+        when {
+            loading -> Box(Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(Modifier.size(24.dp), color = Teal, strokeWidth = 2.dp)
+            }
+            else -> Box(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 380.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                UnitMatrixGrid(
+                    units = units,
+                    selectable = true,
+                    selected = picked?.id,
+                    onSelect = onPick,
+                )
+            }
+        }
+
+        if (picked != null) {
+            Spacer(Modifier.height(14.dp))
+            PickedUnitRow(picked)
+        }
+        Spacer(Modifier.height(14.dp))
+        Button(
+            onClick = onConfirm,
+            enabled = picked != null && !working,
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Teal),
+        ) {
+            Text(
+                when {
+                    working -> "Shortlisting…"
+                    picked != null -> "Shortlist unit ${picked.id}"
+                    else -> "Select a unit"
+                },
+                color = androidx.compose.ui.graphics.Color.White,
+                fontSize = 14.sp, fontWeight = FontWeight.Bold,
+            )
         }
     }
 }

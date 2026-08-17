@@ -148,6 +148,17 @@ enum class DealRole { BUILDER, CP, CUSTOMER;
     val label: String get() = when (this) {
         BUILDER -> "Builder"; CP -> "your advisor"; CUSTOMER -> "Customer"
     }
+
+    /**
+     * What the backend calls this role — on a message's `senderRole`, and in the
+     * hyphenated conversation kinds ("builder-cp", "cp-customer").
+     *
+     * Distinct from [label], which is prose and changes with the register the
+     * reader is in. Comparing against the label is what this exists to prevent.
+     */
+    val wireName: String get() = when (this) {
+        BUILDER -> "builder"; CP -> "cp"; CUSTOMER -> "customer"
+    }
 }
 
 /**

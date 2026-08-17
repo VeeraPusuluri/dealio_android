@@ -184,22 +184,9 @@ private fun DealCard(d: CustomerDeal, onClick: () -> Unit) {
                 )
             }
         }
-        if (d.messages.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.AutoMirrored.Outlined.Chat,
-                    null,
-                    tint = TextSecondary,
-                    modifier = Modifier.size(14.dp),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    "${d.messages.size} message${if (d.messages.size != 1) "s" else ""} · tap to open",
-                    color = TextSecondary,
-                    fontSize = 12.sp,
-                )
-            }
-        }
+        // A message count used to sit here. It cannot any more: a conversation
+        // belongs to the people, not the deal, so the same number would appear
+        // on every card sharing a builder — and it would keep counting messages
+        // about a different project. Messages live in Conversations.
     }
 }
