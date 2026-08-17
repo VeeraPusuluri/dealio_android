@@ -64,6 +64,7 @@ fun DealioNavHost() {
         if (!sessionEnded) return@LaunchedEffect
         tokenStore.clear()
         BuilderStore(context).clear()
+        DeepLink.clear()
         // Nothing left to guard, and the lock has no sign-in behind it.
         locked = false
         signInNotice = "Your session ended. Please sign in again."
@@ -143,6 +144,9 @@ fun DealioNavHost() {
             val logout: () -> Unit = {
                 tokenStore.clear()
                 BuilderStore(context).clear()
+                // An untaken notification link belongs to the session that just
+                // ended — it must not open on whoever signs in next.
+                DeepLink.clear()
                 navController.navigate(Routes.LOGIN) {
                     popUpTo(0) { inclusive = true }
                 }
@@ -173,6 +177,7 @@ fun DealioNavHost() {
                 onSignOut = {
                     tokenStore.clear()
                     BuilderStore(context).clear()
+                    DeepLink.clear()
                     appLockStore.enabled = false
                     locked = false
                     navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }

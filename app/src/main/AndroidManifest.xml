@@ -35,9 +35,16 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Dealio">
 
+        <!--
+          singleTop so a notification tapped while the app is already open is
+          delivered to the running activity (onNewIntent) instead of stacking a
+          second copy of the whole app on top of the first, which would lose the
+          navigation state the user was in the middle of.
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.Dealio">
             <intent-filter>

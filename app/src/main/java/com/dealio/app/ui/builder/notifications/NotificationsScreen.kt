@@ -38,6 +38,8 @@ import com.dealio.app.ui.builder.ErrorState
 import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.builder.formatDate
+import com.dealio.app.ui.navigation.Portal
+import com.dealio.app.ui.navigation.openNotificationLink
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
@@ -103,7 +105,12 @@ fun NotificationsScreen(nav: NavController, vm: NotificationsViewModel = viewMod
             else -> LazyColumn(Modifier.fillMaxSize().padding(pad), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(state.items.size) { i ->
                     val n = state.items[i]
-                    DealioCard(onClick = { vm.markRead(n.id) }) {
+                    // Reading an alert and going to what it is about are one act:
+                    // the same link the tray entry carries takes you there.
+                    DealioCard(onClick = {
+                        vm.markRead(n.id)
+                        nav.openNotificationLink(Portal.BUILDER, n.link)
+                    }) {
                         Row {
                             if (!n.read) {
                                 Box(Modifier.size(8.dp).padding(top = 5.dp).background(Teal, RoundedCornerShape(4.dp)))

@@ -1,6 +1,7 @@
 package com.dealio.app
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.dealio.app.data.api.ApiClient
 import com.dealio.app.ui.navigation.DealioNavHost
+import com.dealio.app.ui.navigation.DeepLink
 import com.dealio.app.ui.theme.DealioTheme
 
 class MainActivity : FragmentActivity() {
@@ -41,6 +43,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         ApiClient.init(applicationContext)
         requestNotificationPermission()
+        takeDeepLink(intent)
         setContent {
             DealioTheme {
                 Surface(
@@ -51,6 +54,30 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * A notification tapped while the app is already running arrives here rather
+     * than through onCreate — the activity is singleTop, so it is reused.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        takeDeepLink(intent)
+    }
+
+    /**
+     * Hands a notification's link to [DeepLink], which holds it until a portal
+     * is on screen to follow it.
+     *
+     * The extra is removed as it is read so that recreating the activity — a
+     * rotation, a theme change — cannot re-deliver the same tap and yank the
+     * user back off wherever they have since navigated.
+     */
+    private fun takeDeepLink(intent: Intent?) {
+        val link = intent?.getStringExtra(DeepLink.EXTRA_LINK) ?: return
+        intent.removeExtra(DeepLink.EXTRA_LINK)
+        DeepLink.offer(link)
     }
 
     /** Android 13+ requires runtime consent to post notifications. */
