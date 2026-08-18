@@ -24,7 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dealio.app.ui.theme.CardBorder
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.components.LocalSurfaceAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 
@@ -83,7 +83,7 @@ fun MoveQueue(
             if (moves.isNotEmpty()) {
                 Spacer(Modifier.width(8.dp))
                 Box(
-                    Modifier.background(Teal, RoundedCornerShape(11.dp))
+                    Modifier.background(LocalSurfaceAccent.current, RoundedCornerShape(11.dp))
                         .padding(horizontal = 8.dp, vertical = 2.dp),
                 ) {
                     Text("${moves.size}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
@@ -131,7 +131,7 @@ fun MoveQueue(
                     Text(
                         // The action, not the stage — the queue is a to-do list.
                         baton.action,
-                        color = if (stalled) StalledAmber else Teal,
+                        color = if (stalled) StalledAmber else LocalSurfaceAccent.current,
                         fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
                     )
                     Text(item.subtitle, color = TextSecondary, fontSize = 10.5.sp, maxLines = 1)

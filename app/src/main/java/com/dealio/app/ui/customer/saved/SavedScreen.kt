@@ -49,6 +49,7 @@ import com.dealio.app.ui.components.PortalEmptyState
 import com.dealio.app.ui.components.PortalHeader
 import com.dealio.app.ui.customer.CustomerProjectCard
 import com.dealio.app.ui.customer.CustomerRoutes
+import com.dealio.app.ui.theme.CustomerSurface
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
@@ -61,7 +62,7 @@ fun SavedScreen(nav: NavController, vm: SavedViewModel = viewModel()) {
     LaunchedEffect(state.message) { state.message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = CustomerSurface,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             PortalHeader(

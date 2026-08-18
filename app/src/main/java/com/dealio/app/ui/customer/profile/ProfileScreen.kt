@@ -85,9 +85,10 @@ import com.dealio.app.ui.components.rememberProfileAvatarState
 import com.dealio.app.ui.components.dealioFieldColors
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.customer.CustomerViewModel
+import com.dealio.app.ui.theme.CustomerSurface
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.ErrorRed
-import com.dealio.app.ui.theme.NavyTealGradient
+import com.dealio.app.ui.theme.PortalHeroGradient
 import com.dealio.app.ui.theme.CustomerAccentBright
 import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
@@ -161,7 +162,7 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
     LaunchedEffect(avatar.message) { avatar.consumeMessage()?.let { snackbar.showSnackbar(it) } }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = CustomerSurface,
         snackbarHost = { SnackbarHost(snackbar) },
     ) { inner ->
         Column(
@@ -172,7 +173,7 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
-                    .background(NavyTealGradient),
+                    .background(PortalHeroGradient),
             ) {
                 Box(
                     Modifier

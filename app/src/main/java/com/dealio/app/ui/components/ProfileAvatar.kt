@@ -46,7 +46,6 @@ import com.dealio.app.data.api.ApiClient
 import com.dealio.app.ui.builder.initialsOf
 import com.dealio.app.ui.builder.resolveUrl
 import com.dealio.app.ui.theme.Teal
-import com.dealio.app.ui.theme.TealBright
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -156,6 +155,10 @@ fun ProfileAvatar(
     ringColor: Color = Color.White.copy(alpha = 0.35f),
     badgeColor: Color = Teal,
 ) {
+    // The initials plate is the largest single block of colour on the profile
+    // hero, so leaving it teal put the brand accent on a portal that had moved
+    // off it. It sits on navy, hence the hero accent and not the surface one.
+    val plate = LocalHeroAccent.current
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let(state::upload)
     }
@@ -169,7 +172,7 @@ fun ProfileAvatar(
                 .border(2.dp, ringColor, CircleShape)
                 .padding(4.dp)
                 .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(TealBright, Teal)))
+                .background(Brush.linearGradient(listOf(plate, plate.copy(alpha = 0.72f))))
                 .clickable(enabled = !state.uploading) {
                     if (photo != null) viewing = true else pick.launch("image/*")
                 },

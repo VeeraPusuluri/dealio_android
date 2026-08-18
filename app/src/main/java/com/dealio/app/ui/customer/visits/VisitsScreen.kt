@@ -69,6 +69,7 @@ import com.dealio.app.ui.components.calDate
 import com.dealio.app.ui.components.meetingStatusColor
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.dealio.app.ui.theme.CustomerSurface
 import com.dealio.app.ui.theme.Orange
 import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
@@ -96,7 +97,7 @@ fun VisitsScreen(nav: NavController, vm: VisitsViewModel = viewModel()) {
     }
 
     Scaffold(
-        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background,
+        containerColor = CustomerSurface,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             val completed = state.meetings.count { it.status.equals("Completed", true) }

@@ -80,6 +80,7 @@ import com.dealio.app.ui.flow.batonOf
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.formatINR
 import com.dealio.app.ui.builder.resolveUrl
+import com.dealio.app.ui.theme.CustomerSurface
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.CustomerAccent
@@ -113,7 +114,7 @@ fun DealDetailScreen(
         showConfirmFor(d)
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = CustomerSurface,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
