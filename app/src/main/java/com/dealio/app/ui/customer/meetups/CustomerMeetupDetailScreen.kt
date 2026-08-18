@@ -94,7 +94,7 @@ import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.ErrorRed
 import com.dealio.app.ui.theme.Mist
 import com.dealio.app.ui.theme.Orange
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -273,7 +273,7 @@ private fun MeetupBody(
                     when {
                         m.isCancelled -> HeroBadge("Cancelled", ErrorRed)
                         m.isGoing -> HeroBadge("You're going", IconGreen)
-                        m.awaitingReply -> HeroBadge("You're invited", Teal)
+                        m.awaitingReply -> HeroBadge("You're invited", CustomerAccent)
                     }
                 }
             }
@@ -313,7 +313,7 @@ private fun MeetupBody(
                 Divider()
                 FactRow(
                     icon = Icons.Outlined.LocationOn,
-                    tint = Teal,
+                    tint = CustomerAccent,
                     title = m.city?.takeIf { it.isNotBlank() } ?: "Venue",
                     body = m.location,
                     bodyLines = 4,
@@ -331,7 +331,7 @@ private fun MeetupBody(
                 if (!m.onlineLink.isNullOrBlank()) {
                     FactRow(
                         icon = Icons.Outlined.Videocam,
-                        tint = Teal,
+                        tint = CustomerAccent,
                         title = "Join online",
                         body = m.onlineLink!!,
                         bodyLines = 2,
@@ -496,7 +496,7 @@ private fun FactRow(
             Spacer(Modifier.height(3.dp))
             Text(
                 body,
-                color = if (onBodyClick != null) Teal else TextSecondary,
+                color = if (onBodyClick != null) CustomerAccent else TextSecondary,
                 fontSize = 13.sp, lineHeight = 19.sp,
                 maxLines = bodyLines, overflow = TextOverflow.Ellipsis,
             )
@@ -505,9 +505,9 @@ private fun FactRow(
         if (action != null) {
             Spacer(Modifier.width(10.dp))
             Icon(
-                action, actionLabel, tint = Teal,
+                action, actionLabel, tint = CustomerAccent,
                 modifier = Modifier.size(36.dp).clip(RoundedCornerShape(11.dp))
-                    .background(Teal.copy(alpha = 0.10f))
+                    .background(CustomerAccent.copy(alpha = 0.10f))
                     .clickable { onAction() }
                     .padding(9.dp),
             )
@@ -547,7 +547,7 @@ private fun ExpandableText(text: String) {
     if (clipped) {
         Text(
             if (expanded) "Show less" else "Read more",
-            color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+            color = CustomerAccent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(top = 8.dp).clickable { expanded = !expanded },
         )
     }
@@ -580,7 +580,7 @@ private fun HostCard(m: CustomerMeetup, ctx: Context) {
                     contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                Text(initialsOf(m.hostName), color = Teal, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(initialsOf(m.hostName), color = CustomerAccent, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
         Spacer(Modifier.width(12.dp))
@@ -598,9 +598,9 @@ private fun HostCard(m: CustomerMeetup, ctx: Context) {
         }
         if (!m.hostPhone.isNullOrBlank()) {
             Icon(
-                Icons.Outlined.Phone, "Call ${m.hostName}", tint = Teal,
+                Icons.Outlined.Phone, "Call ${m.hostName}", tint = CustomerAccent,
                 modifier = Modifier.size(38.dp).clip(CircleShape)
-                    .background(Teal.copy(alpha = 0.12f))
+                    .background(CustomerAccent.copy(alpha = 0.12f))
                     .clickable {
                         runCatching {
                             ctx.startActivity(Intent(Intent.ACTION_DIAL, "tel:${m.hostPhone}".toUri()))
@@ -630,7 +630,7 @@ private fun GoingCard(m: CustomerMeetup) {
             .padding(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.People, null, tint = Teal, modifier = Modifier.size(18.dp))
+            Icon(Icons.Outlined.People, null, tint = CustomerAccent, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(9.dp))
             Text(
                 if (m.goingCount == 0) "Nobody has said yes yet" else "${m.goingCount} going",
@@ -844,11 +844,11 @@ private fun Stepper(value: Int, enabled: Boolean, onChange: (Int) -> Unit) {
 private fun StepButton(glyph: String, enabled: Boolean, onClick: () -> Unit) {
     Text(
         glyph,
-        color = if (enabled) Teal else TextSecondary.copy(alpha = 0.4f),
+        color = if (enabled) CustomerAccent else TextSecondary.copy(alpha = 0.4f),
         fontSize = 17.sp, fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center,
         modifier = Modifier.size(32.dp).clip(CircleShape)
-            .background(Teal.copy(alpha = if (enabled) 0.10f else 0.04f))
+            .background(CustomerAccent.copy(alpha = if (enabled) 0.10f else 0.04f))
             .clickable(enabled = enabled) { onClick() }
             .padding(top = 5.dp),
     )

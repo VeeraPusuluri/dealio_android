@@ -59,7 +59,7 @@ import com.dealio.app.ui.meetups.MeetupMode
 import com.dealio.app.ui.meetups.meetupWhen
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.ErrorRed
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import com.dealio.app.ui.theme.subtleShadow
@@ -136,7 +136,7 @@ private fun CategoryFilter(selected: MeetupCategory?, onPick: (MeetupCategory?) 
             .padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        FilterPill("All", selected == null, Teal) { onPick(null) }
+        FilterPill("All", selected == null, CustomerAccent) { onPick(null) }
         MeetupCategory.entries.forEach { c ->
             FilterPill(c.label, selected == c, c.tint) { onPick(if (selected == c) null else c) }
         }
@@ -191,7 +191,7 @@ fun CustomerMeetupCard(m: CustomerMeetup, onOpen: () -> Unit) {
                 when {
                     m.isCancelled -> Badge("Cancelled", ErrorRed, onImage = true)
                     m.isGoing -> Badge("You're going", com.dealio.app.ui.components.IconGreen, onImage = true)
-                    m.awaitingReply -> Badge("Invited", Teal, onImage = true)
+                    m.awaitingReply -> Badge("Invited", CustomerAccent, onImage = true)
                 }
             }
         }

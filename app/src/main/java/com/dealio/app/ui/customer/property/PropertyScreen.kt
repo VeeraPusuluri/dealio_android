@@ -48,7 +48,7 @@ import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.titleCase
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.customer.CustomerViewModel
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -124,8 +124,8 @@ fun PropertyScreen(nav: NavController, vm: PropertyViewModel = viewModel()) {
                         val s = state.shortlists[i]
                         DealioCard(Modifier.clickable { nav.navigate(CustomerRoutes.projectDetail(s.projectId)) }) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(38.dp).background(Teal.copy(alpha = 0.12f), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Outlined.Bookmark, null, tint = Teal, modifier = Modifier.size(18.dp))
+                                Box(Modifier.size(38.dp).background(CustomerAccent.copy(alpha = 0.12f), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Outlined.Bookmark, null, tint = CustomerAccent, modifier = Modifier.size(18.dp))
                                 }
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
@@ -146,13 +146,13 @@ fun PropertyScreen(nav: NavController, vm: PropertyViewModel = viewModel()) {
 private fun DealRow(d: CustomerDeal, onClick: () -> Unit) {
     DealioCard(Modifier.clickable { onClick() }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(38.dp).background(Teal.copy(alpha = 0.12f), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.Home, null, tint = Teal, modifier = Modifier.size(18.dp))
+            Box(Modifier.size(38.dp).background(CustomerAccent.copy(alpha = 0.12f), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.Home, null, tint = CustomerAccent, modifier = Modifier.size(18.dp))
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(d.projectName, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                if ((d.dealValue ?: 0.0) > 0) Text(formatINRShort(d.dealValue), color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                if ((d.dealValue ?: 0.0) > 0) Text(formatINRShort(d.dealValue), color = CustomerAccent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
             // The buyer's phase, not the raw sales stage — the same translation
             // the journey list and the deal page make. This row was showing

@@ -41,7 +41,7 @@ import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.builder.formatINR
 import com.dealio.app.ui.components.dealioFieldColors
 import com.dealio.app.ui.theme.CardBorder
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 
@@ -79,7 +79,7 @@ fun LoanApplyScreen(nav: NavController, projectId: Long?, builderId: Long?, vm: 
                 colors = dealioFieldColors(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
-            if (loanAmount.isNotBlank()) Text(formatINR(loanAmount.toDoubleOrNull() ?: 0.0), color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+            if (loanAmount.isNotBlank()) Text(formatINR(loanAmount.toDoubleOrNull() ?: 0.0), color = CustomerAccent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
             Spacer(Modifier.height(18.dp))
 
             SectionLabel("Property value")
@@ -120,7 +120,7 @@ fun LoanApplyScreen(nav: NavController, projectId: Long?, builderId: Long?, vm: 
                 enabled = (loanAmount.toDoubleOrNull() ?: 0.0) > 0 && !state.submitting,
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Teal),
+                colors = ButtonDefaults.buttonColors(containerColor = CustomerAccent),
             ) {
                 if (state.submitting) CircularProgressIndicator(Modifier.height(22.dp), color = Color.White, strokeWidth = 2.5.dp)
                 else Text("Submit application", color = Color.White, fontWeight = FontWeight.Bold)
@@ -141,8 +141,8 @@ private fun Pill(label: String, selected: Boolean, onClick: () -> Unit) {
         fontSize = 13.sp,
         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
         modifier = Modifier
-            .background(if (selected) Teal else Color.White, RoundedCornerShape(10.dp))
-            .border(1.dp, if (selected) Teal else CardBorder, RoundedCornerShape(10.dp))
+            .background(if (selected) CustomerAccent else Color.White, RoundedCornerShape(10.dp))
+            .border(1.dp, if (selected) CustomerAccent else CardBorder, RoundedCornerShape(10.dp))
             .clickable { onClick() }
             .padding(horizontal = 14.dp, vertical = 9.dp),
     )

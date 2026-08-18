@@ -49,7 +49,7 @@ import com.dealio.app.ui.builder.formatINR
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.theme.NavyTealGradient
 import com.dealio.app.ui.theme.Orange
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import kotlin.math.pow
@@ -130,7 +130,7 @@ fun EmiCalculatorScreen(nav: NavController) {
             // ── Total payable / interest ──
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    MetricCard("Total Payable", formatINRShort(totalPayable), Icons.Outlined.AccountBalance, Teal, Modifier.weight(1f))
+                    MetricCard("Total Payable", formatINRShort(totalPayable), Icons.Outlined.AccountBalance, CustomerAccent, Modifier.weight(1f))
                     MetricCard("Total Interest", formatINRShort(totalInterest), Icons.Outlined.TrendingDown, Orange, Modifier.weight(1f))
                 }
             }
@@ -154,7 +154,7 @@ fun EmiCalculatorScreen(nav: NavController) {
                         }
                         Spacer(Modifier.width(20.dp))
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            LegendRow(Teal, "Principal", "${principalPct.toInt()}%")
+                            LegendRow(CustomerAccent, "Principal", "${principalPct.toInt()}%")
                             LegendRow(Orange, "Interest", "${interestPct.toInt()}%")
                         }
                     }
@@ -186,7 +186,7 @@ fun EmiCalculatorScreen(nav: NavController) {
                         Spacer(Modifier.height(10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Spacer(Modifier.weight(1f))
-                            LegendDot(Teal, "Principal")
+                            LegendDot(CustomerAccent, "Principal")
                             LegendDot(Orange, "Interest")
                             Spacer(Modifier.weight(1f))
                         }
@@ -209,7 +209,7 @@ fun EmiCalculatorScreen(nav: NavController) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text("${row.month}", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(0.6f))
-                        Text(formatINRShort(row.principal), color = Teal, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1.3f))
+                        Text(formatINRShort(row.principal), color = CustomerAccent, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1.3f))
                         Text(formatINRShort(row.interest), color = Orange, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1.3f))
                         Text(formatINRShort(row.outstanding), color = TextPrimary, fontSize = 12.sp, modifier = Modifier.weight(1.4f))
                     }
@@ -219,10 +219,10 @@ fun EmiCalculatorScreen(nav: NavController) {
             // ── Info strip ──
             item {
                 Column(
-                    Modifier.fillMaxWidth().background(Teal.copy(alpha = 0.06f), RoundedCornerShape(14.dp)).padding(14.dp),
+                    Modifier.fillMaxWidth().background(CustomerAccent.copy(alpha = 0.06f), RoundedCornerShape(14.dp)).padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    InfoLine(Icons.Outlined.CalendarMonth, Teal, "Loan closes in ${tenure.toInt()} years ($months EMIs)")
+                    InfoLine(Icons.Outlined.CalendarMonth, CustomerAccent, "Loan closes in ${tenure.toInt()} years ($months EMIs)")
                     InfoLine(Icons.Outlined.Info, Orange, "Interest is ${interestPct.toInt()}% of your total outflow")
                 }
             }
@@ -256,7 +256,7 @@ private fun SliderRow(label: String, value: String, current: Float, range: Close
         val steps = (((range.endInclusive - range.start) / step).toInt() - 1).coerceAtLeast(0)
         Slider(
             value = current, onValueChange = onChange, valueRange = range, steps = steps,
-            colors = SliderDefaults.colors(thumbColor = Teal, activeTrackColor = Teal, inactiveTrackColor = Teal.copy(alpha = 0.18f)),
+            colors = SliderDefaults.colors(thumbColor = CustomerAccent, activeTrackColor = CustomerAccent, inactiveTrackColor = CustomerAccent.copy(alpha = 0.18f)),
         )
     }
 }
@@ -270,7 +270,7 @@ private fun CompositionDonut(principalPct: Float) {
         val topLeft = Offset(inset, inset)
         val sweepP = principalPct / 100f * 360f
         drawArc(Orange, startAngle = -90f, sweepAngle = 360f, useCenter = false, style = stroke, topLeft = topLeft, size = arcSize)
-        drawArc(Teal, startAngle = -90f, sweepAngle = sweepP, useCenter = false, style = stroke, topLeft = topLeft, size = arcSize)
+        drawArc(CustomerAccent, startAngle = -90f, sweepAngle = sweepP, useCenter = false, style = stroke, topLeft = topLeft, size = arcSize)
     }
 }
 
@@ -286,7 +286,7 @@ private fun YearlyBars(data: List<YearBreak>) {
             val totalH = ((d.principal + d.interest) / maxVal * size.height).toFloat()
             val pH = (d.principal / maxVal * size.height).toFloat()
             drawRect(Orange, topLeft = Offset(x, size.height - totalH), size = Size(barW, (totalH - pH).coerceAtLeast(0f)))
-            drawRect(Teal, topLeft = Offset(x, size.height - pH), size = Size(barW, pH))
+            drawRect(CustomerAccent, topLeft = Offset(x, size.height - pH), size = Size(barW, pH))
         }
     }
 }

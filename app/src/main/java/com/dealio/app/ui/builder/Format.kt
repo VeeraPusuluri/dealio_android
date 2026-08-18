@@ -149,6 +149,35 @@ fun titleCase(s: String?): String =
     (s ?: "").lowercase().split("_", " ").filter { it.isNotBlank() }
         .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
 
+/**
+ * Per-sq.ft rate, low to high, and only a range when there really are two.
+ *
+ * The two fields are entered by hand and arrive unordered — one live project has
+ * from = 1000 and to = 300 — and `to` is often left empty, which formatted as
+ * "₹0" and printed a range running down to nothing.
+ */
+fun pricePerSqftRange(from: Double?, to: Double?): String? {
+    val values = listOfNotNull(from, to).filter { it > 0.0 }.sorted()
+    return when (values.size) {
+        0 -> null
+        1 -> formatINRShort(values[0])
+        else -> if (values[0] == values[1]) formatINRShort(values[0])
+                else "${formatINRShort(values[0])} – ${formatINRShort(values[1])}"
+    }
+}
+
+/**
+ * Commission as the structure describes it — a percentage only when it is one.
+ * `commissionStructure` is FLAT on live projects whose value was still being
+ * rendered with a "%" after it.
+ */
+fun commissionLabel(structure: String?, value: Double?): String? {
+    val v = value ?: return null
+    if (v <= 0.0) return null
+    val flat = structure?.trim()?.uppercase()?.let { it == "FLAT" || it == "FIXED" || it == "AMOUNT" } == true
+    return if (flat) formatINRShort(v) else "${trim(v)}%"
+}
+
 /** True when [haystack] already names [needle] as a whole word. */
 private fun mentions(haystack: String, needle: String): Boolean {
     if (needle.isBlank()) return true

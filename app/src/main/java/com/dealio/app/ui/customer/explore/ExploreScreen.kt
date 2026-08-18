@@ -65,7 +65,7 @@ import com.dealio.app.ui.components.PortalHeaderSurface
 import com.dealio.app.ui.customer.FeaturedCard
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.ErrorRed
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 
@@ -175,8 +175,8 @@ private fun FiltersButton(activeCount: Int, onClick: () -> Unit) {
     val active = activeCount > 0
     Row(
         Modifier
-            .background(if (active) Teal else Color.White, RoundedCornerShape(10.dp))
-            .border(1.dp, if (active) Teal else CardBorder, RoundedCornerShape(10.dp))
+            .background(if (active) CustomerAccent else Color.White, RoundedCornerShape(10.dp))
+            .border(1.dp, if (active) CustomerAccent else CardBorder, RoundedCornerShape(10.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -239,7 +239,7 @@ private fun FilterSheet(state: ExploreState, vm: ExploreViewModel, onDismiss: ()
             Spacer(Modifier.height(20.dp))
             Row(
                 Modifier.fillMaxWidth().height(48.dp)
-                    .background(Teal, RoundedCornerShape(12.dp))
+                    .background(CustomerAccent, RoundedCornerShape(12.dp))
                     .clickable(onClick = onDismiss),
                 horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -309,7 +309,7 @@ private fun ExploreHero(state: ExploreState, vm: ExploreViewModel, nav: NavContr
                 unfocusedLeadingIconColor = TextSecondary,
                 focusedPlaceholderColor = TextSecondary,
                 unfocusedPlaceholderColor = TextSecondary,
-                cursorColor = Teal,
+                cursorColor = CustomerAccent,
             ),
         )
     }
@@ -337,8 +337,8 @@ private fun CityChip(label: String, selected: Boolean, onClick: () -> Unit) {
         fontSize = 12.sp,
         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
         modifier = Modifier
-            .background(if (selected) Teal else Color.White, RoundedCornerShape(20.dp))
-            .border(1.dp, if (selected) Teal else CardBorder, RoundedCornerShape(20.dp))
+            .background(if (selected) CustomerAccent else Color.White, RoundedCornerShape(20.dp))
+            .border(1.dp, if (selected) CustomerAccent else CardBorder, RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 8.dp),
     )
@@ -358,8 +358,8 @@ private fun HeroIconButton(icon: androidx.compose.ui.graphics.vector.ImageVector
 private fun FilterChip(label: String, icon: ImageVector?, selected: Boolean, onClick: () -> Unit) {
     Row(
         Modifier
-            .background(if (selected) Teal else Color.White, RoundedCornerShape(10.dp))
-            .border(1.dp, if (selected) Teal else CardBorder, RoundedCornerShape(10.dp))
+            .background(if (selected) CustomerAccent else Color.White, RoundedCornerShape(10.dp))
+            .border(1.dp, if (selected) CustomerAccent else CardBorder, RoundedCornerShape(10.dp))
             .clickable { onClick() }
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,

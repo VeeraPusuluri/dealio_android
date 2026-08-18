@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
+import com.dealio.app.ui.components.LocalSurfaceAccent
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -315,7 +316,9 @@ fun SectionHeader(
 @Composable
 fun LoadingState(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize().padding(48.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Teal, strokeWidth = 2.5.dp, modifier = Modifier.size(28.dp))
+        // The portal's own accent: this spinner is the first thing drawn on
+        // every screen, and in teal it announced the wrong portal for a second.
+        CircularProgressIndicator(color = LocalSurfaceAccent.current, strokeWidth = 2.5.dp, modifier = Modifier.size(28.dp))
     }
 }
 

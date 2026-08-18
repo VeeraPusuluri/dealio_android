@@ -49,7 +49,7 @@ import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.builder.formatINR
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
@@ -101,7 +101,7 @@ fun LoanEligibilityScreen(nav: NavController) {
             // ── Eligibility calculator ──
             DealioCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Calculate, null, tint = Teal, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Outlined.Calculate, null, tint = CustomerAccent, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Check eligibility", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
@@ -120,7 +120,7 @@ fun LoanEligibilityScreen(nav: NavController) {
                 }
                 Slider(
                     value = tenure, onValueChange = { tenure = it }, valueRange = 5f..30f, steps = 24,
-                    colors = SliderDefaults.colors(thumbColor = Teal, activeTrackColor = Teal, inactiveTrackColor = Teal.copy(alpha = 0.18f)),
+                    colors = SliderDefaults.colors(thumbColor = CustomerAccent, activeTrackColor = CustomerAccent, inactiveTrackColor = CustomerAccent.copy(alpha = 0.18f)),
                 )
                 Spacer(Modifier.height(6.dp))
                 Column(
@@ -183,8 +183,8 @@ fun LoanEligibilityScreen(nav: NavController) {
             bankProducts.forEach { bp ->
                 DealioCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(38.dp).background(Teal.copy(alpha = 0.12f), RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Outlined.AccountBalance, null, tint = Teal, modifier = Modifier.size(19.dp))
+                        Box(Modifier.size(38.dp).background(CustomerAccent.copy(alpha = 0.12f), RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Outlined.AccountBalance, null, tint = CustomerAccent, modifier = Modifier.size(19.dp))
                         }
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
@@ -202,12 +202,12 @@ fun LoanEligibilityScreen(nav: NavController) {
                     }
                     Spacer(Modifier.height(10.dp))
                     Box(
-                        Modifier.fillMaxWidth().background(Teal.copy(alpha = 0.10f), RoundedCornerShape(10.dp))
+                        Modifier.fillMaxWidth().background(CustomerAccent.copy(alpha = 0.10f), RoundedCornerShape(10.dp))
                             .clickable { rate = bp.rate.toFloat() }
                             .padding(vertical = 9.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text("Use this rate", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Use this rate", color = CustomerAccent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -230,9 +230,9 @@ private fun NumField(label: String, value: String, placeholder: String, onChange
             shape = RoundedCornerShape(12.dp),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Teal,
+                focusedBorderColor = CustomerAccent,
                 unfocusedBorderColor = Color(0xFFE3E9F1),
-                cursorColor = Teal,
+                cursorColor = CustomerAccent,
             ),
         )
     }

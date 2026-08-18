@@ -70,7 +70,7 @@ import com.dealio.app.ui.components.meetingStatusColor
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.dealio.app.ui.theme.Orange
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 
@@ -268,11 +268,11 @@ private fun VisitDetailSheet(m: Meeting, onDismiss: () -> Unit, onRate: (Int) ->
             SectionLabel("When")
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.CalendarMonth, null, tint = Teal, modifier = Modifier.size(16.dp))
+                Icon(Icons.Outlined.CalendarMonth, null, tint = CustomerAccent, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(formatDate(m.confirmedDate ?: m.preferredDate), color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.width(16.dp))
-                Icon(Icons.Outlined.Schedule, null, tint = Teal, modifier = Modifier.size(16.dp))
+                Icon(Icons.Outlined.Schedule, null, tint = CustomerAccent, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(8.dp))
                 Text((m.confirmedTime ?: m.preferredTime).ifBlank { "—" }, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             }
@@ -345,8 +345,8 @@ private fun SheetAction(icon: androidx.compose.ui.graphics.vector.ImageVector, l
         modifier = Modifier.fillMaxWidth().height(46.dp),
         shape = RoundedCornerShape(12.dp),
     ) {
-        Icon(icon, null, tint = Teal, modifier = Modifier.size(17.dp))
+        Icon(icon, null, tint = CustomerAccent, modifier = Modifier.size(17.dp))
         Spacer(Modifier.width(8.dp))
-        Text(label, color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(label, color = CustomerAccent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }

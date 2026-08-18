@@ -85,6 +85,10 @@ fun FloatingPillNav(
     tabs: List<PillTab>,
     selectedRoute: String?,
     onSelect: (PillTab) -> Unit,
+    // The portal's own accent. Defaults to the brand teal the builder and
+    // partner shells use; the buyer shell passes its gold, so the one tab a
+    // buyer looks at all day is not the only teal left on a warm screen.
+    accent: Color = Teal,
 ) {
     Box(
         Modifier
@@ -110,6 +114,7 @@ fun FloatingPillNav(
                         tab = tab,
                         selected = tab.route == selectedRoute,
                         onClick = { onSelect(tab) },
+                        accent = accent,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -123,6 +128,7 @@ private fun PillItem(
     tab: PillTab,
     selected: Boolean,
     onClick: () -> Unit,
+    accent: Color,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -150,14 +156,14 @@ private fun PillItem(
             modifier = Modifier
                 .size(width = 52.dp, height = 34.dp)
                 .then(
-                    if (selected) Modifier.background(Teal.copy(alpha = 0.14f), RoundedCornerShape(17.dp))
+                    if (selected) Modifier.background(accent.copy(alpha = 0.14f), RoundedCornerShape(17.dp))
                     else Modifier,
                 ),
         ) {
             Icon(
                 imageVector = if (selected) tab.selectedIcon else tab.icon,
                 contentDescription = tab.label,
-                tint = if (selected) Teal else TextSecondary,
+                tint = if (selected) accent else TextSecondary,
                 modifier = Modifier.size(22.dp).scale(bounce.value),
             )
         }

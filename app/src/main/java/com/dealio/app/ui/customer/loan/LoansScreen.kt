@@ -46,7 +46,7 @@ import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.customer.CustomerRoutes
 import com.dealio.app.ui.customer.CustomerViewModel
 import com.dealio.app.ui.theme.CardBorder
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -85,7 +85,7 @@ fun LoansScreen(nav: NavController, vm: LoansViewModel = viewModel()) {
         "Home loans", nav,
         actions = {
             Row(
-                Modifier.padding(end = 8.dp).background(Teal, RoundedCornerShape(10.dp))
+                Modifier.padding(end = 8.dp).background(CustomerAccent, RoundedCornerShape(10.dp))
                     .clickable { nav.navigate(CustomerRoutes.loanApply()) }
                     .padding(horizontal = 12.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -145,7 +145,7 @@ private fun LoanCard(d: CustomerDeal) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(d.projectName, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                Text(formatINRShort(d.loanAmount), color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text(formatINRShort(d.loanAmount), color = CustomerAccent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
             StatusChip(d.loanStatus ?: "Applied")
         }
@@ -154,7 +154,7 @@ private fun LoanCard(d: CustomerDeal) {
             loanStages.forEachIndexed { idx, _ ->
                 Box(
                     Modifier.weight(1f).height(5.dp)
-                        .background(if (idx <= current) Teal else CardBorder, RoundedCornerShape(3.dp)),
+                        .background(if (idx <= current) CustomerAccent else CardBorder, RoundedCornerShape(3.dp)),
                 )
             }
         }
@@ -181,8 +181,8 @@ private fun LoanToolTile(title: String, subtitle: String, icon: androidx.compose
             .clickable { onClick() }
             .padding(14.dp),
     ) {
-        Box(Modifier.size(38.dp).background(Teal.copy(alpha = 0.12f), RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = Teal, modifier = Modifier.size(20.dp))
+        Box(Modifier.size(38.dp).background(CustomerAccent.copy(alpha = 0.12f), RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
+            Icon(icon, null, tint = CustomerAccent, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.height(10.dp))
         Text(title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)

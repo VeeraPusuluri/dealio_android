@@ -35,7 +35,7 @@ import com.dealio.app.ui.builder.formatDate
 import com.dealio.app.ui.customer.CustomerViewModel
 import com.dealio.app.ui.navigation.Portal
 import com.dealio.app.ui.navigation.openNotificationLink
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -96,7 +96,7 @@ fun CustomerNotificationsScreen(nav: NavController, vm: CustomerNotificationsVie
         "Notifications", nav,
         actions = {
             if (state.items.any { !it.read }) {
-                Text("Mark all read", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                Text("Mark all read", color = CustomerAccent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(end = 14.dp).clickable { vm.markAllRead() })
             }
         },

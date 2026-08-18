@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apartment
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,7 +49,10 @@ import com.dealio.app.ui.builder.LoadingState
 import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.StatusChip
 import com.dealio.app.ui.builder.availableUnitsOrDerived
+import com.dealio.app.ui.builder.commissionLabel
+import com.dealio.app.ui.builder.formatAddress
 import com.dealio.app.ui.builder.formatINRShort
+import com.dealio.app.ui.builder.pricePerSqftRange
 import com.dealio.app.ui.builder.resolveUrl
 import com.dealio.app.ui.builder.titleCase
 import com.dealio.app.ui.customer.project.DeveloperPlate
@@ -391,7 +395,9 @@ private fun ProjectDetailBody(
                 InfoRow("RERA expiry", com.dealio.app.ui.builder.formatDate(p.reraExpiry))
                 InfoRow("RERA state", p.reraState)
                 InfoRow("Building permit", p.buildingPermitNumber)
-                InfoRow("Commission", p.commissionValue?.let { "$it%" })
+                // A flat commission is an amount, not a percentage. One live project
+                // is stored as FLAT and was still being shown as "2.5%".
+                InfoRow("Commission", commissionLabel(p.commissionStructure, p.commissionValue))
                 InfoRow("CP incentive", p.cpIncentive)
             }
 

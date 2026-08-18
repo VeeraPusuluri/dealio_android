@@ -28,7 +28,10 @@ import androidx.navigation.navArgument
 import com.dealio.app.ui.components.CustomerHeroAccent
 import com.dealio.app.ui.components.FloatingPillNav
 import com.dealio.app.ui.components.LocalHeroAccent
+import com.dealio.app.ui.components.LocalSurfaceAccent
 import com.dealio.app.ui.components.PillTab
+import com.dealio.app.ui.theme.CustomerAccent
+import com.dealio.app.ui.theme.CustomerSurface
 import com.dealio.app.ui.components.selectTab
 import com.dealio.app.ui.navigation.FollowPendingDeepLink
 import com.dealio.app.ui.navigation.Portal
@@ -123,11 +126,8 @@ fun CustomerRoot(onLogout: () -> Unit) {
     val currentRoute = backStack?.destination?.route
     // The nav stays up on nested pages. It used to be shown only on the five tab
     // routes, so opening anything — a project, a deal, a visit — took the tabs
-    // away and left Back as the only way to reach another section.
-    //
-    // The exception is a screen that owns the bottom of the display itself: the
-    // project page pins its "Book a site visit" bar there, and stacking a second
-    // bar under it would put two competing controls in the same thumb zone.
+    // away and left Back as the only way to reach another section. The one
+    // remaining exception is the conversation screen; see BOTTOM_OWNING_ROUTES.
     val showBottomBar = currentRoute?.let { route ->
         BOTTOM_OWNING_ROUTES.none { route.startsWith(it) }
     } ?: false
@@ -135,10 +135,15 @@ fun CustomerRoot(onLogout: () -> Unit) {
     // A notification tapped in the tray lands here, on the screen it is about.
     FollowPendingDeepLink(nav, Portal.CUSTOMER)
 
-    // Every hero below this point is lit buyer-green — see LocalHeroAccent.
-    CompositionLocalProvider(LocalHeroAccent provides CustomerHeroAccent) {
+    // Every hero below this point is lit buyer-gold — see LocalHeroAccent.
+    CompositionLocalProvider(
+        LocalHeroAccent provides CustomerHeroAccent,
+        LocalSurfaceAccent provides CustomerAccent,
+    ) {
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        // Sand, not the shared cool grey — the field is most of what a buyer
+        // sees, since every card on top of it is white. See CustomerPalette.
+        containerColor = CustomerSurface,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (showBottomBar) {
@@ -146,6 +151,7 @@ fun CustomerRoot(onLogout: () -> Unit) {
                     tabs = tabs,
                     selectedRoute = currentRoute,
                     onSelect = { tab -> nav.selectTab(tab.route, tabs) },
+                    accent = CustomerAccent,
                 )
             }
         },

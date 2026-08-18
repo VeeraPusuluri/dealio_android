@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.dealio.app.ui.builder.DealioCard
 import com.dealio.app.ui.builder.SubScreenScaffold
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 
@@ -82,7 +82,7 @@ fun CustomerSnaggingScreen(nav: NavController) {
 
     SubScreenScaffold("Snagging Report", nav, actions = {
         Row(
-            Modifier.padding(end = 8.dp).background(Teal, RoundedCornerShape(10.dp))
+            Modifier.padding(end = 8.dp).background(CustomerAccent, RoundedCornerShape(10.dp))
                 .clickable { showAdd = !showAdd }.padding(horizontal = 12.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -120,7 +120,7 @@ fun CustomerSnaggingScreen(nav: NavController) {
                             modifier = Modifier.fillMaxWidth(),
                             placeholder = { Text("Describe the defect clearly…", fontSize = 13.sp) },
                             minLines = 2, shape = RoundedCornerShape(12.dp),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Teal, unfocusedBorderColor = Color(0xFFE3E9F1), cursorColor = Teal),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CustomerAccent, unfocusedBorderColor = Color(0xFFE3E9F1), cursorColor = CustomerAccent),
                         )
                         Spacer(Modifier.height(12.dp))
                         Box(
@@ -204,7 +204,7 @@ private fun ChipRow(label: String, options: List<String>, selected: String, onSe
             options.forEach { opt ->
                 val sel = opt == selected
                 Box(
-                    Modifier.background(if (sel) Teal else Color.White, RoundedCornerShape(20.dp))
+                    Modifier.background(if (sel) CustomerAccent else Color.White, RoundedCornerShape(20.dp))
                         .clickable { onSelect(opt) }.padding(horizontal = 12.dp, vertical = 6.dp),
                 ) { Text(opt, color = if (sel) Color.White else TextSecondary, fontSize = 12.sp, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal) }
             }

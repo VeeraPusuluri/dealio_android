@@ -48,7 +48,7 @@ import com.dealio.app.ui.builder.DealioCard
 import com.dealio.app.ui.builder.GradientButton
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.theme.SurfaceTintTeal
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import com.dealio.app.ui.theme.tintBrush
@@ -82,15 +82,15 @@ fun CustomerContactScreen(nav: NavController) {
             if (submitted) {
                 DealioCard {
                     Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(Modifier.size(52.dp).background(tintBrush(Teal), RoundedCornerShape(26.dp)), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Outlined.CheckCircle, null, tint = Teal, modifier = Modifier.size(28.dp))
+                        Box(Modifier.size(52.dp).background(tintBrush(CustomerAccent), RoundedCornerShape(26.dp)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Outlined.CheckCircle, null, tint = CustomerAccent, modifier = Modifier.size(28.dp))
                         }
                         Spacer(Modifier.height(12.dp))
                         Text("Message received!", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         Text("Thank you${if (name.isNotBlank()) ", $name" else ""}. Our team will get back to you within 24 hours.", color = TextSecondary, fontSize = 13.sp)
                         Spacer(Modifier.height(12.dp))
-                        Text("Send another message", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable {
+                        Text("Send another message", color = CustomerAccent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable {
                             submitted = false; name = ""; phone = ""; email = ""; city = ""; interest = ""; message = ""
                         })
                     }
@@ -147,7 +147,7 @@ private fun ContactRow(icon: ImageVector, label: String, value: String, sub: Str
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(44.dp).background(SurfaceTintTeal, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = Teal, modifier = Modifier.size(20.dp))
+            Icon(icon, null, tint = CustomerAccent, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(14.dp))
         Column {
@@ -168,7 +168,7 @@ private fun ChipPicker(label: String, options: List<String>, selected: String, o
             options.forEach { opt ->
                 val sel = opt == selected
                 Box(
-                    Modifier.background(if (sel) Teal else Color.White, RoundedCornerShape(20.dp))
+                    Modifier.background(if (sel) CustomerAccent else Color.White, RoundedCornerShape(20.dp))
                         .then(if (!sel) Modifier.padding(0.dp) else Modifier)
                         .clickable { onSelect(if (sel) "" else opt) }
                         .padding(horizontal = 12.dp, vertical = 7.dp),
@@ -192,7 +192,7 @@ private fun Field(label: String, value: String, placeholder: String, type: Keybo
             singleLine = minLines == 1, minLines = minLines,
             shape = RoundedCornerShape(12.dp),
             keyboardOptions = KeyboardOptions(keyboardType = type),
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Teal, unfocusedBorderColor = Color(0xFFE3E9F1), cursorColor = Teal),
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CustomerAccent, unfocusedBorderColor = Color(0xFFE3E9F1), cursorColor = CustomerAccent),
         )
     }
 }

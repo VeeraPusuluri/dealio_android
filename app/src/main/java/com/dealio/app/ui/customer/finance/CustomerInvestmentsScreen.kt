@@ -45,7 +45,7 @@ import com.dealio.app.ui.builder.SectionLabel
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.builder.formatINR
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import com.dealio.app.ui.theme.tintBrush
@@ -89,7 +89,7 @@ fun CustomerInvestmentsScreen(nav: NavController) {
                 listOf("Active", "Planner", "Calculator").forEachIndexed { i, label ->
                     val sel = tab == i
                     Box(
-                        Modifier.weight(1f).background(if (sel) Teal else Color.White, RoundedCornerShape(10.dp))
+                        Modifier.weight(1f).background(if (sel) CustomerAccent else Color.White, RoundedCornerShape(10.dp))
                             .clickable { tab = i }.padding(vertical = 9.dp),
                         contentAlignment = Alignment.Center,
                     ) { Text(label, color = if (sel) Color.White else TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
@@ -101,8 +101,8 @@ fun CustomerInvestmentsScreen(nav: NavController) {
                     0 -> {
                         DealioCard {
                             Column(Modifier.fillMaxWidth().padding(vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Box(Modifier.size(54.dp).background(tintBrush(Teal), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Outlined.Wallet, null, tint = Teal, modifier = Modifier.size(26.dp))
+                                Box(Modifier.size(54.dp).background(tintBrush(CustomerAccent), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Outlined.Wallet, null, tint = CustomerAccent, modifier = Modifier.size(26.dp))
                                 }
                                 Spacer(Modifier.height(12.dp))
                                 Text("No active investments yet", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
@@ -142,10 +142,10 @@ fun CustomerInvestmentsScreen(nav: NavController) {
                                 KvRow("Monthly EMI", formatINR(monthlyEmi))
                             }
                             Spacer(Modifier.height(12.dp))
-                            Column(Modifier.fillMaxWidth().background(tintBrush(Teal), RoundedCornerShape(14.dp)).padding(16.dp)) {
+                            Column(Modifier.fillMaxWidth().background(tintBrush(CustomerAccent), RoundedCornerShape(14.dp)).padding(16.dp)) {
                                 Text("MONTHLY INVESTMENT RETURNS", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
                                 Spacer(Modifier.height(4.dp))
-                                Text("${formatINR(monthlyReturn)}/mo", color = Teal, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                                Text("${formatINR(monthlyReturn)}/mo", color = CustomerAccent, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(10.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Outlined.Bolt, null, tint = StatusColors.Amber, modifier = Modifier.size(14.dp))
@@ -176,8 +176,8 @@ private fun InvestmentCard(inv: Investment) {
                 Text(inv.name, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 Text(inv.category, color = TextSecondary, fontSize = 11.sp)
             }
-            Box(Modifier.background(tintBrush(Teal), RoundedCornerShape(20.dp)).padding(horizontal = 10.dp, vertical = 4.dp)) {
-                Text("${inv.returnMin.toInt()}–${inv.returnMax.toInt()}%", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Box(Modifier.background(tintBrush(CustomerAccent), RoundedCornerShape(20.dp)).padding(horizontal = 10.dp, vertical = 4.dp)) {
+                Text("${inv.returnMin.toInt()}–${inv.returnMax.toInt()}%", color = CustomerAccent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -214,6 +214,6 @@ private fun SliderRow(label: String, value: String, current: Float, range: Close
             Text(value, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
         Slider(value = current, onValueChange = onChange, valueRange = range,
-            colors = SliderDefaults.colors(thumbColor = Teal, activeTrackColor = Teal, inactiveTrackColor = Teal.copy(alpha = 0.18f)))
+            colors = SliderDefaults.colors(thumbColor = CustomerAccent, activeTrackColor = CustomerAccent, inactiveTrackColor = CustomerAccent.copy(alpha = 0.18f)))
     }
 }

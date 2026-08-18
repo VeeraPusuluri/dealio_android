@@ -7,6 +7,7 @@ import com.dealio.app.ui.auth.RoleBuilder
 import com.dealio.app.ui.auth.RoleCp
 import com.dealio.app.ui.auth.RoleCustomer
 import com.dealio.app.ui.auth.onNavy
+import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TealBright
 
 /**
@@ -23,7 +24,7 @@ import com.dealio.app.ui.theme.TealBright
  * identity, and a tab that invented its own would read as a different app again.
  */
 
-/** Buyer green — [RoleCustomer]'s colour, lifted for legibility on navy. */
+/** Buyer gold — [RoleCustomer]'s colour, lifted for legibility on navy. */
 val CustomerHeroAccent = RoleCustomer.color.onNavy()
 
 /** Partner orange — [RoleCp]'s colour, same treatment. */
@@ -47,6 +48,17 @@ val BuilderHeroAccent = Color(0xFF2E5D8E).onNavy()
  * screen's own default, for anything that renders outside a portal.
  */
 val LocalHeroAccent = compositionLocalOf { TealBright }
+
+/**
+ * The portal's accent for components sitting on a *light* surface — spinners,
+ * rules, small marks in shared widgets.
+ *
+ * [LocalHeroAccent] cannot be reused for this. It is a colour lifted for
+ * legibility on deep navy, so on white it is washed out to the point of looking
+ * disabled. Portals that carry a light-surface accent of their own provide it
+ * here; everything else keeps the brand teal.
+ */
+val LocalSurfaceAccent = compositionLocalOf { Teal }
 
 /**
  * The tint a role's *sign-in* hero glows with.

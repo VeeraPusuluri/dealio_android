@@ -34,7 +34,7 @@ import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import com.dealio.app.ui.theme.tintBrush
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 
 private val typicalMilestones = listOf(
     "Occupancy Certificate (OC) received",
@@ -55,8 +55,8 @@ fun CustomerPossessionScreen(nav: NavController) {
             // Info / empty state
             DealioCard {
                 Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.size(54.dp).background(tintBrush(Teal), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Outlined.HomeWork, null, tint = Teal, modifier = Modifier.size(26.dp))
+                    Box(Modifier.size(54.dp).background(tintBrush(CustomerAccent), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.HomeWork, null, tint = CustomerAccent, modifier = Modifier.size(26.dp))
                     }
                     Spacer(Modifier.height(12.dp))
                     Text("Tracking begins after handover", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)

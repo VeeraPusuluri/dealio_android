@@ -44,7 +44,7 @@ import com.dealio.app.ui.meetups.CategoryChip
 import com.dealio.app.ui.meetups.MeetupCategory
 import com.dealio.app.ui.meetups.meetupWhen
 import com.dealio.app.ui.theme.CardBorder
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 
@@ -80,14 +80,14 @@ fun MeetupsStrip(nav: NavController, vm: CustomerMeetupsViewModel = viewModel())
             if (state.awaitingReply.isNotEmpty()) {
                 Text(
                     "${state.awaitingReply.size} invite${if (state.awaitingReply.size == 1) "" else "s"}",
-                    color = Teal, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                    color = CustomerAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.clip(RoundedCornerShape(6.dp))
-                        .background(Teal.copy(alpha = 0.12f)).padding(horizontal = 7.dp, vertical = 3.dp),
+                        .background(CustomerAccent.copy(alpha = 0.12f)).padding(horizontal = 7.dp, vertical = 3.dp),
                 )
                 Spacer(Modifier.width(6.dp))
             }
-            Text("See all", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            Icon(Icons.Outlined.ChevronRight, null, tint = Teal, modifier = Modifier.size(16.dp))
+            Text("See all", color = CustomerAccent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Icon(Icons.Outlined.ChevronRight, null, tint = CustomerAccent, modifier = Modifier.size(16.dp))
         }
 
         Spacer(Modifier.height(8.dp))
@@ -120,7 +120,7 @@ private fun MeetupStripCard(m: CustomerMeetup, onOpen: () -> Unit) {
             )
             if (m.awaitingReply) {
                 Text(
-                    "Invited", color = Teal, fontSize = 9.sp, fontWeight = FontWeight.Bold,
+                    "Invited", color = CustomerAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
                         .clip(RoundedCornerShape(5.dp)).background(Color.White)
                         .padding(horizontal = 6.dp, vertical = 2.dp),

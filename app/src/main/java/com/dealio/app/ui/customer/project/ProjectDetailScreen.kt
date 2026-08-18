@@ -137,8 +137,8 @@ import com.dealio.app.ui.theme.Mist
 import com.dealio.app.ui.theme.NavyMid
 import com.dealio.app.ui.theme.NavyPrimary
 import com.dealio.app.ui.theme.NavyDeep
-import com.dealio.app.ui.theme.Teal
-import com.dealio.app.ui.theme.TealBright
+import com.dealio.app.ui.theme.CustomerAccent
+import com.dealio.app.ui.theme.CustomerAccentBright
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.flow.UnitMatrixGrid
 import com.dealio.app.ui.flow.unitsOf
@@ -195,7 +195,7 @@ fun ProjectDetailScreen(nav: NavController, projectId: Long, vm: ProjectDetailVi
                         onClick = { showBooking = true },
                         modifier = Modifier.weight(1.3f).height(50.dp),
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Teal),
+                        colors = ButtonDefaults.buttonColors(containerColor = CustomerAccent),
                     ) { Text("Book a visit", color = Color.White, fontWeight = FontWeight.Bold) }
                 }
             }
@@ -282,7 +282,7 @@ internal fun LazyListScope.projectDetailSections(
         Column(Modifier.padding(16.dp)) {
             Text("Starting price", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
             Spacer(Modifier.height(2.dp))
-            Text(priceText(p), color = Teal, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text(priceText(p), color = CustomerAccent, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             if ((p.pricePerSqftFrom ?: 0.0) > 0) {
                 // Land is quoted by the yard, not the foot. The builder form asks
                 // for the rate in the same unit it is shown in here, so a plot's
@@ -379,7 +379,7 @@ internal fun LazyListScope.projectDetailSections(
                                 .padding(horizontal = 10.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Outlined.Place, null, tint = Teal, modifier = Modifier.size(13.dp))
+                            Icon(Icons.Outlined.Place, null, tint = CustomerAccent, modifier = Modifier.size(13.dp))
                             Spacer(Modifier.width(4.dp))
                             Text(n, color = TextPrimary, fontSize = 12.sp)
                         }
@@ -570,12 +570,12 @@ internal fun LocationAdvantagesList(advantages: List<LocationAdvantage>) {
                 // Naming the count is the point: "show more" hides how
                 // much more there is to read.
                 if (expanded) "Show less" else "Show all ${points.size} advantages",
-                color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                color = CustomerAccent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.width(6.dp))
             Icon(
                 if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
-                null, tint = Teal, modifier = Modifier.size(18.dp),
+                null, tint = CustomerAccent, modifier = Modifier.size(18.dp),
             )
         }
     }
@@ -641,7 +641,7 @@ internal fun DeveloperPlate(p: Project, showRera: Boolean = true) {
                     .padding(horizontal = 11.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.size(6.dp).clip(CircleShape).background(TealBright))
+                Box(Modifier.size(6.dp).clip(CircleShape).background(CustomerAccentBright))
                 Spacer(Modifier.width(7.dp))
                 Text(titleCase(p.status), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
@@ -718,10 +718,10 @@ private fun LocationAdvRow(text: String, detail: String) {
         verticalAlignment = Alignment.Top,
     ) {
         Box(
-            Modifier.size(26.dp).clip(CircleShape).background(Teal.copy(alpha = 0.10f)),
+            Modifier.size(26.dp).clip(CircleShape).background(CustomerAccent.copy(alpha = 0.10f)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.Place, null, tint = Teal, modifier = Modifier.size(14.dp))
+            Icon(Icons.Outlined.Place, null, tint = CustomerAccent, modifier = Modifier.size(14.dp))
         }
         Spacer(Modifier.width(11.dp))
         Text(text, color = TextPrimary, fontSize = 13.sp, lineHeight = 19.sp, modifier = Modifier.weight(1f))
@@ -740,13 +740,13 @@ private fun LocationAdvRow(text: String, detail: String) {
 @Composable
 internal fun ConfigInfoRow(cfg: String, isPlot: Boolean = false) {
     Row(
-        Modifier.fillMaxWidth().background(Teal.copy(alpha = 0.05f), RoundedCornerShape(12.dp)).padding(14.dp),
+        Modifier.fillMaxWidth().background(CustomerAccent.copy(alpha = 0.05f), RoundedCornerShape(12.dp)).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // A building icon next to "200 sq yd" describes the wrong thing.
         Icon(
             if (isPlot) Icons.Outlined.Landscape else Icons.Outlined.Apartment,
-            null, tint = Teal, modifier = Modifier.size(16.dp),
+            null, tint = CustomerAccent, modifier = Modifier.size(16.dp),
         )
         Spacer(Modifier.width(8.dp))
         Text(cfg, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -809,7 +809,7 @@ internal fun ProjectImagePager(
                 }
                 images.size == 1 -> AsyncImage(model = images[0], contentDescription = contentDescription, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 else -> Box(
-                    Modifier.fillMaxSize().background(Brush.linearGradient(listOf(NavyMid, Teal))),
+                    Modifier.fillMaxSize().background(Brush.linearGradient(listOf(NavyMid, CustomerAccent))),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(Icons.Outlined.Apartment, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(56.dp))
@@ -828,7 +828,7 @@ internal fun ProjectImagePager(
                     Box(
                         Modifier
                             .size(width = if (active) 20.dp else 8.dp, height = 8.dp)
-                            .background(if (active) Teal else Color.LightGray, CircleShape),
+                            .background(if (active) CustomerAccent else Color.LightGray, CircleShape),
                     )
                 }
             }
@@ -882,7 +882,7 @@ private fun HeroHeader(
                     color = Color.White,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.background(Teal, RoundedCornerShape(8.dp)).padding(horizontal = 9.dp, vertical = 4.dp),
+                    modifier = Modifier.background(CustomerAccent, RoundedCornerShape(8.dp)).padding(horizontal = 9.dp, vertical = 4.dp),
                 )
                 Spacer(Modifier.height(8.dp))
             }
@@ -913,13 +913,13 @@ private fun AvailabilityBar(p: Project, isPlot: Boolean = false) {
         }
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth().height(10.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            if (available > 0) Box(Modifier.weight(available.toFloat()).fillMaxHeight().background(Teal, RoundedCornerShape(3.dp)))
+            if (available > 0) Box(Modifier.weight(available.toFloat()).fillMaxHeight().background(CustomerAccent, RoundedCornerShape(3.dp)))
             if (booked > 0) Box(Modifier.weight(booked.toFloat()).fillMaxHeight().background(StatusColors.Amber, RoundedCornerShape(3.dp)))
             if (sold > 0) Box(Modifier.weight(sold.toFloat()).fillMaxHeight().background(TextSecondary, RoundedCornerShape(3.dp)))
         }
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Legend(Teal, "Available $available")
+            Legend(CustomerAccent, "Available $available")
             Legend(StatusColors.Amber, "Booked $booked")
             Legend(TextSecondary, "Sold $sold")
         }
@@ -956,15 +956,15 @@ private fun LinkButtons(p: Project) {
 private fun LinkButton(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, onClick: () -> Unit) {
     Row(
         modifier
-            .background(Teal.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+            .background(CustomerAccent.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
             .clickable { onClick() }
             .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, tint = Teal, modifier = Modifier.size(18.dp))
+        Icon(icon, null, tint = CustomerAccent, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text(label, color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(label, color = CustomerAccent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -996,7 +996,7 @@ private fun amenityTint(name: String): Color {
             "sport" in n || "child" in n || "kid" in n || "play" in n -> AmenityActive
         "security" in n || "guard" in n || "gated" in n || "cctv" in n || "camera" in n ||
             "intercom" in n || "fire" in n -> AmenitySafety
-        else -> Teal
+        else -> CustomerAccent
     }
 }
 
@@ -1058,7 +1058,12 @@ private val ADV_BREAK = Regex(
 )
 
 private fun splitAdvantagePoints(raw: String?): List<String> {
+    // Builders often start the pasted blob with its own heading — "Location
+    // Highlights 05 minutes drive from Regional Ring Road …". Two words is under
+    // the merge threshold below, so it was gluing itself onto the first point.
     val text = raw?.trim().orEmpty()
+        .replace(Regex("^\\s*location\\s+highlights\\s*[:\\u2013\\u2014-]?\\s*", RegexOption.IGNORE_CASE), "")
+        .trim()
     if (text.isEmpty()) return emptyList()
     val parts = text.split(ADV_BREAK)
         .map { it.trim().trimStart('•').trim().trimEnd('&', '·', ',').trim() }
@@ -1083,7 +1088,7 @@ private fun LocationAdvBullet(text: String, detail: String) {
     ) {
         Text(
             "•",
-            color = Teal,
+            color = CustomerAccent,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(end = 10.dp),
@@ -1111,7 +1116,7 @@ private fun Section(title: String, content: @Composable () -> Unit) {
 @Composable
 private fun ConfigRow(cfg: String, working: Boolean, onShortlist: () -> Unit, onPricing: () -> Unit) {
     Column(
-        Modifier.fillMaxWidth().background(Teal.copy(alpha = 0.05f), RoundedCornerShape(12.dp)).padding(12.dp),
+        Modifier.fillMaxWidth().background(CustomerAccent.copy(alpha = 0.05f), RoundedCornerShape(12.dp)).padding(12.dp),
     ) {
         Text(cfg, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(8.dp))
@@ -1184,7 +1189,7 @@ private fun BookingSheet(working: Boolean, onConfirm: (date: String, time: Strin
             enabled = !working,
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Teal),
+            colors = ButtonDefaults.buttonColors(containerColor = CustomerAccent),
         ) {
             if (working) CircularProgressIndicator(Modifier.size(22.dp), color = Color.White, strokeWidth = 2.5.dp)
             else {
@@ -1205,8 +1210,8 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
         fontSize = 12.sp,
         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
         modifier = Modifier
-            .background(if (selected) Teal else Color.White, RoundedCornerShape(10.dp))
-            .border(1.dp, if (selected) Teal else CardBorder, RoundedCornerShape(10.dp))
+            .background(if (selected) CustomerAccent else Color.White, RoundedCornerShape(10.dp))
+            .border(1.dp, if (selected) CustomerAccent else CardBorder, RoundedCornerShape(10.dp))
             .clickable { onClick() }
             .padding(horizontal = 12.dp, vertical = 8.dp),
     )
@@ -1371,10 +1376,10 @@ private fun DocumentRow(d: ProjectDocument) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(Teal.copy(alpha = 0.10f)),
+            Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(CustomerAccent.copy(alpha = 0.10f)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.Description, null, tint = Teal, modifier = Modifier.size(18.dp))
+            Icon(Icons.Outlined.Description, null, tint = CustomerAccent, modifier = Modifier.size(18.dp))
         }
         Spacer(Modifier.width(11.dp))
         Column(Modifier.weight(1f)) {
@@ -1397,7 +1402,7 @@ private fun DocumentRow(d: ProjectDocument) {
                     .clickable { shareViaWhatsApp(ctx, "${d.docType.ifBlank { "Document" }}\n$url", "Share document") },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Outlined.Share, "Share ${d.docType}", tint = Teal, modifier = Modifier.size(17.dp))
+                Icon(Icons.Outlined.Share, "Share ${d.docType}", tint = CustomerAccent, modifier = Modifier.size(17.dp))
             }
         }
     }
@@ -1411,9 +1416,9 @@ private fun PdfPlanTile(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(Icons.Outlined.Description, null, tint = Teal, modifier = Modifier.size(34.dp))
+        Icon(Icons.Outlined.Description, null, tint = CustomerAccent, modifier = Modifier.size(34.dp))
         Spacer(Modifier.height(8.dp))
-        Text("Open PDF", color = Teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Text("Open PDF", color = CustomerAccent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -1453,8 +1458,8 @@ private fun TowerPlansSection(p: Project, docs: List<ProjectDocument>) {
                 val hasPlan = planFor(i) != null
                 Row(
                     Modifier
-                        .background(if (sel) Teal else Color.White, RoundedCornerShape(10.dp))
-                        .border(1.dp, if (sel) Teal else CardBorder, RoundedCornerShape(10.dp))
+                        .background(if (sel) CustomerAccent else Color.White, RoundedCornerShape(10.dp))
+                        .border(1.dp, if (sel) CustomerAccent else CardBorder, RoundedCornerShape(10.dp))
                         .clickable { selected = i }
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -1469,7 +1474,7 @@ private fun TowerPlansSection(p: Project, docs: List<ProjectDocument>) {
                     Box(
                         Modifier.size(6.dp).background(
                             when {
-                                hasPlan -> if (sel) Color.White else Teal
+                                hasPlan -> if (sel) Color.White else CustomerAccent
                                 else -> CardBorder
                             },
                             CircleShape,
@@ -1532,7 +1537,7 @@ private fun VirtualTourSection(videoUrl: String?) {
             tours.forEach { (label, url) ->
                 Row(
                     Modifier.fillMaxWidth()
-                        .background(Brush.linearGradient(listOf(NavyMid, Teal)), RoundedCornerShape(14.dp))
+                        .background(Brush.linearGradient(listOf(NavyMid, CustomerAccent)), RoundedCornerShape(14.dp))
                         .clip(RoundedCornerShape(14.dp))
                         .clickable { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } }
                         .padding(16.dp),
@@ -1579,13 +1584,13 @@ private fun LoanCalculator(low: Double?, high: Double?, projectName: String) {
     Column {
         // EMI banner
         Row(
-            Modifier.fillMaxWidth().background(Teal.copy(alpha = 0.08f), RoundedCornerShape(12.dp)).padding(14.dp),
+            Modifier.fillMaxWidth().background(CustomerAccent.copy(alpha = 0.08f), RoundedCornerShape(12.dp)).padding(14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column {
                 Text("Estimated EMI", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                Text("${formatINR(emi.toDouble())}/mo", color = Teal, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text("${formatINR(emi.toDouble())}/mo", color = CustomerAccent, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text("Total Interest", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
@@ -1598,7 +1603,7 @@ private fun LoanCalculator(low: Double?, high: Double?, projectName: String) {
         Row(
             Modifier.fillMaxWidth().background(Mist, RoundedCornerShape(12.dp)).padding(vertical = 12.dp),
         ) {
-            BreakdownCell("Down Payment", formatINRShort(downAmt.toDouble()), Teal, Modifier.weight(1f))
+            BreakdownCell("Down Payment", formatINRShort(downAmt.toDouble()), CustomerAccent, Modifier.weight(1f))
             Box(Modifier.width(1.dp).height(40.dp).background(CardBorder).align(Alignment.CenterVertically))
             BreakdownCell("Loan Amount", formatINRShort(loanAmt.toDouble()), TextPrimary, Modifier.weight(1f))
             Box(Modifier.width(1.dp).height(40.dp).background(CardBorder).align(Alignment.CenterVertically))
@@ -1618,7 +1623,7 @@ private fun LoanCalculator(low: Double?, high: Double?, projectName: String) {
         Row(
             Modifier
                 .clip(RoundedCornerShape(11.dp))
-                .background(Teal.copy(alpha = 0.10f))
+                .background(CustomerAccent.copy(alpha = 0.10f))
                 .clickable {
                     shareViaWhatsApp(
                         ctx,
@@ -1640,9 +1645,9 @@ private fun LoanCalculator(low: Double?, high: Double?, projectName: String) {
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Outlined.Share, null, tint = Teal, modifier = Modifier.size(16.dp))
+            Icon(Icons.Outlined.Share, null, tint = CustomerAccent, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Share this estimate", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text("Share this estimate", color = CustomerAccent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -1669,7 +1674,7 @@ private fun CalcSlider(
         }
         Slider(
             value = current, onValueChange = onChange, valueRange = range, steps = steps,
-            colors = SliderDefaults.colors(thumbColor = Teal, activeTrackColor = Teal),
+            colors = SliderDefaults.colors(thumbColor = CustomerAccent, activeTrackColor = CustomerAccent),
         )
     }
 }

@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import com.dealio.app.ui.builder.pipeline.stageLabel
 import com.dealio.app.ui.theme.CardBorder
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextSecondary
 
 /**
@@ -84,7 +84,7 @@ fun JourneyTrack(current: JourneyPhase, modifier: Modifier = Modifier) {
                 Spacer(Modifier.height(5.dp))
                 Text(
                     phase.label,
-                    color = if (done || active) Teal else TextSecondary,
+                    color = if (done || active) CustomerAccent else TextSecondary,
                     fontSize = 9.sp,
                     fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
                     textAlign = TextAlign.Center,
@@ -104,7 +104,7 @@ private fun androidx.compose.foundation.layout.RowScope.Connector(filled: Boolea
             .background(
                 when {
                     !visible -> Color.Transparent
-                    filled -> Teal.copy(alpha = 0.45f)
+                    filled -> CustomerAccent.copy(alpha = 0.45f)
                     else -> CardBorder
                 },
                 RoundedCornerShape(50),
@@ -116,14 +116,14 @@ private fun androidx.compose.foundation.layout.RowScope.Connector(filled: Boolea
 private fun Node(done: Boolean, active: Boolean) {
     when {
         done -> Box(
-            Modifier.size(18.dp).background(Teal, CircleShape),
+            Modifier.size(18.dp).background(CustomerAccent, CircleShape),
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(11.dp)) }
 
         active -> Box(
-            Modifier.size(18.dp).background(Teal.copy(alpha = 0.18f), CircleShape),
+            Modifier.size(18.dp).background(CustomerAccent.copy(alpha = 0.18f), CircleShape),
             contentAlignment = Alignment.Center,
-        ) { Box(Modifier.size(9.dp).background(Teal, CircleShape)) }
+        ) { Box(Modifier.size(9.dp).background(CustomerAccent, CircleShape)) }
 
         else -> Box(Modifier.size(11.dp).background(CardBorder, CircleShape))
     }
@@ -135,12 +135,12 @@ fun NextStepRow(current: JourneyPhase) {
     Row(
         Modifier
             .fillMaxWidth()
-            .background(Teal.copy(alpha = 0.07f), RoundedCornerShape(10.dp))
+            .background(CustomerAccent.copy(alpha = 0.07f), RoundedCornerShape(10.dp))
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text("UP NEXT", color = Teal, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.7.sp)
+        Text("UP NEXT", color = CustomerAccent, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.7.sp)
         Text(current.nextStep, color = TextSecondary, fontSize = 11.5.sp)
     }
 }

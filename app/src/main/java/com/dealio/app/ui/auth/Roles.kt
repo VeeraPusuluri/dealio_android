@@ -8,6 +8,7 @@ import androidx.compose.material.icons.outlined.Handshake
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.ui.graphics.Color
+import com.dealio.app.ui.theme.CustomerAccentBright
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import kotlin.math.max
@@ -36,7 +37,9 @@ val RoleCustomer = DealioRole(
     label = "Customer",
     shortLabel = "Customer",
     tagline = "Monitor your property journey",
-    color = Color(0xFF16A34A),
+    // Brand gold, not the buyer green it used to be — see CustomerPalette. The
+    // pill a buyer picks here has to be the colour the portal then opens in.
+    color = CustomerAccentBright,
     icon = Icons.Outlined.Person,
 )
 

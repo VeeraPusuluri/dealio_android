@@ -49,7 +49,7 @@ import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.components.PortalEmptyState
 import com.dealio.app.ui.components.PortalHeader
 import com.dealio.app.ui.customer.CustomerRoutes
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 
@@ -143,7 +143,7 @@ private fun DealCard(d: CustomerDeal, onClick: () -> Unit) {
                     Spacer(Modifier.height(2.dp))
                     Text(
                         formatINRShort(d.dealValue),
-                        color = Teal,
+                        color = CustomerAccent,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                     )

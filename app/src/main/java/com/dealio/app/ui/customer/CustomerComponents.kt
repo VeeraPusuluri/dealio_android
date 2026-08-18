@@ -47,8 +47,8 @@ import com.dealio.app.ui.builder.titleCase
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.NavyMid
 import com.dealio.app.ui.theme.Orange
-import com.dealio.app.ui.theme.Teal
-import com.dealio.app.ui.theme.TealDeep
+import com.dealio.app.ui.theme.CustomerAccent
+import com.dealio.app.ui.theme.CustomerAccentDeep
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import com.dealio.app.ui.theme.softShadow
@@ -78,8 +78,8 @@ private fun statusMeta(raw: String?): StatusMeta? {
         "ACTIVE", "LAUNCHED" -> StatusMeta(SellingGreen, "Selling")
         "READY_TO_MOVE" -> StatusMeta(SellingGreen, "Ready to move")
         "CLOSING_SOON" -> StatusMeta(ClosingRust, "Closing soon")
-        "NEW_LAUNCH" -> StatusMeta(TealDeep, "New launch")
-        "PRE_LAUNCH" -> StatusMeta(TealDeep, "Pre-launch")
+        "NEW_LAUNCH" -> StatusMeta(CustomerAccentDeep, "New launch")
+        "PRE_LAUNCH" -> StatusMeta(CustomerAccentDeep, "Pre-launch")
         "UNDER_CONSTRUCTION" -> StatusMeta(ConstructionAmber, "Under construction")
         // An unrecognised status is still worth saying, just without a claim
         // about what it means — a grey dot reads as "stated, not classified".
@@ -89,7 +89,7 @@ private fun statusMeta(raw: String?): StatusMeta? {
 
 @Composable
 private fun HeroImage(p: Project, modifier: Modifier) {
-    Box(modifier.background(Brush.linearGradient(listOf(NavyMid, Teal)))) {
+    Box(modifier.background(Brush.linearGradient(listOf(NavyMid, CustomerAccent)))) {
         val url = resolveUrl(p.imageUrl ?: p.coverUrl)
         if (url != null) {
             AsyncImage(model = url, contentDescription = p.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
@@ -226,9 +226,9 @@ fun CustomerProjectCard(
                             Text("·", color = CardBorder, fontSize = 11.sp)
                             Spacer(Modifier.width(8.dp))
                         }
-                        Icon(Icons.Filled.CheckCircle, null, tint = TealDeep, modifier = Modifier.size(10.dp))
+                        Icon(Icons.Filled.CheckCircle, null, tint = CustomerAccentDeep, modifier = Modifier.size(10.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("RERA", color = TealDeep, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                        Text("RERA", color = CustomerAccentDeep, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -281,7 +281,7 @@ fun CustomerProjectCard(
                     Spacer(Modifier.height(3.dp))
                     Text(
                         priceRange(p),
-                        color = if (hasPrice(p)) Teal else TextSecondary,
+                        color = if (hasPrice(p)) CustomerAccent else TextSecondary,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -352,7 +352,7 @@ fun FeaturedCard(p: Project, onClick: () -> Unit) {
             Text(p.name, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(p.city ?: "—", color = TextSecondary, fontSize = 11.sp, maxLines = 1)
             Spacer(Modifier.height(6.dp))
-            Text(priceRange(p), color = Teal, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(priceRange(p), color = CustomerAccent, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
     }
 }

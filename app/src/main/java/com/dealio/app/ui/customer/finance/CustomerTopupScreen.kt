@@ -51,7 +51,7 @@ import com.dealio.app.ui.builder.GradientButton
 import com.dealio.app.ui.builder.StatusColors
 import com.dealio.app.ui.builder.SubScreenScaffold
 import com.dealio.app.ui.builder.formatINR
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import kotlin.math.pow
@@ -153,7 +153,7 @@ fun CustomerTopupScreen(nav: NavController) {
                         Slider(
                             value = amount, onValueChange = { amount = it },
                             valueRange = 1_00_000f..maxTopup.toFloat().coerceAtLeast(1_00_000f),
-                            colors = SliderDefaults.colors(thumbColor = Teal, activeTrackColor = Teal, inactiveTrackColor = Teal.copy(alpha = 0.18f)),
+                            colors = SliderDefaults.colors(thumbColor = CustomerAccent, activeTrackColor = CustomerAccent, inactiveTrackColor = CustomerAccent.copy(alpha = 0.18f)),
                         )
                         // Purpose dropdown
                         ExposedDropdownMenuBox(expanded = purposeOpen, onExpandedChange = { purposeOpen = it }) {
@@ -163,7 +163,7 @@ fun CustomerTopupScreen(nav: NavController) {
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(purposeOpen) },
                                 modifier = Modifier.fillMaxWidth().menuAnchor(),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Teal, unfocusedBorderColor = Color(0xFFE3E9F1)),
+                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CustomerAccent, unfocusedBorderColor = Color(0xFFE3E9F1)),
                             )
                             DropdownMenu(expanded = purposeOpen, onDismissRequest = { purposeOpen = false }) {
                                 PURPOSES.forEach { p ->
@@ -236,7 +236,7 @@ private fun NumField(label: String, value: String, placeholder: String, onChange
             placeholder = { Text(placeholder, fontSize = 13.sp) },
             singleLine = true, shape = RoundedCornerShape(12.dp),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Teal, unfocusedBorderColor = Color(0xFFE3E9F1), cursorColor = Teal),
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CustomerAccent, unfocusedBorderColor = Color(0xFFE3E9F1), cursorColor = CustomerAccent),
         )
     }
 }

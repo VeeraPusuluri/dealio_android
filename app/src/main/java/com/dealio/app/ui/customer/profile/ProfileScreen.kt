@@ -88,8 +88,8 @@ import com.dealio.app.ui.customer.CustomerViewModel
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.ErrorRed
 import com.dealio.app.ui.theme.NavyTealGradient
-import com.dealio.app.ui.theme.TealBright
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccentBright
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -179,7 +179,7 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
                         .align(Alignment.TopCenter)
                         .size(260.dp)
                         .background(
-                            Brush.radialGradient(listOf(TealBright.copy(alpha = 0.22f), Color.Transparent)),
+                            Brush.radialGradient(listOf(CustomerAccentBright.copy(alpha = 0.22f), Color.Transparent)),
                             CircleShape,
                         ),
                 )
@@ -284,7 +284,7 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
                         onClick = vm::saveEmail,
                         modifier = Modifier.fillMaxWidth().height(46.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Teal),
+                        colors = ButtonDefaults.buttonColors(containerColor = CustomerAccent),
                     ) { Text("Save email", color = Color.White, fontWeight = FontWeight.SemiBold) }
                 }
 
@@ -295,7 +295,7 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
                 ActionGroup(
                     "Around you",
                     listOf(
-                        ActionItem("Meetups", Icons.Outlined.Groups, Teal) { nav.navigate(CustomerRoutes.MEETUPS) },
+                        ActionItem("Meetups", Icons.Outlined.Groups, CustomerAccent) { nav.navigate(CustomerRoutes.MEETUPS) },
                     ),
                 )
 
@@ -313,7 +313,7 @@ fun ProfileScreen(nav: NavController, onLogout: () -> Unit, vm: ProfileViewModel
                     "Documents & support",
                     listOf(
                         ActionItem("Documents", Icons.Outlined.Description, IconBlue) { nav.navigate(CustomerRoutes.DOCUMENTS) },
-                        ActionItem("Conversations", Icons.Outlined.ChatBubbleOutline, Teal) { nav.navigate(CustomerRoutes.CONVERSATIONS) },
+                        ActionItem("Conversations", Icons.Outlined.ChatBubbleOutline, CustomerAccent) { nav.navigate(CustomerRoutes.CONVERSATIONS) },
                         ActionItem("Possession tracker", Icons.Outlined.HomeWork, IconOrange) { nav.navigate(CustomerRoutes.POSSESSION) },
                         ActionItem("Snagging report", Icons.Outlined.Handyman, IconRed) { nav.navigate(CustomerRoutes.SNAGGING) },
                         ActionItem("Contact us", Icons.Outlined.SupportAgent, IconGreen) { nav.navigate(CustomerRoutes.CONTACT) },
@@ -371,8 +371,8 @@ private fun HeaderChip(icon: ImageVector, text: String) {
 private fun CityChip(city: String, selected: Boolean, onClick: () -> Unit) {
     Row(
         Modifier
-            .background(if (selected) Teal else Color.White, RoundedCornerShape(10.dp))
-            .border(1.dp, if (selected) Teal else CardBorder, RoundedCornerShape(10.dp))
+            .background(if (selected) CustomerAccent else Color.White, RoundedCornerShape(10.dp))
+            .border(1.dp, if (selected) CustomerAccent else CardBorder, RoundedCornerShape(10.dp))
             .clickable { onClick() }
             .padding(horizontal = 14.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,

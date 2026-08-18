@@ -82,7 +82,7 @@ import com.dealio.app.ui.builder.formatINR
 import com.dealio.app.ui.builder.resolveUrl
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.Navy
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 
@@ -226,7 +226,7 @@ fun DealDetailScreen(
                                 .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Outlined.Description, null, tint = Teal, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Outlined.Description, null, tint = CustomerAccent, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(doc.name, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
@@ -247,9 +247,9 @@ fun DealDetailScreen(
                         modifier = Modifier.fillMaxWidth().height(46.dp),
                         shape = RoundedCornerShape(12.dp),
                     ) {
-                        Icon(Icons.Outlined.ChatBubbleOutline, null, tint = Teal, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Outlined.ChatBubbleOutline, null, tint = CustomerAccent, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Message", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Message", color = CustomerAccent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -311,7 +311,7 @@ private fun UnitPickerSheet(
         // just tapped to reach the button that shortlists it.
         when {
             loading -> Box(Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(Modifier.size(24.dp), color = Teal, strokeWidth = 2.dp)
+                CircularProgressIndicator(Modifier.size(24.dp), color = CustomerAccent, strokeWidth = 2.dp)
             }
             else -> Box(
                 Modifier
@@ -338,7 +338,7 @@ private fun UnitPickerSheet(
             enabled = picked != null && !working,
             modifier = Modifier.fillMaxWidth().height(48.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Teal),
+            colors = ButtonDefaults.buttonColors(containerColor = CustomerAccent),
         ) {
             Text(
                 when {
@@ -372,11 +372,11 @@ private fun DealActions(d: CustomerDeal, working: Boolean, onAccept: () -> Unit,
         OutlinedButton(
             onClick = onAccept, enabled = !working,
             modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(12.dp),
-        ) { Text("Accept negotiated price", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
+        ) { Text("Accept negotiated price", color = CustomerAccent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
     } else if (showConfirmFor(d)) {
         OutlinedButton(
             onClick = onConfirm, enabled = !working,
             modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(12.dp),
-        ) { Text("Confirm deal", color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
+        ) { Text("Confirm deal", color = CustomerAccent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
     }
 }

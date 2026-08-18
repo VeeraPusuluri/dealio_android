@@ -47,7 +47,7 @@ import com.dealio.app.ui.builder.formatDate
 import com.dealio.app.ui.builder.resolveUrl
 import com.dealio.app.ui.customer.CustomerViewModel
 import com.dealio.app.ui.theme.CardBorder
-import com.dealio.app.ui.theme.Teal
+import com.dealio.app.ui.theme.CustomerAccent
 import com.dealio.app.ui.theme.TextPrimary
 import com.dealio.app.ui.theme.TextSecondary
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -115,8 +115,8 @@ fun DocumentsScreen(nav: NavController, vm: DocumentsViewModel = viewModel()) {
                             .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Box(Modifier.size(40.dp).background(Teal.copy(alpha = 0.12f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Outlined.Description, null, tint = Teal, modifier = Modifier.size(20.dp))
+                        Box(Modifier.size(40.dp).background(CustomerAccent.copy(alpha = 0.12f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Outlined.Description, null, tint = CustomerAccent, modifier = Modifier.size(20.dp))
                         }
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
