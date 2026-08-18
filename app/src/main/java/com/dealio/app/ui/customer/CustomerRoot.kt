@@ -29,6 +29,7 @@ import com.dealio.app.ui.components.CustomerHeroAccent
 import com.dealio.app.ui.components.FloatingPillNav
 import com.dealio.app.ui.components.LocalHeroAccent
 import com.dealio.app.ui.components.PillTab
+import com.dealio.app.ui.components.selectTab
 import com.dealio.app.ui.navigation.FollowPendingDeepLink
 import com.dealio.app.ui.navigation.Portal
 import com.dealio.app.ui.customer.explore.ExploreScreen
@@ -94,9 +95,17 @@ object CustomerRoutes {
         "$LOAN_APPLY?projectId=${projectId ?: -1}&builderId=${builderId ?: -1}"
 }
 
-/** Nested routes that pin their own bar at the bottom — see [showBottomBar]. */
-private val BOTTOM_OWNING_ROUTES =
-    listOf(CustomerRoutes.PROJECT_DETAIL, CustomerRoutes.CONVERSATION)
+/**
+ * Nested routes that pin their own bar at the bottom — see [showBottomBar].
+ *
+ * Only the conversation screen qualifies now. The project page also pins a bar,
+ * but it is a page a buyer opens constantly and closes rarely, so taking the
+ * tabs away there stranded them on it with Back as the only exit. Its actions
+ * now stack above the tabs instead — see the bottom bar in ProjectDetailScreen,
+ * which gives up its own navigation-bar inset because the pill nav below it
+ * already holds one.
+ */
+private val BOTTOM_OWNING_ROUTES = listOf(CustomerRoutes.CONVERSATION)
 
 private val tabs = listOf(
     PillTab(CustomerRoutes.EXPLORE, "Explore", Icons.Filled.Explore, Icons.Outlined.Explore),
@@ -136,13 +145,7 @@ fun CustomerRoot(onLogout: () -> Unit) {
                 FloatingPillNav(
                     tabs = tabs,
                     selectedRoute = currentRoute,
-                    onSelect = { tab ->
-                        nav.navigate(tab.route) {
-                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
+                    onSelect = { tab -> nav.selectTab(tab.route, tabs) },
                 )
             }
         },

@@ -29,6 +29,7 @@ import com.dealio.app.ui.components.CpHeroAccent
 import com.dealio.app.ui.components.FloatingPillNav
 import com.dealio.app.ui.components.LocalHeroAccent
 import com.dealio.app.ui.components.PillTab
+import com.dealio.app.ui.components.selectTab
 import com.dealio.app.ui.navigation.FollowPendingDeepLink
 import com.dealio.app.ui.navigation.Portal
 import com.dealio.app.ui.cp.calllogs.CallLogsScreen
@@ -134,13 +135,7 @@ private val tabs = listOf(
  * left the bar unable to switch back, and only Back worked. Anything pointing at
  * a tab has to move the same way the bar does.
  */
-fun NavController.navigateToCpTab(route: String) {
-    navigate(route) {
-        popUpTo(graph.findStartDestination().id) { saveState = true }
-        launchSingleTop = true
-        restoreState = true
-    }
-}
+fun NavController.navigateToCpTab(route: String) = selectTab(route, tabs)
 
 /** The channel-partner app shell: floating pill navigation + nested route host. */
 @Composable
@@ -168,13 +163,7 @@ fun CpRoot(onLogout: () -> Unit) {
                 FloatingPillNav(
                     tabs = tabs,
                     selectedRoute = currentRoute,
-                    onSelect = { tab ->
-                        nav.navigate(tab.route) {
-                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
+                    onSelect = { tab -> nav.selectTab(tab.route, tabs) },
                 )
             }
         },

@@ -30,6 +30,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.dealio.app.ui.theme.Navy
 import com.dealio.app.ui.theme.Teal
 import com.dealio.app.ui.theme.TextSecondary
@@ -42,6 +44,36 @@ data class PillTab(
     val selectedIcon: ImageVector,
     val icon: ImageVector,
 )
+
+/**
+ * Moves to a bottom-nav tab from anywhere in a portal, nested pages included.
+ * Every shell routes tab taps through here so the three portals behave alike.
+ *
+ * Each tab keeps its own back stack — leaving Deals for Projects and coming back
+ * returns you to where you were in Deals — which is what saveState/restoreState
+ * buy. That same restore is what made the bar look dead on a detail page: the
+ * pop saves the stack you are standing on, and navigating to the tab you were
+ * nested under promptly restores it, nested page and all, so the tap landed you
+ * back on the page it was meant to leave. Tapping the tab you are already inside
+ * means "back out to it", so that case pops instead of navigating; every other
+ * tab still goes through navigate() and keeps its remembered place.
+ */
+fun NavController.selectTab(route: String, tabs: List<PillTab>) {
+    val entries = currentBackStack.value
+    // Already standing on the tab itself — re-navigating would only save and
+    // restore the same entry, throwing away its scroll position.
+    if (entries.lastOrNull()?.destination?.route == route) return
+
+    val tabRoutes = tabs.map { it.route }
+    val enclosingTab = entries.lastOrNull { it.destination.route in tabRoutes }?.destination?.route
+    if (enclosingTab == route && popBackStack(route, inclusive = false)) return
+
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
 
 /**
  * Revolut-style floating pill bottom navigation shared by every role shell. Sits

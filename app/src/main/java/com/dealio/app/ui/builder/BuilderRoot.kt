@@ -57,6 +57,7 @@ import com.dealio.app.ui.components.BuilderHeroAccent
 import com.dealio.app.ui.components.FloatingPillNav
 import com.dealio.app.ui.components.LocalHeroAccent
 import com.dealio.app.ui.components.PillTab
+import com.dealio.app.ui.components.selectTab
 import com.dealio.app.ui.navigation.FollowPendingDeepLink
 import com.dealio.app.ui.navigation.Portal
 
@@ -136,13 +137,7 @@ fun BuilderRoot(onLogout: () -> Unit) {
                 FloatingPillNav(
                     tabs = bottomTabs,
                     selectedRoute = currentRoute,
-                    onSelect = { tab ->
-                        nav.navigate(tab.route) {
-                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
+                    onSelect = { tab -> nav.selectTab(tab.route, bottomTabs) },
                 )
             }
         },
