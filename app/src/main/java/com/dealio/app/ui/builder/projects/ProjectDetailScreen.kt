@@ -51,6 +51,8 @@ import com.dealio.app.ui.builder.availableUnitsOrDerived
 import com.dealio.app.ui.builder.formatINRShort
 import com.dealio.app.ui.builder.resolveUrl
 import com.dealio.app.ui.builder.titleCase
+import com.dealio.app.ui.customer.project.DeveloperPlate
+import com.dealio.app.ui.customer.project.LocationAdvantagesList
 import com.dealio.app.ui.theme.CardBorder
 import com.dealio.app.ui.theme.NavyMid
 import com.dealio.app.ui.theme.Teal
@@ -257,8 +259,15 @@ private fun ProjectDetailBody(
                 listOfNotNull(p.address, p.locality, p.city, p.pincode).joinToString(", ").ifBlank { "—" },
                 color = TextSecondary, fontSize = 13.sp,
             )
+            // The blurb is prose, not a field: given a heading and a card it reads
+            // as the project's own description instead of a third grey line
+            // trailing off the address above it.
             if (!p.description.isNullOrBlank()) {
-                Text(p.description!!, color = TextSecondary, fontSize = 13.sp)
+                DealioCard {
+                    SectionLabel("About this project")
+                    Spacer(Modifier.height(8.dp))
+                    Text(p.description!!, color = TextSecondary, fontSize = 13.sp, lineHeight = 20.sp)
+                }
             }
 
             // Key metrics
@@ -346,14 +355,15 @@ private fun ProjectDetailBody(
                 }
             }
 
-            // Location advantages
+            // Location advantages — the same rows the customer and CP portals show,
+            // so the builder proofs exactly what a buyer will read. As label/value
+            // rows this printed a bare "km · min" whenever the distance fields were
+            // left empty, which is the common case.
             if (!p.locationAdvantages.isNullOrEmpty()) {
                 DealioCard {
                     SectionLabel("Location advantages")
                     Spacer(Modifier.height(8.dp))
-                    p.locationAdvantages!!.filter { !it.name.isNullOrBlank() }.forEach {
-                        InfoRow(it.name ?: "", listOfNotNull(it.distanceKm?.let { d -> "$d km" }, it.driveMinutes?.let { m -> "$m min" }).joinToString(" · "))
-                    }
+                    LocationAdvantagesList(p.locationAdvantages!!)
                 }
             }
 
@@ -371,18 +381,22 @@ private fun ProjectDetailBody(
 
             DocumentsCard(documents, uploading, onUpload)
 
-            // Builder profile
+            // Builder profile — the credential plate the buyer-facing portals show,
+            // rather than the label/value rows that made the company's own name
+            // read like one more attribute. RERA is suppressed here because the
+            // compliance card above already carries it.
             if (!p.builderName.isNullOrBlank() || !p.builderAbout.isNullOrBlank()) {
                 DealioCard {
                     SectionLabel("Developer")
                     Spacer(Modifier.height(8.dp))
-                    InfoRow("Company", p.builderName)
-                    InfoRow("Established", p.builderYearEstablished?.toString())
-                    InfoRow("Delivered", p.builderDeliveredProjects?.let { "$it projects" })
-                    InfoRow("Website", p.builderWebsite)
+                    DeveloperPlate(p, showRera = false)
+                    if (!p.builderWebsite.isNullOrBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        InfoRow("Website", p.builderWebsite)
+                    }
                     if (!p.builderAbout.isNullOrBlank()) {
-                        Spacer(Modifier.height(4.dp))
-                        Text(p.builderAbout!!, color = TextSecondary, fontSize = 12.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Text(p.builderAbout!!, color = TextSecondary, fontSize = 12.sp, lineHeight = 18.sp)
                     }
                 }
             }

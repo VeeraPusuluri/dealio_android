@@ -110,6 +110,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.dealio.app.data.api.LocationAdvantage
 import com.dealio.app.data.api.Project
 import com.dealio.app.data.api.ProjectDocument
 import com.dealio.app.ui.builder.ErrorState
@@ -503,58 +504,7 @@ internal fun LazyListScope.projectDetailSections(
     if (!p.locationAdvantages.isNullOrEmpty()) {
         item {
             Section("Location advantages") {
-                // Proximity is the whole point of this section, so the distance is
-                // pulled out of the sentence and set right-aligned where it can be
-                // scanned down the column instead of hunted for inside prose.
-                val points = buildList {
-                    p.locationAdvantages!!.forEach { la ->
-                        // Blank (not null) distance/drive values are the norm here, so filter
-                        // them out — joining them raw produced a bare "km · min" with no numbers.
-                        //
-                        // Category is deliberately not among these. It reads as a measure in
-                        // a right-aligned metric column — "CORPORATE" set where a distance
-                        // belongs looks like one — and it describes the place, not how far
-                        // away it is, which is what this section is for.
-                        val detail = listOfNotNull(
-                            la.distanceKm?.takeIf { it.isNotBlank() }?.let { "$it km" },
-                            la.driveMinutes?.takeIf { it.isNotBlank() }?.let { "$it min" },
-                        ).joinToString(" · ")
-                        splitAdvantagePoints(la.name).forEachIndexed { i, point ->
-                            add(point to if (i == 0) detail else "")
-                        }
-                    }
-                }
-                // Builders paste long lists here — a dozen entries is normal and
-                // buries everything below the section. Show enough to judge the
-                // location, and let the rest be asked for.
-                var expanded by remember { mutableStateOf(false) }
-                val shown = if (expanded) points else points.take(LOCATION_ADV_PREVIEW)
-                shown.forEachIndexed { i, (point, detail) ->
-                    if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(CardBorder.copy(alpha = 0.5f)))
-                    LocationAdvRow(point, detail)
-                }
-                if (points.size > LOCATION_ADV_PREVIEW) {
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(CardBorder.copy(alpha = 0.5f)))
-                    Row(
-                        Modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .clickable { expanded = !expanded }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            // Naming the count is the point: "show more" hides how
-                            // much more there is to read.
-                            if (expanded) "Show less" else "Show all ${points.size} advantages",
-                            color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Icon(
-                            if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
-                            null, tint = Teal, modifier = Modifier.size(18.dp),
-                        )
-                    }
-                }
+                LocationAdvantagesList(p.locationAdvantages!!)
             }
         }
     }
@@ -570,8 +520,73 @@ internal fun LazyListScope.projectDetailSections(
     }
 }
 
+/**
+ * The location-advantage rows, shared by every portal that shows a project.
+ * Kept out of the section wrapper so each portal can frame it its own way — the
+ * customer/CP pages use a divider-ruled [Section], the builder page a card.
+ */
 @Composable
-private fun DeveloperPlate(p: Project) {
+internal fun LocationAdvantagesList(advantages: List<LocationAdvantage>) {
+    // Proximity is the whole point of this section, so the distance is
+    // pulled out of the sentence and set right-aligned where it can be
+    // scanned down the column instead of hunted for inside prose.
+    val points = buildList {
+        advantages.forEach { la ->
+            // Blank (not null) distance/drive values are the norm here, so filter
+            // them out — joining them raw produced a bare "km · min" with no numbers.
+            //
+            // Category is deliberately not among these. It reads as a measure in
+            // a right-aligned metric column — "CORPORATE" set where a distance
+            // belongs looks like one — and it describes the place, not how far
+            // away it is, which is what this section is for.
+            val detail = listOfNotNull(
+                la.distanceKm?.takeIf { it.isNotBlank() }?.let { "$it km" },
+                la.driveMinutes?.takeIf { it.isNotBlank() }?.let { "$it min" },
+            ).joinToString(" · ")
+            splitAdvantagePoints(la.name).forEachIndexed { i, point ->
+                add(point to if (i == 0) detail else "")
+            }
+        }
+    }
+    // Builders paste long lists here — a dozen entries is normal and
+    // buries everything below the section. Show enough to judge the
+    // location, and let the rest be asked for.
+    var expanded by remember { mutableStateOf(false) }
+    val shown = if (expanded) points else points.take(LOCATION_ADV_PREVIEW)
+    shown.forEachIndexed { i, (point, detail) ->
+        if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(CardBorder.copy(alpha = 0.5f)))
+        LocationAdvRow(point, detail)
+    }
+    if (points.size > LOCATION_ADV_PREVIEW) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(CardBorder.copy(alpha = 0.5f)))
+        Row(
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .clickable { expanded = !expanded }
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                // Naming the count is the point: "show more" hides how
+                // much more there is to read.
+                if (expanded) "Show less" else "Show all ${points.size} advantages",
+                color = Teal, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.width(6.dp))
+            Icon(
+                if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                null, tint = Teal, modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+/**
+ * @param showRera draws the registration block. The builder's own page already
+ *   carries RERA in its compliance card, so it opts out rather than print it twice.
+ */
+@Composable
+internal fun DeveloperPlate(p: Project, showRera: Boolean = true) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -598,7 +613,7 @@ private fun DeveloperPlate(p: Project) {
             }
         }
 
-        if (!p.reraNumber.isNullOrBlank()) {
+        if (showRera && !p.reraNumber.isNullOrBlank()) {
             Spacer(Modifier.height(16.dp))
             Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.14f)))
             Spacer(Modifier.height(14.dp))
