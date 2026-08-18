@@ -255,10 +255,23 @@ private fun ProjectDetailBody(
 
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(p.name, color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            // formatAddress rather than a plain join: the parts carry line breaks,
+            // padding and a locality/pincode the address already states, so joining
+            // them raw printed "…Kondurg E, Telangana 509207, Kondurg , Hyderabad,
+            // 509207" across two lines. See Format.kt.
             Text(
-                listOfNotNull(p.address, p.locality, p.city, p.pincode).joinToString(", ").ifBlank { "—" },
-                color = TextSecondary, fontSize = 13.sp,
+                formatAddress(p.address, p.locality, p.city, p.pincode).ifBlank { "—" },
+                color = TextSecondary, fontSize = 13.sp, lineHeight = 19.sp,
             )
+            // The landmark is how people actually find a site — every live project
+            // fills it in ("Near Yadagirigutta (Yadadri) Temple") and this screen
+            // was the one place that never showed it.
+            if (!p.landmark.isNullOrBlank()) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Outlined.Place, null, tint = Teal, modifier = Modifier.size(14.dp))
+                    Text(p.landmark!!.trim(), color = TextSecondary, fontSize = 12.sp)
+                }
+            }
             // The blurb is prose, not a field: given a heading and a card it reads
             // as the project's own description instead of a third grey line
             // trailing off the address above it.
@@ -291,7 +304,10 @@ private fun ProjectDetailBody(
                 InfoRow("Floors / tower", p.floorsPerTower?.toString())
                 InfoRow("Land area", p.landArea)
                 InfoRow("Clubhouse", p.clubhouseAreaSqft?.let { "$it sq.ft" })
-                InfoRow("Price / sq.ft", if ((p.pricePerSqftFrom ?: 0.0) > 0) "${formatINRShort(p.pricePerSqftFrom)} – ${formatINRShort(p.pricePerSqftTo)}" else null)
+                // Read low-to-high, and only as a range when there are two numbers.
+                // One live project has from=1000 with to=300, which printed as
+                // "₹1 K – ₹300"; another leaves `to` empty, which printed "– ₹0".
+                InfoRow("Price / sq.ft", pricePerSqftRange(p.pricePerSqftFrom, p.pricePerSqftTo))
                 InfoRow("Maintenance", p.maintenanceCharges?.let { formatINRShort(it) })
             }
 

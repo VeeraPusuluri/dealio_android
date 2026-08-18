@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -13,6 +15,17 @@ plugins {
 val releaseApiBaseUrl: String = providers.gradleProperty("dealio.apiBaseUrl")
     .getOrElse("https://d2l7qgxnnc8786.cloudfront.net/api/")
 
+// Upload signing. The key never lives in the repo: copy keystore.properties.example
+// to keystore.properties (gitignored), point it at your .jks, and the release
+// build signs itself. Without that file the build still runs and simply produces
+// an unsigned artifact, so nobody needs a keystore to compile the project.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) keystorePropertiesFile.inputStream().use { load(it) }
+}
+val hasReleaseKeystore = keystorePropertiesFile.exists() &&
+    keystoreProperties.getProperty("storeFile").isNullOrBlank().not()
+
 android {
     namespace = "com.dealio.app"
     compileSdk = 36
@@ -25,6 +38,17 @@ android {
         versionName = "1.0"
     }
 
+    signingConfigs {
+        create("release") {
+            if (hasReleaseKeystore) {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // 10.0.2.2 is the host machine's localhost from the Android emulator
@@ -32,6 +56,13 @@ android {
         }
         release {
             buildConfigField("String", "API_BASE_URL", "\"$releaseApiBaseUrl\"")
+            // Unsigned rather than broken when no keystore is configured: a
+            // developer without the key can still run assembleRelease.
+            signingConfig = if (hasReleaseKeystore) signingConfigs.getByName("release") else null
+            // Left off deliberately. R8 strips the Gson model classes' fields by
+            // reflection unless every one is kept, and the app has not been run
+            // end-to-end minified yet — turning it on is a change to make and
+            // then test, not to slip into a release build. See RELEASE.md.
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

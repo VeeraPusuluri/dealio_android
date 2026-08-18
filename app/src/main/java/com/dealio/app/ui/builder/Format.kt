@@ -148,3 +148,44 @@ fun initialsOf(name: String?): String {
 fun titleCase(s: String?): String =
     (s ?: "").lowercase().split("_", " ").filter { it.isNotBlank() }
         .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+
+/** True when [haystack] already names [needle] as a whole word. */
+private fun mentions(haystack: String, needle: String): Boolean {
+    if (needle.isBlank()) return true
+    val bounded = "(^|[^\\p{L}\\p{N}])" + Regex.escape(needle) + "([^\\p{L}\\p{N}]|$)"
+    return Regex(bounded, RegexOption.IGNORE_CASE).containsMatchIn(haystack)
+}
+
+/**
+ * One readable address line out of the several fields a project carries.
+ *
+ * Builders type these by hand and paste them out of Google Maps, so the parts
+ * arrive in a state that a plain `joinToString(", ")` renders badly:
+ *
+ *  - line breaks inside the address ("…127/P Situated at\nSalarpur Village…"),
+ *    which wrap mid-address and leave a blank line from the trailing newline
+ *  - padding on the ends ("Kondurg ") that joins as "Kondurg , Hyderabad"
+ *  - the same place written twice, which is the normal case rather than the
+ *    exception: four of the five live projects have an address ending in
+ *    "Telangana 509207" and then repeat that pincode in its own field, and the
+ *    locality is usually already inside the address as well
+ *  - blank strings, which `listOfNotNull` keeps, producing ", , "
+ *
+ * So each part is collapsed onto one line, trimmed of whitespace and trailing
+ * punctuation, dropped if empty, and dropped again if the line already names it.
+ */
+fun formatAddress(vararg parts: String?): String {
+    val kept = mutableListOf<String>()
+    for (raw in parts) {
+        val part = raw
+            ?.replace(Regex("\\s+"), " ")
+            ?.trim()
+            ?.trim(',', ';', '·', '-', '.')
+            ?.trim()
+            ?: continue
+        if (part.isEmpty()) continue
+        if (mentions(kept.joinToString(" "), part)) continue
+        kept += part
+    }
+    return kept.joinToString(", ")
+}

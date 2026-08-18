@@ -10,3 +10,8 @@ captures/
 .cxx/
 *.apk
 *.aab
+
+# Upload signing — the key and its passwords never go in the repo.
+keystore.properties
+*.jks
+*.keystore
