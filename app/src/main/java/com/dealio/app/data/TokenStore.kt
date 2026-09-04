@@ -20,10 +20,11 @@ class TokenStore(context: Context) {
      *
      * Presence of a token alone used to be enough, which is how a launch with a
      * week-old token reached the dashboard and then failed on every request —
-     * see [Session]. But an expired access token is not the end of a session
-     * when a 60-day refresh token sits beside it; treating it as one would send
-     * exactly the users this is meant to keep signed in back to the sign-in
-     * screen. Those launches go through, and the first request renews the token.
+     * see [Session]. Tokens issued now never expire, so this is nearly always
+     * the first branch; the second is what carries the last of the week-long
+     * ones, since an expired access token is not the end of a session when a
+     * refresh token sits beside it. Those launches go through, and the first
+     * request renews the token.
      */
     val isLoggedIn: Boolean
         get() {
@@ -36,9 +37,10 @@ class TokenStore(context: Context) {
         get() = prefs.getString(KEY_ACCESS_TOKEN, null)
 
     /**
-     * The long-lived credential that renews [accessToken]. Opaque — it is not a
-     * JWT and carries no expiry to read; the server is the only judge of whether
-     * it is still good.
+     * The credential that renews [accessToken]. Opaque — it is not a JWT and
+     * carries no expiry to read; the server is the only judge of whether it is
+     * still good, and it stays good until it is spent or the device is signed
+     * out.
      */
     val refreshToken: String?
         get() = prefs.getString(KEY_REFRESH_TOKEN, null)

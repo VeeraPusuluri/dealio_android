@@ -9,19 +9,19 @@ import org.json.JSONObject
 /**
  * The one place that knows the signed-in session has ended.
  *
- * A Dealio access token lives seven days and there is nothing to renew it with:
- * the backend has no refresh route, and the `refreshToken` it hands back at
- * sign-in is the very same JWT. So every session eventually dies — on its own
- * expiry, when the device is signed out from another one, or when a dev server
- * restarts with a fresh JWT_SECRET.
+ * A Dealio access token no longer expires on a clock — it carries no `exp`
+ * claim, and `ApiClient` renews it from the refresh token when the server
+ * rejects one. So a session ends only when something ends it: the device signed
+ * out from another one, the account suspended, or a dev server restarted with a
+ * fresh JWT_SECRET.
  *
- * The app used to sit on the dead token forever, because "logged in" only meant
+ * The app used to sit on a dead token forever, because "logged in" only meant
  * "a token string is in SharedPreferences". Every authed screen then rendered
  * the backend's raw 401 — "Invalid or expired token" — over a Try again button
  * that re-fired the same doomed request, with no route back to sign-in short of
- * clearing the app's data. Both halves of that are fixed here: [isExpired] lets
- * the launch path notice a stale token before it is ever used, and [end] is the
- * signal the nav host listens on to bounce a session that dies mid-use.
+ * clearing the app's data. [end] is the signal the nav host listens on to bounce
+ * a session that dies mid-use, and [isExpired] still reads the claim for the
+ * tokens issued while they lasted a week.
  */
 object Session {
 
@@ -42,10 +42,11 @@ object Session {
     /**
      * True when [token]'s `exp` claim is already in the past.
      *
-     * Unreadable tokens count as live on purpose. This is only a shortcut so a
-     * launch with a known-dead token skips straight to sign-in; the server stays
-     * the authority, and anything this can't parse just takes the network path
-     * and gets a 401 like before.
+     * Tokens minted now have no `exp` at all, which reads here as "not expired"
+     * — the same answer as for a token this cannot parse. That is deliberate:
+     * this is only a shortcut so a launch holding one of the old week-long
+     * tokens can skip a doomed request; the server stays the authority, and
+     * anything unreadable takes the network path and gets a 401 like before.
      */
     fun isExpired(token: String): Boolean {
         val exp = expiryEpochSeconds(token) ?: return false
